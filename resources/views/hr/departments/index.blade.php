@@ -262,7 +262,7 @@
 
                     </h5>
 
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-dismiss="modal"></button>
 
                 </div>
 
@@ -298,7 +298,7 @@
 
                     <div class="modal-footer-modern">
 
-                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+                        <button type="button" class="btn btn-cancel" data-dismiss="modal">
 
                             <i class="fa fa-times me-2"></i>Cancel
 

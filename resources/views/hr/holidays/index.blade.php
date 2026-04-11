@@ -210,7 +210,7 @@
                         <i class="fa fa-calendar-alt"></i>
                         <span>Add Holiday</span>
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
                 <form id="holidayForm" action="{{ route('hr.holidays.store') }}" method="POST">
                     @csrf
@@ -246,7 +246,7 @@
                         </div>
                     </div>
                     <div class="modal-footer-modern">
-                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+                        <button type="button" class="btn btn-cancel" data-dismiss="modal">
                             <i class="fa fa-times me-2"></i>Cancel
                         </button>
                         <button type="submit" class="btn btn-save" id="saveHolidayBtn"
@@ -270,7 +270,7 @@
                         <i class="fa fa-users"></i>
                         <span>Assign Employees to <span id="assignHolidayName"></span></span>
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
                 <!-- We do NOT use data-ajax-validate="true" here specifically if we want manual handling or just rely on generic, but let's use standard ajax handling if generic applies -->
                 <form id="assignForm" action="#" method="POST">
@@ -350,7 +350,7 @@
                         </div>
                     </div>
                     <div class="modal-footer-modern">
-                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+                        <button type="button" class="btn btn-cancel" data-dismiss="modal">
                             <i class="fa fa-times me-2"></i>Cancel
                         </button>
                         <button type="submit" class="btn btn-save" id="saveAssignBtn"
@@ -496,7 +496,7 @@
                                 if (response.success) {
                                     Swal.fire({
                                         title: 'Deleted!',
-                                        text: response.success,
+                                        html: response.success,
                                         icon: 'success',
                                         confirmButtonColor: '#3b82f6'
                                     }).then(() => location.reload());
@@ -547,7 +547,7 @@
                             $('#holidayModal').modal('hide');
                             Swal.fire({
                                 title: 'Success!',
-                                text: response.success,
+                                html: response.success,
                                 icon: 'success',
                                 confirmButtonColor: '#10b981',
                                 iconColor: '#10b981',
@@ -572,7 +572,7 @@
 
                         Swal.fire({
                             title: 'Failed to Save',
-                            text: errorMsg,
+                            html: errorMsg,
                             icon: 'error',
                             confirmButtonColor: '#ef4444',
                             iconColor: '#ef4444',
@@ -603,7 +603,7 @@
                             $('#assignModal').modal('hide');
                             Swal.fire({
                                 title: 'Assigned Successfully!',
-                                text: response.success,
+                                html: response.success,
                                 icon: 'success',
                                 confirmButtonColor: '#3b82f6',
                                 iconColor: '#3b82f6',
@@ -628,7 +628,7 @@
 
                         Swal.fire({
                             title: 'Assignment Failed',
-                            text: errorMsg,
+                            html: errorMsg,
                             icon: 'error',
                             confirmButtonColor: '#ef4444',
                             iconColor: '#ef4444',

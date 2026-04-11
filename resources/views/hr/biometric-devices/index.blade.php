@@ -343,6 +343,11 @@
             // Submit Form
             $('#deviceForm').submit(function(e) {
                 e.preventDefault();
+                const form = $(this);
+                const submitBtn = form.find('button[type="submit"]');
+                const originalHtml = submitBtn.html();
+
+                submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Processing...');
 
                 const deviceId = $('#device_id').val();
                 const method = $('#_method').val();
@@ -364,18 +369,26 @@
                     },
                     success: function(response) {
                         $('#deviceModal').modal('hide');
-                        Swal.fire('Success!', response.success, 'success').then(() => location
-                            .reload());
+                        Swal.fire({
+                            title: 'Success!',
+                            html: response.success,
+                            icon: 'success'
+                        }).then(() => location.reload());
                     },
                     error: function(xhr) {
+                        submitBtn.prop('disabled', false).html(originalHtml);
                         const errors = xhr.responseJSON?.errors || {};
                         let errorMsg = xhr.responseJSON?.message || 'Failed to save device';
 
                         if (Object.keys(errors).length > 0) {
-                            errorMsg += ':\n' + Object.values(errors).flat().join('\n');
+                            errorMsg += ':<br>' + Object.values(errors).flat().join('<br>');
                         }
 
-                        Swal.fire('Error!', errorMsg, 'error');
+                        Swal.fire({
+                            title: 'Error!',
+                            html: errorMsg,
+                            icon: 'error'
+                        });
                     }
                 });
             });
@@ -389,8 +402,11 @@
                         _token: '{{ csrf_token() }}'
                     })
                     .done(response => {
-                        Swal.fire(response.success ? 'Connected!' : 'Failed', response.message,
-                            response.success ? 'success' : 'error');
+                        Swal.fire({
+                            title: response.success ? 'Connected!' : 'Failed',
+                            html: response.message,
+                            icon: response.success ? 'success' : 'error'
+                        });
                     })
                     .fail(() => {
                         Swal.fire('Error!', 'Failed to test connection', 'error');
@@ -420,8 +436,11 @@
                                 _token: '{{ csrf_token() }}'
                             })
                             .done(response => {
-                                Swal.fire('Success!', response.message, 'success').then(() =>
-                                    location.reload());
+                                Swal.fire({
+                                    title: 'Success!',
+                                    html: response.message,
+                                    icon: 'success'
+                                }).then(() => location.reload());
                             })
                             .fail(xhr => {
                                 Swal.fire('Error!', xhr.responseJSON?.message ||
@@ -446,8 +465,11 @@
                         _token: '{{ csrf_token() }}'
                     })
                     .done(response => {
-                        Swal.fire('Success!', response.message, 'success').then(() => location
-                            .reload());
+                        Swal.fire({
+                            title: 'Success!',
+                            html: response.message,
+                            icon: 'success'
+                        }).then(() => location.reload());
                     })
                     .fail(xhr => {
                         Swal.fire('Error!', xhr.responseJSON?.message || 'Failed to pull attendance',
@@ -478,8 +500,11 @@
                                 _token: '{{ csrf_token() }}'
                             },
                             success: function(response) {
-                                Swal.fire('Deleted!', response.success, 'success').then(
-                                    () => location.reload());
+                                Swal.fire({
+                                    title: 'Deleted!',
+                                    html: response.success,
+                                    icon: 'success'
+                                }).then(() => location.reload());
                             },
                             error: function() {
                                 Swal.fire('Error!', 'Failed to delete device', 'error');
