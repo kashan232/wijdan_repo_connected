@@ -234,8 +234,8 @@
                         <p class="page-subtitle">{{ \Carbon\Carbon::parse($selectedDate)->format('l, F d, Y') }}</p>
                     </div>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-light border" data-bs-toggle="modal"
-                            data-bs-target="#attendanceGuideModal">
+                        <button type="button" class="btn btn-light border" data-toggle="modal"
+                            data-target="#attendanceGuideModal">
                             <i class="fa fa-question-circle text-primary me-1"></i> System Guide
                         </button>
                         @can('hr.attendance.create')
@@ -263,7 +263,7 @@
                             <div class="modal-header gradient text-white">
                                 <h5 class="modal-title font-weight-bold"><i class="fa fa-info-circle me-2"></i> HR
                                     Attendance Guide</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                <button type="button" class="btn-close btn-close-white" data-dismiss="modal"
                                     aria-label="Close"></button>
                             </div>
                             <div class="modal-body p-4">
@@ -823,7 +823,7 @@
                         console.log('Success Response:', response);
                         Swal.fire({
                             title: 'Saved!',
-                            text: response.success || 'Attendance updated.',
+                            html: response.success || 'Attendance updated.',
                             icon: 'success',
                             timer: 1500,
                             showConfirmButton: false
@@ -844,7 +844,11 @@
                                 errorMessage = xhr.responseJSON.message;
                             }
                         }
-                        Swal.fire('Error', errorMessage, 'error');
+                        Swal.fire({
+                            title: 'Error',
+                            html: errorMessage,
+                            icon: 'error'
+                        });
                         if (btn.length > 0) {
                             btn.prop('disabled', false).html(originalBtnContent);
                         }
@@ -873,7 +877,7 @@
                         console.log('Pull Attendance Success:', res);
                         Swal.fire({
                             title: 'Success!',
-                            text: res.message || 'Attendance pulled successfully',
+                            html: res.message || 'Attendance pulled successfully',
                             icon: 'success',
                             timer: 3000
                         }).then(() => location.reload());
@@ -902,7 +906,7 @@
 
                         Swal.fire({
                             title: 'Error',
-                            text: errorMessage,
+                            html: errorMessage,
                             icon: 'error',
                             confirmButtonText: 'OK'
                         });
@@ -916,7 +920,7 @@
             $('#markAbsentBtn').click(function() {
                 Swal.fire({
                     title: 'Mark Absent?',
-                    text: "Mark all employees without attendance as 'Absent'.",
+                    html: "Mark all employees without attendance as 'Absent'.",
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonText: 'Yes, Mark Absent'
@@ -933,8 +937,11 @@
                                     .reload());
                             })
                             .fail(function(xhr) {
-                                Swal.fire('Error', xhr.responseJSON?.error || 'Failed.',
-                                    'error');
+                                Swal.fire({
+                                    title: 'Error',
+                                    html: xhr.responseJSON?.error || 'Failed.',
+                                    icon: 'error'
+                                });
                                 btn.prop('disabled', false).html(
                                     '<i class="fa fa-user-times me-1"></i> Mark Absent');
                             });

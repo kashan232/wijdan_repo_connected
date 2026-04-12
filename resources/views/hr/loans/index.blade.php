@@ -158,7 +158,7 @@
                                         </div>
                                     </div>
                                     <div class="dropdown">
-                                        <button class="btn btn-light btn-sm border" type="button" data-bs-toggle="dropdown">
+                                        <button class="btn btn-light btn-sm border" type="button" data-toggle="dropdown">
                                             <i class="fa fa-ellipsis-v"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
@@ -292,7 +292,7 @@
                         <h5 class="modal-title fw-800 mb-0"><i class="fa fa-hand-holding-usd me-2"></i> New Loan Request</h5>
                         <p class="mb-0 opacity-75 small">Choose loan type and configure repayment terms</p>
                     </div>
-                    <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white opacity-75" data-dismiss="modal"></button>
                 </div>
 
                 <form action="{{ route('hr.loans.store') }}" method="POST" id="addLoanForm" data-ajax-validate="true">
@@ -413,7 +413,7 @@
                     </div>
 
                     <div class="modal-footer-modern">
-                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-cancel" data-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-save"><i class="fa fa-paper-plane me-1"></i> Submit Request</button>
                     </div>
                 </form>
@@ -429,7 +429,7 @@
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
                 <div class="modal-header border-0 p-4" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">
                     <h5 class="modal-title fw-800 mb-0"><i class="fa fa-plus-circle me-2"></i> Record Loan Payment</h5>
-                    <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white opacity-75" data-dismiss="modal"></button>
                 </div>
                 <form id="recordPaymentForm" data-ajax-validate="true">
                     @csrf
@@ -476,7 +476,7 @@
                         </div>
                     </div>
                     <div class="modal-footer-modern">
-                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-cancel" data-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-save" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fa fa-check me-1"></i> Record Payment</button>
                     </div>
                 </form>
@@ -492,7 +492,7 @@
             <div class="modal-content border-0">
                 <div class="modal-header bg-warning-subtle">
                     <h5 class="modal-title text-warning-emphasis"><i class="fa fa-clock me-2"></i> Schedule One-Off Deduction</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
                 <form action="{{ route('hr.loans.schedule') }}" method="POST" id="scheduleForm" data-ajax-validate="true">
                     @csrf
@@ -516,7 +516,7 @@
                         </div>
                     </div>
                     <div class="modal-footer-modern">
-                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-cancel" data-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-save bg-warning border-warning text-dark"><i class="fa fa-calendar-check me-1"></i> Schedule</button>
                     </div>
                 </form>
@@ -535,7 +535,7 @@
                         <h5 class="modal-title fw-800 mb-0" id="ld_emp_name">Loading...</h5>
                         <div id="ld_subtitle" class="opacity-75 small mt-1"></div>
                     </div>
-                    <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white opacity-75" data-dismiss="modal"></button>
                 </div>
 
                 {{-- Stats Bar --}}
@@ -564,9 +564,9 @@
 
                 <div class="modal-body p-0">
                     <ul class="nav nav-tabs nav-justified border-bottom px-4 pt-3 bg-light" id="ldTab" role="tablist">
-                        <li class="nav-item" role="presentation"><button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#ld_payments" type="button"><i class="fa fa-list me-1"></i> Payment History</button></li>
-                        <li class="nav-item" role="presentation"><button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#ld_schedule" type="button"><i class="fa fa-calendar me-1"></i> Installment Schedule</button></li>
-                        <li class="nav-item" role="presentation"><button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#ld_info" type="button"><i class="fa fa-info-circle me-1"></i> Loan Info</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link active fw-bold" data-toggle="tab" data-target="#ld_payments" type="button"><i class="fa fa-list me-1"></i> Payment History</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link fw-bold" data-toggle="tab" data-target="#ld_schedule" type="button"><i class="fa fa-calendar me-1"></i> Installment Schedule</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link fw-bold" data-toggle="tab" data-target="#ld_info" type="button"><i class="fa fa-info-circle me-1"></i> Loan Info</button></li>
                     </ul>
 
                     <div class="tab-content p-4 bg-light" id="ldTabContent">
