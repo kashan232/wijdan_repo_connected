@@ -287,7 +287,7 @@
                                         <div class="alert alert-success alert-dismissible fade show"
                                             role="alert">
                                             <strong>Success!</strong> {{ session('success') }}
-                                            <button type="button" class="btn-close" data-bs-dismiss="alert"
+                                            <button type="button" class="btn-close" data-dismiss="alert"
                                                 aria-label="Close"></button>
                                         </div>
                                         @endif
@@ -295,7 +295,7 @@
                                         <div class="alert alert-danger alert-dismissible fade show"
                                             role="alert">
                                             <strong>Error!</strong> {{ session('error') }}
-                                            <button type="button" class="btn-close" data-bs-dismiss="alert"
+                                            <button type="button" class="btn-close" data-dismiss="alert"
                                                 aria-label="Close"></button>
                                         </div>
                                         @endif
@@ -432,7 +432,7 @@
 
                                                         <div class="modal-header">
                                                             <h5 class="modal-title">Search Product</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                            <button type="button" class="btn-close" data-dismiss="modal"></button>
                                                         </div>
 
                                                         <div class="modal-body">

@@ -48,6 +48,9 @@
                     <a href="{{ route('customer.payments') }}" class="btn btn-outline-success btn-sm">
                         Payments
                     </a>
+                    <a href="{{ route('customer.charges') }}" class="btn btn-outline-warning btn-sm">
+                        Charges
+                    </a>
                     <a href="{{ route('customers.create') }}" class="btn btn-primary btn-sm">
                         + Add Customer
                     </a>

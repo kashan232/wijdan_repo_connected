@@ -407,14 +407,14 @@
             @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-dismiss="alert" aria-label="Close"></button>
             </div>
             @endif
 
             @if (session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-dismiss="alert" aria-label="Close"></button>
             </div>
             @endif
             <div class="card-body">
@@ -450,7 +450,7 @@
 
                             <div class="modal-header">
                                 <h5 class="modal-title">Search Product</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                <button type="button" class="btn-close" data-dismiss="modal"></button>
                             </div>
 
                             <div class="modal-body">

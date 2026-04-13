@@ -12,7 +12,7 @@
                     <h6>Manage Customer Receivables</h6>
                 </div>
                 <div class="page-btn d-flex justify-content-end col-lg-6">
-                    <button class="btn btn-outline-primary mb-2" data-bs-toggle="modal" data-bs-target="#paymentModal" onclick="clearPaymentForm()">Add Payment</button>
+                    <button class="btn btn-outline-primary mb-2" data-toggle="modal" data-target="#paymentModal" onclick="clearPaymentForm()">Add Payment</button>
                 </div>
             </div>
 

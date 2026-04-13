@@ -63,7 +63,7 @@
                 <div class="modal-content rounded-3 shadow">
                     <div class="modal-header bg-dark text-white">
                         <h5 class="modal-title" id="modalTitle">Add Narration</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        <button type="button" class="btn-close btn-close-white" data-dismiss="modal"></button>
                     </div>
 
                     <div class="modal-body">

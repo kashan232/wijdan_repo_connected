@@ -853,7 +853,13 @@ class ReportingController extends Controller
             ->where('payment_date', '<', $start)
             ->sum('amount');
 
-        // 4. Returns that happened ON/AFTER StartDate, but belong to Prior Sales.
+        // 4. Prior Charges (New)
+        $prevCharges = DB::table('customer_charges')
+            ->where('customer_id', $customerId)
+            ->where('date', '<', $start)
+            ->sum('amount');
+
+        // 5. Returns that happened ON/AFTER StartDate, but belong to Prior Sales.
         // These need to be added back because the Prior Sales Sum is already reduced by them,
         // but the credit event hasn't happened yet in this timeline.
         $addBackReturns = DB::table('sales_returns')
@@ -863,7 +869,7 @@ class ReportingController extends Controller
             ->where('sales.created_at', '<', $start)
             ->sum('sales_returns.total_net');
 
-        $opening = $initial + $prevSales - $prevPayments + $addBackReturns;
+        $opening = $initial + $prevSales + $prevCharges - $prevPayments + $addBackReturns;
 
         // ---------------- FETCH ALL SALE RETURNS FIRST ----------------
         $allSaleReturns = DB::table('sales_returns')
@@ -898,6 +904,23 @@ class ReportingController extends Controller
                     'debit' => $debitAmount,
                     'credit' => 0,
                     'original_sale_id' => $s->id
+                ];
+            });
+
+        // ---------------- CHARGES (Debit) ----------------
+        $charges = DB::table('customer_charges')
+            ->where('customer_id', $customerId)
+            ->whereBetween('date', [$start, $end])
+            ->get()
+            ->map(function ($c) {
+                return [
+                    'date' => $c->date . ' 23:59:59',
+                    'sort_type' => 4,
+                    'invoice' => $c->charge_no,
+                    'reference' => $c->transporter_name,
+                    'description' => $c->note ?? 'To Charge / Expense A/c',
+                    'debit' => (float) $c->amount,
+                    'credit' => 0,
                 ];
             });
 
@@ -938,6 +961,7 @@ class ReportingController extends Controller
         // ---------------- MERGE + SORT ----------------
         $transactions = collect()
             ->merge($sales)
+            ->merge($charges)
             ->merge($saleReturns)
             ->merge($payments)
             ->sort(function ($a, $b) {
@@ -945,8 +969,8 @@ class ReportingController extends Controller
                 $dateB = strtotime($b['date']);
                 if ($dateA != $dateB) return $dateA <=> $dateB;
 
-                // Sale → Sale Return → Payment
-                $order = [1 => 1, 3 => 2, 2 => 3];
+                // Sale → Sale Return → Payment → Charge
+                $order = [1 => 1, 3 => 2, 2 => 3, 4 => 4];
                 return $order[$a['sort_type']] <=> $order[$b['sort_type']];
             })
             ->values()
@@ -1002,6 +1026,12 @@ class ReportingController extends Controller
             ->where('gatepass_date', '<', $start)
             ->sum('net_amount');
 
+        // 2c. Prior Bilties (Debit: We owe more)
+        $prevBilties = DB::table('vendor_bilties')
+            ->where('vendor_id', $vendorId)
+            ->where('delivery_date', '<', $start)
+            ->sum('amount');
+
         // 3. Prior Returns (Credit: We owe less)
         $prevReturns = DB::table('purchase_returns')
             ->where('vendor_id', $vendorId)
@@ -1014,7 +1044,7 @@ class ReportingController extends Controller
             ->where('payment_date', '<', $start)
             ->sum('amount');
 
-        $opening = $initial + $prevPurchases + $prevInwards - $prevReturns - $prevPayments;
+        $opening = $initial + $prevPurchases + $prevInwards + $prevBilties - $prevReturns - $prevPayments;
 
         // 🔹 1. Purchases → Debit (we owe vendor)
         $purchases = DB::table('purchases')
@@ -1047,6 +1077,22 @@ class ReportingController extends Controller
                     'debit' => $i->net_amount,
                     'credit' => 0,
                     'sort_date' => $i->gatepass_date
+                ];
+            });
+
+        // 🔹 1c. Bilties → Debit (we owe vendor)
+        $bilties = DB::table('vendor_bilties')
+            ->where('vendor_id', $vendorId)
+            ->whereBetween('delivery_date', [$start, $end])
+            ->get()
+            ->map(function ($b) {
+                return [
+                    'date' => $b->delivery_date,
+                    'invoice' => $b->bilty_no,
+                    'description' => 'Bilty - ' . ($b->transporter_name ?? '') . ' (' . ($b->vehicle_no ?? '') . ')',
+                    'debit' => $b->amount,
+                    'credit' => 0,
+                    'sort_date' => $b->delivery_date
                 ];
             });
 
@@ -1086,6 +1132,7 @@ class ReportingController extends Controller
         // 🔹 Merge all
         $transactions = $purchases
             ->merge($inwards)
+            ->merge($bilties)
             ->merge($returns)
             ->merge($payments)
             ->sortBy('sort_date')
@@ -1093,19 +1140,15 @@ class ReportingController extends Controller
             ->all();
 
         // 🔹 Running Balance Calculation (Debit increases, Credit decreases)
-
         $balance = $opening;
 
         foreach ($transactions as $key => $t) {
-
             $debit  = (float) ($t['debit'] ?? 0);
             $credit = (float) ($t['credit'] ?? 0);
 
             $balance = $balance + $debit - $credit;
-
             $transactions[$key]['balance'] = round($balance, 2);
         }
-
 
         return response()->json([
             'vendor' => $vendor,

@@ -27,7 +27,7 @@
                     <a href="{{ url('vendor/bilties') }}" class="btn btn-outline-info btn-sm">
                         Bilty
                     </a>
-                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#vendorModal" onclick="clearVendor()">
+                    <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#vendorModal" onclick="clearVendor()">
                         + Add Vendor
                     </button>
                 </div>
@@ -106,7 +106,7 @@
         <div class="modal-content">
             <div class="modal-header bg-light">
                 <h5 class="modal-title fw-bold" id="vendorModalLabel">Add/Edit Vendor</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{{ url('vendor/store') }}" method="POST">
                 @csrf
@@ -130,7 +130,7 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                 </div>
             </form>

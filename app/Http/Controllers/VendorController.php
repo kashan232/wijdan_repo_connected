@@ -282,15 +282,23 @@ class VendorController extends Controller
             'vendor_id' => 'required|exists:vendors,id',
             'purchase_id' => 'nullable|exists:purchases,id',
             'bilty_no' => 'nullable|string',
+            'amount' => 'required|numeric|min:0',
             'vehicle_no' => 'nullable|string',
             'transporter_name' => 'nullable|string',
             'delivery_date' => 'nullable|date',
             'note' => 'nullable|string',
         ]);
 
-        VendorBilty::create($request->all());
+        $bilty = VendorBilty::create($request->all());
 
-        return back()->with('success', 'Vendor bilty saved successfully.');
+        // Update vendor ledger
+        $ledger = VendorLedger::where('vendor_id', $request->vendor_id)->first();
+        if ($ledger) {
+            $ledger->closing_balance += $request->amount;
+            $ledger->save();
+        }
+
+        return back()->with('success', 'Vendor bilty saved and ledger updated successfully.');
     }
 
     // Get vendor balance by vendor id

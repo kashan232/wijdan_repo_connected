@@ -13,8 +13,8 @@
     @endif
 
     <div class="mb-3">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAccountModal">➕ Add New Account</button>
-        <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addHeadModal">➕ Add Head</button>
+        <button class="btn btn-primary" data-toggle="modal" data-target="#addAccountModal">➕ Add New Account</button>
+        <button class="btn btn-outline-secondary" data-toggle="modal" data-target="#addHeadModal">➕ Add Head</button>
     </div>
 
     <div class="table-responsive">
@@ -48,8 +48,8 @@
                     </td>
                     <td>
                         <button class="btn btn-sm btn-primary btn-edit-account"
-                            data-bs-toggle="modal"
-                            data-bs-target="#addAccountModal"
+                            data-toggle="modal"
+                            data-target="#addAccountModal"
                             data-id="{{ $account->id }}"
                             data-head="{{ $account->head_id }}"
                             data-code="{{ $account->account_code }}"
@@ -80,7 +80,7 @@
             @csrf
             <div class="modal-header">
                 <h5 class="modal-title" id="accountModalTitle">Add New Account</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-dismiss="modal"></button>
             </div>
             <input type="hidden" name="account_id" id="account_id">
             <div class="modal-body">
@@ -129,7 +129,7 @@
             @csrf
             <div class="modal-header">
                 <h5 class="modal-title">Add Head</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">

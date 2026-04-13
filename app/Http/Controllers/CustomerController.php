@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Customer;
 use App\Models\CustomerLedger;
 use App\Models\CustomerPayment;
+use App\Models\CustomerCharge;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -359,5 +360,59 @@ class CustomerController extends Controller
         $customers = Customer::where('customer_type', $type)->get(['id', 'customer_name']);
 
         return response()->json(['customers' => $customers]);
+    }
+
+    // Customer Charges (Extra expenses added to customer ledger)
+    public function customer_charges()
+    {
+        $charges = CustomerCharge::with('customer')->orderByDesc('id')->get();
+        $customers = Customer::all();
+        return view('admin_panel.customers.customer_charges', compact('charges', 'customers'));
+    }
+
+    public function store_customer_charge(Request $request)
+    {
+        $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'amount' => 'required|numeric|min:0',
+            'charge_no' => 'nullable|string',
+            'date' => 'required|date',
+            'vehicle_no' => 'nullable|string',
+            'transporter_name' => 'nullable|string',
+            'note' => 'nullable|string',
+        ]);
+
+        $charge = CustomerCharge::create($request->all());
+
+        // Update ledger (Plus adjustment for customer charges/expenses)
+        $ledger = CustomerLedger::where('customer_id', $request->customer_id)->latest()->first();
+        if ($ledger) {
+            $ledger->update([
+                'previous_balance' => $ledger->closing_balance,
+                'closing_balance'  => $ledger->closing_balance + $request->amount,
+            ]);
+        }
+
+        return back()->with('success', 'Customer charge added and ledger updated successfully.');
+    }
+
+    public function destroy_customer_charge($id)
+    {
+        $charge = CustomerCharge::findOrFail($id);
+        $customerId = $charge->customer_id;
+        $amount     = $charge->amount;
+
+        // Reverse ledger update (Subtract from closing balance)
+        $ledger = CustomerLedger::where('customer_id', $customerId)->latest()->first();
+        if ($ledger) {
+            $ledger->update([
+                'previous_balance' => $ledger->closing_balance,
+                'closing_balance'  => $ledger->closing_balance - $amount,
+            ]);
+        }
+
+        $charge->delete();
+
+        return back()->with('success', 'Customer charge deleted and ledger updated successfully.');
     }
 }

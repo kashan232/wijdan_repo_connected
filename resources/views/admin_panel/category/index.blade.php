@@ -8,7 +8,7 @@
                  <div class="col-lg-12">
                      <div class="d-flex justify-content-between align-items-center mb-3">
                          <h3>Category</h3>
-                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal"
+                         <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal"
                              id="reset">Create</button>
                      </div>
                      <div class="border mt-1 shadow rounded " style="background-color: white;">
@@ -74,7 +74,7 @@
                      </div>
              </div>
              <div class="modal-footer">
-                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                  <input type="submit" class="btn btn-primary save-btn">
              </div>
              </form>

@@ -12,6 +12,7 @@ class VendorBilty extends Model
         'vendor_id',
         'purchase_id',
         'bilty_no',
+        'amount',
         'vehicle_no',
         'transporter_name',
         'delivery_date',

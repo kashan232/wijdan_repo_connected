@@ -127,6 +127,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/customer-payments/{id}', [CustomerController::class, 'destroy_payment'])->name('customer.payments.destroy');
     Route::get('customer-payments/receipt/{id}', [CustomerController::class, 'customer_payment_receipt'])->name('customer.payments.receipt');
 
+    Route::get('/customer/charges', [CustomerController::class, 'customer_charges'])->name('customer.charges');
+    Route::post('/customer/charges', [CustomerController::class, 'store_customer_charge'])->name('customer.charges.store');
+    Route::get('/customer/charges/delete/{id}', [CustomerController::class, 'destroy_customer_charge'])->name('customer.charges.destroy');
+
 
     // Vendor Routes
     Route::get('/vendors', [VendorController::class, 'index'])->name('vendors')->middleware('permission:Vendor');

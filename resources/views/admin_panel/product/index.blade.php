@@ -73,7 +73,7 @@
         @if (session()->has('success'))
         <div class="alert alert-success alert-dismissible fade show">
             ✅ {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-dismiss="alert"></button>
         </div>
         @endif
 
@@ -188,7 +188,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Add Product</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{{ route('store-product') }}" method="POST">
                 @csrf

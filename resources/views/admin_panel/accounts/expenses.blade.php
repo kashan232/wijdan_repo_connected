@@ -10,7 +10,7 @@
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center text-white">
                 <h6 class="mb-0 text-dark ">{{ ucwords($type) }}</h6>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#voucherModal">
+                <button class="btn btn-primary" data-toggle="modal" data-target="#voucherModal">
                     <i class="bi bi-plus-circle"></i> Add Voucher
                 </button>
             </div>
@@ -48,7 +48,7 @@
                                         data-type="{{ $voucher->type }}" data-person="{{ $voucher->person }}"
                                         data-sub_head="{{ $voucher->sub_head }}"
                                         data-narration="{{ $voucher->narration }}" data-amount="{{ $voucher->amount }}"
-                                        data-bs-toggle="modal" data-bs-target="#voucherModal">
+                                        data-toggle="modal" data-target="#voucherModal">
                                         Edit
                                     </button>
                                 </td>
@@ -70,7 +70,7 @@
 
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title" id="voucherModalLabel">Add Voucher</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <button type="button" class="btn-close" data-dismiss="modal"></button>
                     </div>
 
                     <div class="modal-body">
@@ -142,7 +142,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                         <button type="submit" class="btn btn-success">Save Voucher</button>
                     </div>
                 </form>
@@ -324,7 +324,7 @@
             });
 
             // Reset Form on Add New Click
-            $('[data-bs-target="#voucherModal"]').on('click', function() {
+            $('[data-target="#voucherModal"]').on('click', function() {
                 $('#voucherModalLabel').text('Add Voucher');
                 $('#voucher_id').val('');
                 $('#voucherModal form')[0].reset();

@@ -8,7 +8,7 @@
                 <div class="col-lg-12">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h3>Users</h3>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal"
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal"
                 id="reset-form">Create</button>
         </div>
         <div class="border mt-1 shadow rounded " style="background-color: white;">
@@ -143,7 +143,7 @@
                         </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                     <input type="submit" class="btn btn-primary save-btn">
                 </div>
                 </form>
@@ -174,7 +174,7 @@
                             </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                         <input type="submit" class="btn btn-primary save-btn">
                     </div>
                 </form>
@@ -188,7 +188,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Set Daily Opening Cash</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="{{ route('users.store_opening_balance') }}" method="POST">
                     @csrf
@@ -215,7 +215,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                         <button type="submit" class="btn btn-primary">Save Balance</button>
                     </div>
                 </form>

@@ -283,7 +283,7 @@
 
                         <div class="modal-header">
                             <h5 id="modalTitle"></h5>
-                            <button class="btn-close" data-bs-dismiss="modal"></button>
+                            <button class="btn-close" data-dismiss="modal"></button>
                         </div>
 
                         <div class="modal-body">

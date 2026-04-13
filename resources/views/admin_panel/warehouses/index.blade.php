@@ -11,7 +11,7 @@
                     <h6 class="text-muted">Manage Warehouses</h6>
                 </div>
                 <div class="col-lg-6 col-md-6 col-sm-12 d-flex justify-content-end gap-2">
-                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#warehouseModal" onclick="clearWarehouse()">
+                    <button class="btn btn-outline-primary" data-toggle="modal" data-target="#warehouseModal" onclick="clearWarehouse()">
                         Add Warehouse
                     </button>
                     <a href="{{ url()->previous() }}" class="btn btn-danger text-center">
@@ -33,14 +33,14 @@
                             <tr>
                                 <td>{{ $key+1 }}</td><td>{{ $w->user->name }}</td><td>{{ $w->warehouse_name }}</td><td>{{ $w->location }}</td><td>{{ $w->remarks }}</td>
                                 <td>
-                                    {{-- <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#warehouseModal" onclick="editWarehouse('{{ $w->id }}','{{ $w->warehouse_name }}','{{ $w->location }}','{{ $w->remarks }}')">Edit</button> --}}
+                                    {{-- <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#warehouseModal" onclick="editWarehouse('{{ $w->id }}','{{ $w->warehouse_name }}','{{ $w->location }}','{{ $w->remarks }}')">Edit</button> --}}
                                     <button class="btn btn-sm btn-primary edit-warehouse-btn"
                                         data-id="{{ $w->id }}"
                                         data-name="{{ $w->warehouse_name }}"
                                         data-location="{{ $w->location }}"
                                         data-remarks="{{ $w->remarks }}"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#warehouseModal">
+                                        data-toggle="modal"
+                                        data-target="#warehouseModal">
                                         Edit
                                     </button>
                                     <!-- <a href="{{ url('warehouse/delete/'.$w->id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">Delete</a> -->

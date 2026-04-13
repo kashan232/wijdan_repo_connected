@@ -99,23 +99,23 @@
                     <div class="d-flex justify-content-center flex-wrap gap-2 flex-grow-1">
                         {{-- <button class="btn btn-md btn--warning py-2" ></button> --}}
                         <!-- Category Button -->
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
-                            data-bs-target="#categoryModal">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal"
+                            data-target="#categoryModal">
                             <i class="la la-plus-circle"></i> Add Category
                         </button>
 
                         <!-- Subcategory Button -->
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
-                            data-bs-target="#subcategoryModal">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal"
+                            data-target="#subcategoryModal">
                             <i class="las la-plus"></i> Add Subcategory
                         </button>
 
                         {{-- <button type="button" class="btn btn-sm btn-outline-primary cuModalBtn"
-                                    data-modal_title="Add New Model" data-bs-toggle="modal" data-bs-target="#modelModal">
+                                    data-modal_title="Add New Model" data-toggle="modal" data-target="#modelModal">
                                     <i class="las la-plus"></i>Add Units </button> --}}
                         {{-- <button class="btn btn-md btn-outline--primary py-2 "></button> --}}
                         <button type="button" class="btn btn-sm btn-outline-primary cuModalBtn"
-                            data-modal_title="Add New Brand" data-bs-toggle="modal" data-bs-target="#cuModal">
+                            data-modal_title="Add New Brand" data-toggle="modal" data-target="#cuModal">
                             <i class="las la-plus"></i> Add Brand
                         </button>
 
@@ -322,7 +322,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><span class="type"></span> <span>Add Category</span></h5>
-                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <i class="las la-times"></i>
                     </button>
                 </div>
@@ -349,7 +349,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><span class="type"></span> <span>Add Category</span></h5>
-                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <i class="las la-times"></i>
                     </button>
                 </div>
@@ -384,7 +384,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><span class="type"></span> <span>Add Models</span></h5>
-                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <i class="las la-times"></i>
                     </button>
                 </div>
@@ -410,7 +410,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><span class="type"></span> <span>Add Brand</span></h5>
-                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <i class="las la-times"></i>
                     </button>
                 </div>

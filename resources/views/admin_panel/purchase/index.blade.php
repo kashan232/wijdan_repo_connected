@@ -66,7 +66,7 @@
                                 <div class="alert alert-success alert-dismissible fade show"
                                     role="alert">
                                     <strong>Success!</strong> {{ session('success') }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"
+                                    <button type="button" class="btn-close" data-dismiss="alert"
                                         aria-label="Close"></button>
                                 </div>
                                 @endif
@@ -243,7 +243,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                                                     <input type="submit" class="btn btn-primary save-btn" value="Save">
                                                 </div>
                                             </form>

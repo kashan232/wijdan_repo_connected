@@ -285,19 +285,8 @@
 `;
 
                 res.transactions.forEach((t) => {
-                    let debit = 0,
-                        credit = 0;
-
-                    if (t.type === 'purchase') {
-                        debit = parseFloat(t.amount) || 0;
-                    } else if (t.type === 'purchase_return') {
-                        credit = parseFloat(t.amount) || 0;
-                    } else if (t.type === 'vendor_payment') {
-                        credit = parseFloat(t.amount) || 0;
-                    } else {
-                        debit = parseFloat(t.debit) || 0;
-                        credit = parseFloat(t.credit) || 0;
-                    }
+                    let debit = parseFloat(t.debit) || 0;
+                    let credit = parseFloat(t.credit) || 0;
 
                     totalDebit += debit;
                     totalCredit += credit;
@@ -307,7 +296,7 @@
                     html += `
     <tr>
         <td>${formatDate(t.date.split(" ")[0])}</td>
-        <td>${t.invoice ?? '-'} - (${t.reference ?? '-'})</td>
+        <td>${t.invoice ?? '-'} ${t.reference ? '- (' + t.reference + ')' : ''}</td>
         <td class="text-left">${t.description}</td>
         <td>${debit > 0 ? 'Rs. ' + debit.toFixed(2) : '-'}</td>
         <td>${credit > 0 ? 'Rs. ' + credit.toFixed(2) : '-'}</td>
@@ -334,7 +323,7 @@
         });
     });
 
-    // CSV Export Function
+    // PDF Export Function
     $("#exportPdfBtn").on("click", function() {
 
         if ($("#ledgerBox").is(":hidden")) {
@@ -346,7 +335,7 @@
 
         const opt = {
             margin: [10, 10, 10, 10], // top, left, bottom, right
-            filename: 'Customer_Ledger.pdf',
+            filename: 'Vendor_Ledger.pdf',
             image: {
                 type: 'jpeg',
                 quality: 0.98
