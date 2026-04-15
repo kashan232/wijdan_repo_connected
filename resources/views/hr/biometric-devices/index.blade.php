@@ -215,7 +215,7 @@
                     </h5>
                     <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
-                <form id="deviceForm" data-ajax-validate="true">
+                <form id="deviceForm">
                     @csrf
                     <input type="hidden" id="device_id" name="device_id">
                     <input type="hidden" id="_method" name="_method" value="POST">
