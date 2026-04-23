@@ -28,16 +28,16 @@ class EmployeeController extends Controller
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'first_name' => 'required|string',
-            'last_name' => 'required|string',
-            'phone' => 'required|string|max:11',
+        $rules = [
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:20',
             'email' => 'required|email|max:255|unique:hr_employees,email,'.$request->edit_id,
             'department_id' => 'required|exists:hr_departments,id',
             'designation_id' => 'required|exists:hr_designations,id',
             'joining_date' => 'required|date',
             'weekly_off' => 'nullable|string',
-            'password' => 'nullable|min:6',
+            'password' => $request->filled('edit_id') ? 'nullable|min:6' : 'required|min:6',
             'punch_gap_minutes' => 'nullable|integer|min:1|max:120',
             'document_degree' => 'nullable|file|mimes:pdf,jpg,png,jpeg|max:2048',
             'document_certificate' => 'nullable|file|mimes:pdf,jpg,png,jpeg|max:2048',
@@ -46,19 +46,25 @@ class EmployeeController extends Controller
             'document_cv' => 'nullable|file|mimes:pdf,jpg,png,jpeg|max:2048',
             'casual_leaves_allocated' => 'nullable|integer|min:0',
             'sick_leaves_allocated' => 'nullable|integer|min:0',
-        ]);
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $data = $request->except(['document_degree', 'document_certificate', 'document_hsc_marksheet', 'document_ssc_marksheet', 'document_cv', 'password']);
         $data['is_docs_submitted'] = $request->has('is_docs_submitted') ? 1 : 0;
 
-        // Handle Custom Shift Logic
+        // Handle Shift Logic - convert empty strings to null
         if ($request->shift_id === 'custom') {
-            $data['shift_id'] = null; // No standard shift assigned
+            $data['shift_id'] = null;
         } else {
+            $data['shift_id'] = $request->filled('shift_id') ? $request->shift_id : null;
             // Standard shift assigned, clear custom times
             $data['custom_start_time'] = null;
             $data['custom_end_time'] = null;
@@ -112,26 +118,6 @@ class EmployeeController extends Controller
                 );
             }
         }
-
-
-        // Auto-sync to biometric device when creating new employee
-        // Auto-sync to biometric device when creating new employee
-        // DISABLED FOR PERFORMANCE: This causes the request to hang if the device is slow.
-        // Users should sync manually from the Device Manager page.
-        /*
-        if (! $request->filled('edit_id')) {
-            try {
-                $activeDevice = \App\Models\BiometricDevice::active()->first();
-                if ($activeDevice) {
-                    $syncService = app(\App\Services\Hr\BiometricSyncService::class);
-                    $syncService->syncEmployeeToDevice($employee, $activeDevice);
-                }
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::warning('Failed to auto-sync employee to biometric device: '.$e->getMessage());
-                // Don't fail the employee creation if sync fails
-            }
-        }
-        */
 
         // Clear relevant caches
         \Cache::forget('employee.face_encodings');

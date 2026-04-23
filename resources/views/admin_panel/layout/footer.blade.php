@@ -185,14 +185,27 @@
                     showAlert(msg, "Error!", "error");
                     return;
                 }
-                if (resp.message != 'The given data was invalid.') {
+                
+                // If standard Laravel validation error (message is present)
+                if (resp.message && resp.message != 'The given data was invalid.') {
                     showAlert(resp.message, "Error!", "error");
                     return;
                 }
-                multipleerrorshandle(resp.errors);
-            } else {
-                showAlert(msg + "!", "Error!", 'error');
-            }
+
+                // If errors are present, show them
+                if (resp.errors) {
+                    multipleerrorshandle(resp.errors);
+                    return;
+                }
+
+                // Fallback for other errors with message
+                if (resp.message) {
+                    showAlert(resp.message, "Error!", "error");
+                    return;
+                }
+            } 
+            
+            showAlert(msg || "Something went wrong!", "Error!", 'error');
             return;
         }
         //post

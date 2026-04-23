@@ -40,9 +40,8 @@ class InwardgatepassController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Sorting: Pending first, then Latest
-        $gatepasses = $query->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
-                            ->orderBy('id', 'desc')
+        // Sorting: Latest entries on top
+        $gatepasses = $query->orderBy('id', 'desc')
                             ->get();
 
         return view('admin_panel.inward.index', compact('gatepasses'));

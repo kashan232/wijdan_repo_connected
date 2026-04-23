@@ -1050,13 +1050,14 @@ class ReportingController extends Controller
         $purchases = DB::table('purchases')
             ->where('vendor_id', $vendorId)
             ->whereBetween('purchase_date', [$start, $end])
-            ->select('purchase_date', 'invoice_no', 'net_amount', 'note') // Explicitly select note
+            ->select('purchase_date', 'invoice_no', 'net_amount', 'note') 
             ->get()
             ->map(function ($p) {
                 return [
                     'date' => $p->purchase_date,
                     'invoice' => $p->invoice_no,
-                    'description' => $p->note ?: 'Purchase Invoice', // Use note if available
+                    'reference' => null, // Regular purchases don't have this field
+                    'description' => $p->note ?: 'Purchase Invoice',
                     'debit' => $p->net_amount,
                     'credit' => 0,
                     'sort_date' => $p->purchase_date
@@ -1073,6 +1074,7 @@ class ReportingController extends Controller
                 return [
                     'date' => $i->gatepass_date,
                     'invoice' => $i->invoice_no . ' (' . $i->gatepass_no . ')',
+                    'reference' => $i->company_invoice_no, // Pass Company Inv#
                     'description' => 'Inward Bill - ' . ($i->remarks ?? ''),
                     'debit' => $i->net_amount,
                     'credit' => 0,

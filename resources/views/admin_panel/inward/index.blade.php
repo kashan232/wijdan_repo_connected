@@ -35,38 +35,37 @@
                         </div>
 
                         <div class="card-body">
-                    <!-- Filter Row -->
-                    <div class="row mb-3">
-                        <form action="{{ route('InwardGatepass.home') }}" method="GET" class="d-flex gap-2 align-items-end flex-wrap">
-                            
-                            <div>
-                                <label class="fw-bold small">Start Date</label>
-                                <input type="date" name="start_date" class="form-control form-control-sm" value="{{ request('start_date') }}">
+                    <!-- Compact Filter Toolbar -->
+                    <div class="card-header bg-white border-0 pt-0 pb-3">
+                        <form action="{{ route('InwardGatepass.home') }}" method="GET" class="d-flex align-items-end flex-wrap gap-3">
+                            <div style="min-width: 170px;">
+                                <label class="small text-uppercase fw-bold text-muted mb-1 d-block">From Date</label>
+                                <input type="date" name="start_date" class="form-control" value="{{ request('start_date') }}" style="height: 38px; border: 1px solid #ced4da !important;">
                             </div>
 
-                            <div>
-                                <label class="fw-bold small">End Date</label>
-                                <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request('end_date') }}">
+                            <div style="min-width: 170px;">
+                                <label class="small text-uppercase fw-bold text-muted mb-1 d-block">To Date</label>
+                                <input type="date" name="end_date" class="form-control" value="{{ request('end_date') }}" style="height: 38px; border: 1px solid #ced4da !important;">
                             </div>
 
-                            <div>
-                                <label class="fw-bold small">Status</label>
-                                <select name="status" class="form-select form-select-sm" style="min-width: 150px;">
-                                    <option value="">All</option>
-                                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Unbilled (Pending)</option>
-                                    <option value="linked" {{ request('status') == 'linked' ? 'selected' : '' }}>Billed (Linked)</option>
+                            <div style="min-width: 200px;">
+                                <label class="small text-uppercase fw-bold text-muted mb-1 d-block">Filter Status</label>
+                                <select name="status" class="form-control" style="height: 38px; border: 1px solid #ced4da !important; background-color: #fff !important;">
+                                    <option value="">All Statuses</option>
+                                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending (Unbilled)</option>
+                                    <option value="linked" {{ request('status') == 'linked' ? 'selected' : '' }}>Linked (Billed)</option>
+                                    <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                                 </select>
                             </div>
 
-                            <div>
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-funnel"></i> Filter
+                            <div class="d-flex" style="gap: 10px;">
+                                <button type="submit" class="btn btn-primary px-4" style="height: 38px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fa fa-filter mr-2"></i> Filter
                                 </button>
-                                <a href="{{ route('InwardGatepass.home') }}" class="btn btn-secondary btn-sm">
-                                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                                <a href="{{ route('InwardGatepass.home') }}" class="btn btn-light" style="height: 38px; width: 45px; border: 1px solid #ced4da !important; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa !important;" title="Reset Filters">
+                                    <i class="fa fa-undo"></i>
                                 </a>
                             </div>
-
                         </form>
                     </div>
 
@@ -274,7 +273,7 @@
             "pageLength": 10,
             "lengthMenu": [5, 10, 25, 50, 100],
             "order": [
-                [0, 'desc']
+                [1, 'desc']
             ],
             "language": {
                 "search": "Search Gatepass:",

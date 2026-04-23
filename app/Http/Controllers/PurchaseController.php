@@ -337,6 +337,7 @@ class PurchaseController extends Controller
                 // 🔹 Update Gatepass record
                 $gatepass->update([
                     'receive_type'   => $validated['received_in'],
+                    'gatepass_date'  => $validated['purchase_date'], // ✅ Update with Bill Date
                     'warehouse_id'  => $validated['received_in'] === 'warehouse'
                         ? $validated['warehouse_id']
                         : null,
@@ -430,6 +431,7 @@ class PurchaseController extends Controller
             // 🔹 Update Gatepass record
             $gatepass->update([
                 'receive_type'   => $validated['received_in'],
+                'gatepass_date'  => $validated['purchase_date'], // ✅ Update with Bill Date
                 'warehouse_id'  => $validated['received_in'] === 'warehouse'
                     ? $validated['warehouse_id']
                     : null,

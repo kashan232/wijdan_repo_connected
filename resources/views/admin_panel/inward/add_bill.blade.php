@@ -59,7 +59,7 @@
                                     <!-- Purchase Date -->
                                     <div class="col-md-3">
                                         <label>Purchase Date</label>
-                                        <input type="date" name="purchase_date" class="form-control" value="{{ old('gatepass_date', $gatepass->gatepass_date) }}">
+                                        <input type="date" name="purchase_date" class="form-control" value="{{ old('purchase_date', $gatepass->gatepass_date) }}">
                                     </div>
 
                                     <div class="col-md-3">
