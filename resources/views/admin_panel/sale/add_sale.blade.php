@@ -1599,6 +1599,15 @@
         const $btn = $(document.activeElement);
         // If the focused element is a submit button, give it a visual state
         if ($btn.hasClass('submit-btn')) {
+            // Safely append hidden input because disabling the button prevents its value from submitting
+            if ($btn.attr('name') && $btn.attr('value')) {
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: $btn.attr('name'),
+                    value: $btn.attr('value')
+                }).appendTo(this);
+            }
+
             $btn.prop('disabled', true).text('Processing...');
             $('.submit-btn').not($btn).prop('disabled', true);
         }

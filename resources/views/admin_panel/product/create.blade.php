@@ -431,14 +431,25 @@
     </div>
     @endsection
 
-
     @section('scripts')
-
     <script>
         $(document).ready(function() {
             $('.brand-select').select2({
                 placeholder: "Select Brand",
-                allowClear: true
+                allowClear: true,
+                width: '100%'
+            });
+            $('#category-dropdown').select2({
+                placeholder: "Select Category",
+                width: '100%'
+            });
+            $('#subcategory-dropdown').select2({
+                placeholder: "Select Subcategory",
+                width: '100%'
+            });
+            $('select[name="unit"]').select2({
+                placeholder: "Select Unit",
+                width: '100%'
             });
         });
         $(document).ready(function() {

@@ -10,6 +10,18 @@ use Illuminate\Support\Facades\Log;
 
 class BiometricDeviceService
 {
+    /**
+     * Determine if the device is a ZKTeco based device
+     */
+    protected function isZkDevice(BiometricDevice $device): bool
+    {
+        // Many ZK devices use port 4370. BlackCopper BC-K40 is ZK base.
+        return $device->port == 4370 ||
+               stripos($device->model ?? '', 'BC') !== false ||
+               stripos($device->model ?? '', 'K40') !== false ||
+               stripos($device->model ?? '', 'ZK') !== false;
+    }
+
     protected function getClient(BiometricDevice $device)
     {
         // Try to decrypt or use as is
@@ -32,19 +44,19 @@ class BiometricDeviceService
 
     /**
      * Connect (Test Connection)
+     * Throws exception on failure for detailed error reporting
      */
     public function connect(BiometricDevice $device): bool
     {
-        try {
-            $client = $this->getClient($device);
-            $response = $client->get('ISAPI/System/deviceInfo');
-
-            return $response->getStatusCode() === 200;
-        } catch (Exception $e) {
-            Log::error("Hikvision Connect Failed for {$device->ip_address}: ".$e->getMessage());
-
-            return false;
+        if ($this->isZkDevice($device)) {
+            $zk = new ZKTecoService($device->ip_address, $device->port);
+            return $zk->connect();
         }
+
+        $client = $this->getClient($device);
+        $response = $client->get('ISAPI/System/deviceInfo');
+
+        return $response->getStatusCode() === 200;
     }
 
     /**
@@ -53,13 +65,47 @@ class BiometricDeviceService
     public function testConnection(BiometricDevice $device): array
     {
         try {
-            if ($this->connect($device)) {
-                return ['success' => true, 'message' => 'Connection Successful'];
+            if ($this->isZkDevice($device)) {
+                $zk = new ZKTecoService($device->ip_address, $device->port);
+                if ($zk->connect()) {
+                    return [
+                        'success' => true,
+                        'message' => "✅ <b>ZKTeco Connected!</b><br>Device (BlackCopper/ZK) at <b>{$device->ip_address}:{$device->port}</b> responded successfully via Binary Protocol."
+                    ];
+                }
+                return [
+                    'success' => false,
+                    'message' => "❌ <b>ZKTeco Connection Failed!</b><br>Could not establish binary handshake on port {$device->port}. <br><br><b>Recommendations:</b><br>1. Check if IP/Port is correct<br>2. Ensure device is online<br>3. Verify Network connectivity"
+                ];
             }
 
-            return ['success' => false, 'message' => 'Connection Failed (Check Credentials/Network)'];
+            if ($this->connect($device)) {
+                return ['success' => true, 'message' => '✅ Connection Successful! Device responded properly.'];
+            }
+
+            return ['success' => false, 'message' => '❌ Connection Failed: Device returned non-200 status.'];
+        } catch (\GuzzleHttp\Exception\ConnectException $e) {
+            return [
+                'success' => false, 
+                'message' => '🔌 <b>Network Error:</b> Could not reach the device at ' . $device->ip_address . ':' . $device->port . '. <br><br><b>Possible causes:</b><br>- Device is offline<br>- IP/Port is wrong<br>- Firewall blocking the connection'
+            ];
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            $statusCode = $e->getResponse() ? $e->getResponse()->getStatusCode() : 'Unknown';
+            if ($statusCode == 401) {
+                return [
+                    'success' => false,
+                    'message' => '🔑 <b>Authentication Failed:</b> The username or password was rejected. Please check your device credentials.'
+                ];
+            }
+            return [
+                'success' => false,
+                'message' => '🚫 <b>Access Denied (Status ' . $statusCode . '):</b> The device refused the request. ' . $e->getMessage()
+            ];
         } catch (Exception $e) {
-            return ['success' => false, 'message' => 'Error: '.$e->getMessage()];
+            return [
+                'success' => false, 
+                'message' => '⚠️ <b>Unexpected Error:</b> ' . $e->getMessage()
+            ];
         }
     }
 
@@ -69,6 +115,17 @@ class BiometricDeviceService
     public function getAttendanceLogs(BiometricDevice $device): array
     {
         try {
+            if ($this->isZkDevice($device)) {
+                $zk = new ZKTecoService($device->ip_address, $device->port);
+                if ($zk->connect()) {
+                    $logs = $zk->getAttendance();
+                    $zk->disconnect();
+                    return $logs;
+                }
+                Log::error("ZKTeco Log Pull Failed for {$device->ip_address}: Could not connect");
+                return [];
+            }
+
             // Try JSON format first (since it worked for user push)
             $logs = $this->getAttendanceLogsJson($device);
 
@@ -80,7 +137,7 @@ class BiometricDeviceService
             return $this->getAttendanceLogsXml($device);
 
         } catch (Exception $e) {
-            Log::error('Hikvision Log Pull Failed: '.$e->getMessage());
+            Log::error('Biometric Log Pull Failed: '.$e->getMessage());
 
             return [];
         }

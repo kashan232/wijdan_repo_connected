@@ -43,29 +43,17 @@
 
 
         </div>
-        <div class="d-flex justify-content-between align-items-end gap-1">
-            @if (auth()->user()->can(' Discount.index') || auth()->user()->email === 'admin@admin.com')
-            <a href="{{ route('discount.index') }}" class="btn btn-success btn-sm">
-                View Discount
-            </a>
-            @endif
+         <div class="d-flex align-items-center">
+             @if (auth()->user()->can(' Discount.index') || auth()->user()->email === 'admin@admin.com')
+             <a href="{{ route('discount.index') }}" class="btn btn-success btn-sm">View Discount</a>
+             @endif
+             <a href="create_prodcut" class="btn btn-primary btn-sm">Add Product</a>
+             <button id="createDiscountBtn" class="btn btn-primary btn-sm">Create Discount</button>
+             <a id="exportAllBtn" class="btn btn-outline-secondary btn-sm" href="javascript:void(0)">⬇ Export All</a>
+             <button id="exportSelectedBtn" class="btn btn-outline-primary btn-sm" type="button">⬇ Export Selected</button>
+             <a href="{{ url()->previous() }}" class="btn btn-danger btn-sm px-3">Back</a>
+         </div>
 
-
-            <a href="create_prodcut" class="btn btn-primary btn-sm  text-center">
-                ➡ Add Product
-            </a>
-
-            <button id="createDiscountBtn" class="btn btn-primary btn-sm  text-center">
-                ➡ Create Discount
-            </button>
-            <a href="{{ url()->previous() }}" class="btn btn-danger btn-sm  text-center">
-                Back
-            </a>
-
-            <a id="exportAllBtn" class="btn btn-outline-secondary btn-sm" href="javascript:void(0)">⬇ Export All</a>
-            <button id="exportSelectedBtn" class="btn btn-outline-primary btn-sm" type="button">⬇ Export Selected</button>
-
-        </div>
 
     </div>
 

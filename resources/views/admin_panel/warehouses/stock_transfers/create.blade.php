@@ -932,8 +932,9 @@
 
         // 🔥🔥 YEH LINE ADD / CONFIRM KARO
         setTimeout(() => {
-            row.find('.quantity').focus().select();
-            
+            row.find('.quantity')
+            .focus()
+            .select();
             // Auto scroll to center the row (robust)
             $('html, body').animate({
                 scrollTop: row.offset().top - ($(window).height() / 2) + (row.outerHeight() / 2)

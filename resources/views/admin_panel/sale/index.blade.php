@@ -164,7 +164,13 @@
                 { data: 8, orderable: false, searchable: false }, // Price
                 { data: 9, orderable: false, searchable: false }, // Discount
                 { data: 10, orderable: false, searchable: false }, // Total Row
-                { data: 11 }, // Bill Amount
+                { 
+                    data: 11, 
+                    className: "align-middle",
+                    render: function(data, type, row) {
+                        return '<span style="font-weight: 900; font-size: 26px; color: #000;">' + data + '</span>';
+                    }
+                }, // Bill Amount
                 { data: 12 }, // Date
                 { data: 13 }, // Status
                 { data: 14, orderable: false, searchable: false } // Action

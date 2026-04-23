@@ -6,15 +6,16 @@
     }
 </style>
 <div class="card shadow-sm border-0">
-    <div class="d-flex gap-2">
-        <a href="{{ url()->previous() }}" class="btn btn-danger btn-sm rounded-pill px-3">← Back</a>
-        <h5 class="mb-0 text-center flex-grow-1">🔄 Stock Transfer List</h5>
-        <a href="{{ route('stock_transfers.create') }}" class="btn btn-primary btn-sm">+ New Transfer</a>
+     <div class="card-header">
+         <h5 class="mb-0 fw-bold">🔄 Stock Transfer List</h5>
+         <div class="d-flex align-items-center">
+             <a href="{{ route('stock_transfers.create') }}" class="btn btn-primary btn-sm">+ New Transfer</a>
+             <a id="exportTransfersAllBtn" class="dropdown-item btn btn-outline-secondary btn-sm" href="javascript:void(0)" style="width: auto; margin-left: 10px;">⬇ Export All</a>
+             <button id="exportTransfersSelectedBtn" class="btn btn-outline-primary btn-sm" type="button" style="margin-left: 10px;">⬇ Export Selected</button>
+             <a href="{{ url()->previous() }}" class="btn btn-danger btn-sm rounded-pill px-3" style="margin-left: 10px;">← Back</a>
+         </div>
+     </div>
 
-        <!-- EXPORT buttons -->
-        <a id="exportTransfersAllBtn" class="btn btn-outline-secondary btn-sm" href="javascript:void(0)">⬇ Export All</a>
-        <button id="exportTransfersSelectedBtn" class="btn btn-outline-primary btn-sm" type="button">⬇ Export Selected</button>
-    </div>
 
     @if(session('error'))
     <div class="alert alert-danger">{{ session('error') }}</div>
