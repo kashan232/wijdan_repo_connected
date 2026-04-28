@@ -367,7 +367,7 @@ class InwardgatepassController extends Controller
                 $itemsToDelete = InwardGatepassItem::whereIn('id', $idsToDelete)->get();
                 foreach ($itemsToDelete as $delItem) {
                     // Reverse stock (subtract existing qty)
-                    $this->adjustStock($gatepass, $delItem->product_id, -($delItem->qty));
+                    $this->adjustStock($gatepass, $delItem->product_id, -($delItem->qty), $delItem->receive_type ?? $gatepass->receive_type);
                     $delItem->delete();
                 }
             }
@@ -375,6 +375,7 @@ class InwardgatepassController extends Controller
             foreach ($request->product_id as $i => $pid) {
 
                 $unit = $request->unit[$i] ?? null;
+                $itemReceiveType = $request->item_receive_type[$i] ?? $gatepass->receive_type;
 
                 if ($unit === 'Piece') {
                     $qty = (int) ($request->qty[$i] ?? 0);   // integer only
@@ -396,16 +397,26 @@ class InwardgatepassController extends Controller
                     if (!$item) continue;
 
                     $oldQty = $item->qty;
-                    $diff   = $qty - $oldQty;
+                    $oldReceiveType = $item->receive_type ?? $gatepass->receive_type;
+                    
+                    if ($oldReceiveType !== $itemReceiveType) {
+                        // Location changed! Reverse old location completely, add new location completely
+                        $this->adjustStock($gatepass, $pid, -$oldQty, $oldReceiveType);
+                        $this->adjustStock($gatepass, $pid, $qty, $itemReceiveType);
+                    } else {
+                        // Same location, just adjust difference
+                        $diff = $qty - $oldQty;
+                        if ($diff != 0) {
+                            $this->adjustStock($gatepass, $pid, $diff, $itemReceiveType);
+                        }
+                    }
 
                     $item->update([
-                        'qty'  => $qty,
-                        'note' => $note,
+                        'qty'          => $qty,
+                        'note'         => $note,
+                        'receive_type' => $itemReceiveType,
                     ]);
 
-                    if ($diff != 0) {
-                        $this->adjustStock($gatepass, $pid, $diff);
-                    }
                 } else {
 
                     InwardGatepassItem::create([
@@ -413,9 +424,10 @@ class InwardgatepassController extends Controller
                         'product_id'         => $pid,
                         'qty'                => $qty,
                         'note'               => $note,
+                        'receive_type'       => $itemReceiveType,
                     ]);
 
-                    $this->adjustStock($gatepass, $pid, $qty);
+                    $this->adjustStock($gatepass, $pid, $qty, $itemReceiveType);
                 }
             }
 
@@ -427,10 +439,12 @@ class InwardgatepassController extends Controller
         return redirect()->route('InwardGatepass.home')->with('success', 'Items updated successfully');
     }
 
-    private function adjustStock($gatepass, $productId, $qty)
+    private function adjustStock($gatepass, $productId, $qty, $receiveType = null)
     {
+        $type = $receiveType ?: $gatepass->receive_type;
+
         // 🏪 SHOP STOCK
-        if ($gatepass->receive_type === 'shop') {
+        if ($type === 'shop') {
 
             $stock = \App\Models\Stock::firstOrCreate(
                 [
@@ -449,11 +463,17 @@ class InwardgatepassController extends Controller
         }
 
         // 🏬 WAREHOUSE STOCK
-        if ($gatepass->receive_type === 'warehouse') {
+        if ($type === 'warehouse') {
+
+            $wid = $gatepass->warehouse_id;
+            if (!$wid) {
+                $defaultWarehouse = \App\Models\Warehouse::first();
+                $wid = $defaultWarehouse ? $defaultWarehouse->id : 1;
+            }
 
             $ws = \App\Models\WarehouseStock::firstOrCreate(
                 [
-                    'warehouse_id' => $gatepass->warehouse_id,
+                    'warehouse_id' => $wid,
                     'product_id'   => $productId,
                 ],
                 [

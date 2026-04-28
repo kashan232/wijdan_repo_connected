@@ -63,7 +63,17 @@
                                 </tr>
                             </thead>
                             <tbody id="reportBody"></tbody>
-
+                            <tfoot>
+                                <tr class="fw-bold bg-light">
+                                    <td colspan="12" class="text-end">Grand Total:</td>
+                                    <td id="grandSubtotal">0.00</td>
+                                    <td id="grandDiscount">0.00</td>
+                                    <td id="grandExtraCost">0.00</td>
+                                    <td id="grandNet">0.00</td>
+                                    <td id="grandPaid">0.00</td>
+                                    <td id="grandDue">0.00</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -140,10 +150,9 @@
 
         function renderRows(rows) {
             if ($.fn.DataTable.isDataTable('#purchaseTable')) {
-                purchaseTable.clear().draw();
+                purchaseTable.clear();
             }
 
-            let tableContent = '';
             let grandSubtotal = 0;
             let grandDiscount = 0;
             let grandExtraCost = 0;
@@ -160,38 +169,39 @@
                 return `${day}-${month}-${year}`;
             }
 
+            let dataTableRows = [];
+
             rows.forEach(function(r, idx) {
-                tableContent += `<tr>
-            <td>${idx + 1}</td>
-            <td>
-    <span class="badge ${
-        r.source_type === 'inward' ? 'bg-danger' :
-        r.source_type === 'purchase' ? 'bg-success' : 'bg-secondary'
-    }">
-        ${r.source_type}
-    </span>
-</td>
+                
+                let sourceBadge = `<span class="badge ${r.source_type === 'inward' ? 'bg-danger' : (r.source_type === 'purchase' ? 'bg-success' : 'bg-secondary')}">${r.source_type}</span>`;
+                
+                let subtotalCell = r.is_duplicate ? '<span class="text-muted">-</span>' : parseFloat(r.subtotal).toFixed(2);
+                let discountCell = r.is_duplicate ? '<span class="text-muted">-</span>' : parseFloat(r.discount).toFixed(2);
+                let extraCostCell = r.is_duplicate ? '<span class="text-muted">-</span>' : parseFloat(r.extra_cost).toFixed(2);
+                let netAmountCell = r.is_duplicate ? '<span class="text-muted">-</span>' : '<span class="fw-bold">' + parseFloat(r.net_amount).toFixed(2) + '</span>';
+                let paidAmountCell = r.is_duplicate ? '<span class="text-muted">-</span>' : parseFloat(r.paid_amount).toFixed(2);
+                let dueAmountCell = r.is_duplicate ? '<span class="text-muted">-</span>' : parseFloat(r.due_amount).toFixed(2);
 
-            <td>${formatDate(r.purchase_date)}</td>
-
-            <td>${r.invoice_no}</td>
-            <td>${r.vendor_name}</td>
-            <td>${r.item_code}</td>
-            <td>${r.item_name}</td>
-            <td>${r.qty}</td> {{-- Remove parse float to avoid issues with non-numeric, though it should be numeric --}}
-            <td>${r.unit}</td>
-            <td>${parseFloat(r.price).toFixed(2)}</td>
-            <td>${parseFloat(r.item_discount).toFixed(2)}</td>
-            <td>${parseFloat(r.line_total).toFixed(2)}</td>
-            
-            <!-- Logic to hide invoice totals for duplicate rows -->
-            <td class="${r.is_duplicate ? 'text-muted text-center' : ''}">${r.is_duplicate ? '-' : parseFloat(r.subtotal).toFixed(2)}</td>
-            <td class="${r.is_duplicate ? 'text-muted text-center' : ''}">${r.is_duplicate ? '-' : parseFloat(r.discount).toFixed(2)}</td>
-            <td class="${r.is_duplicate ? 'text-muted text-center' : ''}">${r.is_duplicate ? '-' : parseFloat(r.extra_cost).toFixed(2)}</td>
-            <td class="${r.is_duplicate ? 'text-muted text-center fw-bold' : ''}">${r.is_duplicate ? '-' : parseFloat(r.net_amount).toFixed(2)}</td>
-            <td class="${r.is_duplicate ? 'text-muted text-center' : ''}">${r.is_duplicate ? '-' : parseFloat(r.paid_amount).toFixed(2)}</td>
-            <td class="${r.is_duplicate ? 'text-muted text-center' : ''}">${r.is_duplicate ? '-' : parseFloat(r.due_amount).toFixed(2)}</td>
-        </tr>`;
+                dataTableRows.push({
+                    index: idx + 1,
+                    source_type: sourceBadge,
+                    purchase_date: formatDate(r.purchase_date),
+                    invoice_no: r.invoice_no,
+                    vendor_name: r.vendor_name,
+                    item_code: r.item_code,
+                    item_name: r.item_name,
+                    qty: r.qty,
+                    unit: r.unit,
+                    price: parseFloat(r.price).toFixed(2),
+                    item_discount: parseFloat(r.item_discount).toFixed(2),
+                    line_total: parseFloat(r.line_total).toFixed(2),
+                    subtotal: subtotalCell,
+                    discount: discountCell,
+                    extra_cost: extraCostCell,
+                    net_amount: netAmountCell,
+                    paid_amount: paidAmountCell,
+                    due_amount: dueAmountCell
+                });
 
                 // Grand totals
                 grandSubtotal += parseFloat(r.subtotal);
@@ -202,18 +212,14 @@
                 grandDue += parseFloat(r.due_amount);
             });
 
-            // Grand total row
-            tableContent += `<tr class="fw-bold">
-        <td colspan="12" class="text-end">Grand Total:</td>
-        <td>${grandSubtotal.toFixed(2)}</td>
-        <td>${grandDiscount.toFixed(2)}</td>
-        <td>${grandExtraCost.toFixed(2)}</td>
-        <td>${grandNet.toFixed(2)}</td>
-        <td>${grandPaid.toFixed(2)}</td>
-        <td>${grandDue.toFixed(2)}</td>
-    </tr>`;
+            purchaseTable.rows.add(dataTableRows).draw();
 
-            $('#reportBody').html(tableContent);
+            $('#grandSubtotal').text(grandSubtotal.toFixed(2));
+            $('#grandDiscount').text(grandDiscount.toFixed(2));
+            $('#grandExtraCost').text(grandExtraCost.toFixed(2));
+            $('#grandNet').text(grandNet.toFixed(2));
+            $('#grandPaid').text(grandPaid.toFixed(2));
+            $('#grandDue').text(grandDue.toFixed(2));
         }
 
         $('#btnSearch').on('click', function() {
@@ -245,47 +251,36 @@
         }
 
         $('#btnExportCsv').on('click', function() {
-            var start_date = $('#start_date').val();
-            var end_date = $('#end_date').val();
-            $('#loader').show();
+            var rowsData = purchaseTable.rows({ search: 'applied' }).data().toArray();
+            
+            if (rowsData.length === 0) {
+                alert('No data to export');
+                return;
+            }
 
-            $.ajax({
-                url: "{{ route('report.purchase.fetch') }}",
-                type: "POST",
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    start_date: start_date,
-                    end_date: end_date
-                },
-                success: function(response) {
-                    $('#loader').hide();
-                    if (!response.data.length) {
-                        alert('No data to export');
-                        return;
-                    }
+            // Simple function to strip HTML tags from a string
+            function stripHtml(html) {
+                if (typeof html !== 'string') return html;
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                return doc.body.textContent || "";
+            }
 
-                    var csv = 'Source,Purchase Date,Invoice No,Vendor,Item Code,Item Name,Qty,Unit,Price,Item Discount,Line Total,Subtotal,Discount,Extra Cost,Net Amount,Paid Amount,Due Amount\n';
+            var csv = 'Source,Purchase Date,Invoice No,Vendor,Item Code,Item Name,Qty,Unit,Price,Item Discount,Line Total,Subtotal,Discount,Extra Cost,Net Amount,Paid Amount,Due Amount\n';
 
-                    response.data.forEach(function(r) {
-                        csv += `"${r.source_type}","${r.purchase_date}","${r.invoice_no}","${r.vendor_name}","${r.item_code}","${r.item_name}",${r.qty},${r.unit},${r.price},${r.item_discount},${r.line_total},${r.subtotal},${r.discount},${r.extra_cost},${r.net_amount},${r.paid_amount},${r.due_amount}\n`;
-                    });
-
-                    var blob = new Blob([csv], {
-                        type: 'text/csv;charset=utf-8;'
-                    });
-                    var url = URL.createObjectURL(blob);
-                    var a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'purchase_report.csv';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                },
-                error: function() {
-                    $('#loader').hide();
-                    alert('Export failed');
-                }
+            rowsData.forEach(function(r) {
+                csv += `"${stripHtml(r.source_type)}","${r.purchase_date}","${r.invoice_no}","${r.vendor_name}","${r.item_code}","${r.item_name}",${r.qty},"${r.unit}",${r.price},${r.item_discount},${r.line_total},"${stripHtml(r.subtotal)}","${stripHtml(r.discount)}","${stripHtml(r.extra_cost)}","${stripHtml(r.net_amount)}","${stripHtml(r.paid_amount)}","${stripHtml(r.due_amount)}"\n`;
             });
+
+            var blob = new Blob([csv], {
+                type: 'text/csv;charset=utf-8;'
+            });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'purchase_report.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         });
     });
 </script>

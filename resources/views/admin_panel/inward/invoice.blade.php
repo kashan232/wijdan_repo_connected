@@ -222,6 +222,7 @@
                     <tr>
                         <th>#</th>
                         <th>Item Name</th>
+                        <th>Location</th>
                         <th>Qty</th>
                         <th>Price</th>
                         <th>Discount</th>
@@ -252,6 +253,7 @@
                     <tr>
                         <td>{{ $index + 1 }}</td>
                         <td>{{ $item->product->item_name ?? 'N/A' }}</td>
+                        <td>{{ ucfirst($item->receive_type ?? $gatepass->receive_type) }}</td>
                         <td>{{ $qty }}</td>
                         <td>{{ number_format($price, 2) }}</td>
                         <td>

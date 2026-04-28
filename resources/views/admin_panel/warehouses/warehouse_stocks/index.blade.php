@@ -69,23 +69,30 @@
                 </select>
             </div>
 
-            <div class="col-md-3">
+            <div class="col-12 col-md-3">
+                <label class="form-label fw-bold">Search Product:</label>
+                <input type="text" name="search" id="warehouseStockSearch" class="form-control form-control-sm" placeholder="Name or Code..." value="{{ request('search') }}">
+            </div>
+
+            <div class="col-md-2">
                 <label class="form-label fw-bold">Start Date:</label>
                 <input type="date" name="start_date" class="form-control form-control-sm"
                     value="{{ request('start_date') }}">
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label fw-bold">End Date:</label>
                 <input type="date" name="end_date" class="form-control form-control-sm"
                     value="{{ request('end_date') }}">
             </div>
 
-            <div class="col-12 col-md-2">
+            <div class="col-6 col-md-1">
+                <label class="form-label d-none d-md-block">&nbsp;</label>
                 <button type="submit" class="btn btn-success btn-sm w-100">Filter</button>
             </div>
 
-            <div class="col-12 col-md-2">
+            <div class="col-6 col-md-1">
+                <label class="form-label d-none d-md-block">&nbsp;</label>
                 <a href="{{ route('warehouse_stocks.index') }}" class="btn btn-secondary btn-sm w-100">Reset</a>
             </div>
         </form>
@@ -117,7 +124,10 @@
                         <td>{{ ($stocks->currentPage() - 1) * $stocks->perPage() + $loop->iteration }}</td>
                         <td>{{ \Carbon\Carbon::parse($stock->created_at)->format('d M Y') }}</td>
                         <td>{{ $stock->warehouse_name ?? '— Shop —' }}</td>
-                        <td>{{ $stock->item_name }}</td>
+                        <td>
+                            <strong>{{ $stock->item_name }}</strong><br>
+                            <small class="text-muted">{{ $stock->item_code }}</small>
+                        </td>
                         <td>{{ $stock->unit_id }}</td>
                         <td>{{ $stock->brand_name ?? 'N/A' }}</td>
                         <td>{{ number_format($stock->price, 2) }}</td>
@@ -139,7 +149,7 @@
             </table>
         </div>
 
-        <div class="mt-3">
+        <div class="mt-3" id="paginationLinks">
             {{ $stocks->links('pagination::bootstrap-5') }}
         </div>
     </div>
@@ -155,12 +165,66 @@
     $(document).ready(function() {
         $('#stockTable').DataTable({
             paging: false, // Disabling DT paging because we use Laravel Pagination
-            searching: true,
+            searching: false, // Disabling DT searching because we use server-side search
             ordering: true,
             info: false,
             responsive: true,
             scrollX: false
         });
+
+        // 🔍 AJAX SEARCH (Similar to Product List)
+        let searchTimer = null;
+
+        function triggerAjaxFetch() {
+            let query = $('#warehouseStockSearch').val();
+            let type = $('select[name="stock_type"]').val();
+            let start = $('input[name="start_date"]').val();
+            let end = $('input[name="end_date"]').val();
+            fetchStocks(query, type, start, end);
+        }
+
+        $('#warehouseStockSearch').on('keyup', function() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(triggerAjaxFetch, 400); // debounce
+        });
+
+        $('select[name="stock_type"], input[name="start_date"], input[name="end_date"]').on('change', function() {
+            triggerAjaxFetch();
+        });
+
+        // Prevent form submission to keep it AJAX
+        $('form').on('submit', function(e) {
+            e.preventDefault();
+            triggerAjaxFetch();
+        });
+
+        // 📄 PAGINATION
+        $(document).on('click', '#paginationLinks a', function(e) {
+            e.preventDefault();
+            let url = $(this).attr('href');
+            fetchStocks($('#warehouseStockSearch').val(), $('select[name="stock_type"]').val(), $('input[name="start_date"]').val(), $('input[name="end_date"]').val(), url);
+        });
+
+        function fetchStocks(search = '', type = 'all', start = '', end = '', url = null) {
+            if (!url) {
+                url = "{{ route('warehouse_stocks.index') }}";
+            }
+
+            $.ajax({
+                url: url,
+                data: {
+                    search: search,
+                    stock_type: type,
+                    start_date: start,
+                    end_date: end
+                },
+                success: function(res) {
+                    // Replace table body and pagination
+                    $('#stockTable tbody').html($(res).find('#stockTable tbody').html());
+                    $('#paginationLinks').html($(res).find('#paginationLinks').html());
+                }
+            });
+        }
     });
 </script>
 

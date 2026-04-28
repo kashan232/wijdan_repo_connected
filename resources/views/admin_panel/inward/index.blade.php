@@ -268,8 +268,9 @@
 
 
 <script>
+    var gatepassTable;
     $(document).ready(function() {
-        $('#gatepass-table').DataTable({
+        gatepassTable = $('#gatepass-table').DataTable({
             "pageLength": 10,
             "lengthMenu": [5, 10, 25, 50, 100],
             "order": [
@@ -404,12 +405,19 @@
         $('#exportGatepassAllBtn').on('click', function() {
             let rows = [];
 
-            $('#gatepass-table tbody tr').each(function() {
-                if (!$(this).is(':hidden')) {
-                    // Use concat to merge array of rows
-                    rows = rows.concat(parseGatepassRow(this));
-                }
-            });
+            // Use DataTables API to get all filtered rows across all pages
+            if (typeof gatepassTable !== 'undefined') {
+                gatepassTable.rows({ search: 'applied' }).nodes().each(function(node) {
+                    rows = rows.concat(parseGatepassRow(node));
+                });
+            } else {
+                // Fallback
+                $('#gatepass-table tbody tr').each(function() {
+                    if (!$(this).is(':hidden')) {
+                        rows = rows.concat(parseGatepassRow(this));
+                    }
+                });
+            }
 
             if (!rows.length) {
                 alert('No data to export');

@@ -12,27 +12,33 @@ class WarehouseStockController extends Controller
 {
     public function index(Request $request)
     {
-        $branchId  = auth()->id();
         $type      = $request->stock_type ?? 'all';
         $startDate = $request->start_date;
         $endDate   = $request->end_date;
+        $search    = $request->search;
 
         $query = DB::table('products')
             ->leftJoin('brands', 'products.brand_id', '=', 'brands.id')
             ->select(
                 'products.id',
                 'products.item_name',
+                'products.item_code',
                 'products.unit_id',
                 'products.price',
                 'products.created_at',
                 'brands.name as brand_name'
             );
 
-        // Subquery for Shop Stock
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('products.item_name', 'like', "%{$search}%")
+                  ->orWhere('products.item_code', 'like', "%{$search}%");
+            });
+        }
+
         $shopSub = DB::table('stocks')
             ->selectRaw('COALESCE(SUM(qty), 0)')
-            ->whereColumn('product_id', 'products.id')
-            ->where('branch_id', $branchId);
+            ->whereColumn('product_id', 'products.id');
         if ($startDate && $endDate) {
             $shopSub->whereBetween('updated_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
         }
@@ -55,10 +61,9 @@ class WarehouseStockController extends Controller
             ->limit(1);
         $query->selectSub($whNameSub, 'warehouse_name');
 
-        // Filter by type
         if ($type === 'shop') {
-            $query->whereExists(function($q) use ($branchId, $startDate, $endDate) {
-                $q->select(DB::raw(1))->from('stocks')->whereColumn('product_id', 'products.id')->where('branch_id', $branchId);
+            $query->whereExists(function($q) use ($startDate, $endDate) {
+                $q->select(DB::raw(1))->from('stocks')->whereColumn('product_id', 'products.id');
                 if ($startDate && $endDate) $q->whereBetween('updated_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
             });
         } elseif ($type === 'warehouse') {
@@ -69,6 +74,10 @@ class WarehouseStockController extends Controller
         }
 
         $stocks = $query->orderBy('products.id', 'desc')->paginate(100)->withQueryString();
+
+        if ($request->ajax()) {
+            return view('admin_panel.warehouses.warehouse_stocks.index', compact('stocks'))->render();
+        }
 
         return view('admin_panel.warehouses.warehouse_stocks.index', compact('stocks'));
     }

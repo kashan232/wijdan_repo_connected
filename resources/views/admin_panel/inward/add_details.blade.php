@@ -188,7 +188,8 @@
                                     <th width="140">Brand</th>
                                     <th width="100">Unit</th>
                                     <th width="90">Qty</th>
-                                    <th width="220">Note</th>
+                                    <th width="120">Location</th>
+                                    <th width="180">Note</th>
                                     <th width="80">Action</th>
 
                                 </thead>
@@ -227,6 +228,13 @@
                                                 min="0"
                                                 step="any">
                                         </td>
+                                        
+                                        <td>
+                                            <select name="item_receive_type[]" class="form-control">
+                                                <option value="shop" {{ ($item->receive_type ?? $gatepass->receive_type) == 'shop' ? 'selected' : '' }}>Shop</option>
+                                                <option value="warehouse" {{ ($item->receive_type ?? $gatepass->receive_type) == 'warehouse' ? 'selected' : '' }}>Warehouse</option>
+                                            </select>
+                                        </td>
 
                                         <td>
                                             <input type="text"
@@ -262,6 +270,13 @@
                                                 value=""
                                                 min="0"
                                                 step="any"></td>
+
+                                        <td>
+                                            <select name="item_receive_type[]" class="form-control">
+                                                <option value="shop" {{ $gatepass->receive_type == 'shop' ? 'selected' : '' }}>Shop</option>
+                                                <option value="warehouse" {{ $gatepass->receive_type == 'warehouse' ? 'selected' : '' }}>Warehouse</option>
+                                            </select>
+                                        </td>
 
                                         <!-- ✅ NOTE -->
                                         <td>
@@ -323,6 +338,12 @@
         value=""
         min="0"
         step="any"></td>
+    <td>
+        <select name="item_receive_type[]" class="form-control">
+            <option value="shop" {{ $gatepass->receive_type == 'shop' ? 'selected' : '' }}>Shop</option>
+            <option value="warehouse" {{ $gatepass->receive_type == 'warehouse' ? 'selected' : '' }}>Warehouse</option>
+        </select>
+    </td>
     <td>
         <input type="text" name="note[]" class="form-control" placeholder="Optional note">
     </td>

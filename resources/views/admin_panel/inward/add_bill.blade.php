@@ -6,9 +6,9 @@
         <div class="container-fluid">
             <div class="row">
 
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h3>Add Bill For Good received note #{{ $gatepass->id }}</h3>
-                    <a href="{{ route('InwardGatepass.home') }}" class="btn btn-secondary">Back</a>
+                <div class="col-12 d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="page-title">Add Bill For Good received note #{{ $gatepass->id }}</h5>
+                    <a href="{{ route('InwardGatepass.home') }}" class="btn btn-danger">Back</a>
                 </div>
 
                 <div class="col-lg-12 col-md-12 mb-30">
@@ -38,7 +38,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label>Received In Type</label>
-                                        <select name="received_in" class="form-select" id="receivedIn">
+                                        <select name="received_in" class="form-control" id="receivedIn" style="pointer-events: none;" readonly>
                                             <option value="warehouse" {{ old('received_in', $gatepass->receive_type ?? 'warehouse') == 'warehouse' ? 'selected' : '' }}>
                                                 Warehouse
                                             </option>
@@ -78,6 +78,7 @@
                                                 <th>Product</th>
                                                 <th>Note</th>
                                                 <th>Item Code</th>
+                                                <th>Location</th>
                                                 <th>Qty</th>
                                                 <th>Price <span class="text-danger">*</span></th>
                                                 <th>Discount</th>
@@ -102,6 +103,9 @@
                                                     <input type="text" name="item_code[]" class="form-control" value="{{ $item->product->item_code ?? '-' }}" readonly>
                                                 </td>
                                                 <td>
+                                                    <input type="text" class="form-control bg-light" value="{{ ucfirst($item->receive_type ?? $gatepass->receive_type) }}" readonly>
+                                                </td>
+                                                <td>
                                                     <input type="number" name="qty[]" class="form-control qty" min="1" value="{{ $item->qty }}" readonly>
                                                 </td>
                                                 <td>
@@ -112,7 +116,7 @@
 
                                                 </td>
                                                 <td>
-                                                    <select name="discount_type[{{ $item->id }}]" class="form-select discount_type">
+                                                    <select name="discount_type[{{ $item->id }}]" class="form-control discount_type">
                                                         <option value="pkr" {{ old('discount_type.' . $item->id) == 'pkr' ? 'selected' : '' }}>PKR</option>
                                                         <option value="percent" {{ old('discount_type.' . $item->id) == 'percent' ? 'selected' : '' }}>%</option>
                                                     </select>
