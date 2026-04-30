@@ -32,6 +32,7 @@ use App\Http\Controllers\ProductBookingController;
 use App\Http\Controllers\WarehouseStockController;
 use App\Http\Controllers\ReportLockController;
 
+// shift to new repo
 /*
     |--------------------------------------------------------------------------
     | Web Routes
