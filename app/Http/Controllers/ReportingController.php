@@ -34,16 +34,13 @@ class ReportingController extends Controller
     public function fetchItemStock(Request $request)
     {
         $productId = $request->product_id;
-        $startDate = $request->start_date ?? date('Y-m-01');
-        $endDate   = $request->end_date ?? date('Y-m-t');
+        $startDate = $request->start_date;
+        $endDate   = $request->end_date ?? date('Y-m-d');
 
-        $startDateTime = $startDate . ' 00:00:00';
+        $startDateTime = $startDate ? $startDate . ' 00:00:00' : null;
         $endDateTime   = $endDate . ' 23:59:59';
 
-        $rows = [];
-        $grandTotalValue = 0;
-
-        // 🔹 Base query — include only products created within range
+        // 🔹 Base query
         $productsQuery = Product::query();
 
         if ($productId && $productId !== 'all') {
@@ -51,104 +48,190 @@ class ReportingController extends Controller
         }
 
         $perPage = 50;
-
         $products = $productsQuery
             ->orderBy('item_name')
             ->paginate($perPage);
 
-        foreach ($products as $product) {
-            // 🔹 Purchases in date range
-            $purchaseData = DB::table('purchase_items')
-                ->where('product_id', $product->id)
-                ->whereBetween('created_at', [$startDateTime, $endDateTime])
-                ->select(
-                    DB::raw('COALESCE(SUM(qty),0) as total_qty'),
-                    DB::raw('COALESCE(SUM(line_total),0) as total_amount')
-                )
-                ->first();
+        $productIds = $products->pluck('id')->toArray();
+        $productCodes = $products->pluck('item_code')->toArray();
 
-            // 🔹 Inward Quantity (from inward_gatepasses)
-            $inwardData = DB::table('inward_gatepasses')
-                ->join('inward_gatepass_items', 'inward_gatepasses.id', '=', 'inward_gatepass_items.inward_gatepass_id')
-                ->where('inward_gatepass_items.product_id', $product->id)
-                ->whereBetween('inward_gatepasses.gatepass_date', [$startDate, $endDate])
-                ->select(DB::raw('COALESCE(SUM(inward_gatepass_items.qty),0) as total_inward_qty'))
-                ->first();
+        // 🔹 PRE-FETCH DATA FOR ALL PRODUCTS ON THIS PAGE (Optimization)
 
-            // 🔹 Sales in date range
-            $sold = 0.0;
-            $saleAmount = 0.0;
-            $sales = DB::table('sales')
-                ->whereBetween('created_at', [$startDateTime, $endDateTime])
-                ->select('product_code', 'qty', 'per_total')
+        // 1. Transactions BEFORE startDate (Opening Balance)
+        $inwardsBefore = [];
+        $purchasesBefore = [];
+        $pReturnsBefore = [];
+        $soldBeforeMap = array_fill_keys($productCodes, 0);
+        $srBeforeMap = array_fill_keys($productCodes, 0);
+
+        if ($startDate) {
+            $inwardsBefore = DB::table('inward_gatepass_items')
+                ->join('inward_gatepasses', 'inward_gatepasses.id', '=', 'inward_gatepass_items.inward_gatepass_id')
+                ->whereIn('inward_gatepass_items.product_id', $productIds)
+                ->where('inward_gatepasses.gatepass_date', '<', $startDate)
+                ->select('product_id', DB::raw('SUM(qty) as total'))
+                ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+
+            $purchasesBefore = DB::table('purchase_items')
+                ->whereIn('product_id', $productIds)
+                ->where('created_at', '<', $startDateTime)
+                ->select('product_id', DB::raw('SUM(qty) as total'))
+                ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+
+            $pReturnsBefore = DB::table('purchase_return_items')
+                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                ->whereIn('purchase_return_items.product_id', $productIds)
+                ->where('purchase_returns.created_at', '<', $startDateTime)
+                ->select('product_id', DB::raw('SUM(qty) as total'))
+                ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+
+            $salesBefore = DB::table('sales')
+                ->where('created_at', '<', $startDateTime)
                 ->whereNotNull('product_code')
+                ->where(function($q) use ($productCodes) {
+                    foreach ($productCodes as $code) {
+                        $q->orWhere('product_code', 'like', '%' . $code . '%');
+                    }
+                })
+                ->select('product_code', 'qty')
                 ->get();
-
-            foreach ($sales as $s) {
+            
+            foreach ($salesBefore as $s) {
                 $codes = array_map('trim', explode(',', $s->product_code));
                 $qtys  = array_map('trim', explode(',', $s->qty));
-                $totals = array_map('trim', explode(',', $s->per_total));
-
                 foreach ($codes as $idx => $code) {
-                    if ($code === $product->item_code && isset($qtys[$idx])) {
-                        $sold += floatval($qtys[$idx]);
-                        $saleAmount += isset($totals[$idx]) ? floatval($totals[$idx]) : 0;
+                    if (isset($soldBeforeMap[$code]) && isset($qtys[$idx])) {
+                        $soldBeforeMap[$code] += floatval($qtys[$idx]);
                     }
                 }
             }
 
-            // 🔹 Stock balance (latest record if available)
-            $stockRecord = DB::table('stocks')
-                ->where('product_id', $product->id)
-                ->latest('id')
-                ->first();
-
-            $balance = $stockRecord ? (float) $stockRecord->qty : 0;
-
-            // 🔹 Calculate stock value
-            $stockValue = $balance * (float) ($product->wholesale_price ?? 0);
-            $grandTotalValue += $stockValue;
-
-            // 🔹 Purchase Returns in date range
-            $purchaseReturnData = DB::table('purchase_return_items')
-                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
-                ->where('purchase_return_items.product_id', $product->id)
-                ->whereBetween('purchase_returns.created_at', [$startDateTime, $endDateTime])
-                ->select(
-                    DB::raw('COALESCE(SUM(purchase_return_items.qty),0) as total_return_qty'),
-                    DB::raw('COALESCE(SUM(purchase_return_items.line_total),0) as total_return_amount')
-                )
-                ->first();
-
-            // 🔹 Sale Returns in date range
-            $saleReturnData = DB::table('sales_returns')
-                ->whereBetween('created_at', [$startDateTime, $endDateTime])
-                ->select('product_code', 'qty', 'per_total')
+            $srBefore = DB::table('sales_returns')
+                ->where('created_at', '<', $startDateTime)
+                ->whereNotNull('product_code')
+                ->where(function($q) use ($productCodes) {
+                    foreach ($productCodes as $code) {
+                        $q->orWhere('product_code', 'like', '%' . $code . '%');
+                    }
+                })
+                ->select('product_code', 'qty')
                 ->get();
-
-            $saleReturnQty = 0;
-            $saleReturnAmount = 0;
-
-            foreach ($saleReturnData as $sr) {
+            foreach ($srBefore as $sr) {
                 $codes = array_map('trim', explode(',', $sr->product_code));
                 $qtys  = array_map('trim', explode(',', $sr->qty));
-                $totals = array_map('trim', explode(',', $sr->per_total));
-
                 foreach ($codes as $idx => $code) {
-                    if ($code === $product->item_code && isset($qtys[$idx])) {
-                        $saleReturnQty += floatval($qtys[$idx]);
-                        $saleReturnAmount += isset($totals[$idx]) ? floatval($totals[$idx]) : 0;
+                    if (isset($srBeforeMap[$code]) && isset($qtys[$idx])) {
+                        $srBeforeMap[$code] += floatval($qtys[$idx]);
                     }
                 }
             }
+        }
 
-            $balance =
-                ($product->initial_stock ?? 0)
-                + ($inwardData->total_inward_qty ?? 0)
-                + ($purchaseData->total_qty ?? 0)
-                - ($purchaseReturnData->total_return_qty ?? 0)
-                - ($sold ?? 0)
-                + ($saleReturnQty ?? 0);
+        // 2. Transactions WITHIN range
+        $inwardsPeriodQuery = DB::table('inward_gatepass_items')
+            ->join('inward_gatepasses', 'inward_gatepasses.id', '=', 'inward_gatepass_items.inward_gatepass_id')
+            ->whereIn('inward_gatepass_items.product_id', $productIds)
+            ->where('inward_gatepasses.gatepass_date', '<=', $endDate);
+        if ($startDate) {
+            $inwardsPeriodQuery->where('inward_gatepasses.gatepass_date', '>=', $startDate);
+        }
+        $inwardsPeriodMap = $inwardsPeriodQuery->select('product_id', DB::raw('SUM(qty) as total'))
+            ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+
+        $purchasesPeriodQuery = DB::table('purchase_items')
+            ->whereIn('product_id', $productIds)
+            ->where('created_at', '<=', $endDateTime);
+        if ($startDateTime) {
+            $purchasesPeriodQuery->where('created_at', '>=', $startDateTime);
+        }
+        $purchasesPeriod = $purchasesPeriodQuery->select('product_id', DB::raw('SUM(qty) as total'))
+            ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+
+        $pReturnsPeriodQuery = DB::table('purchase_return_items')
+            ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+            ->whereIn('purchase_return_items.product_id', $productIds)
+            ->where('purchase_returns.created_at', '<=', $endDateTime);
+        if ($startDateTime) {
+            $pReturnsPeriodQuery->where('purchase_returns.created_at', '>=', $startDateTime);
+        }
+        $pReturnsPeriod = $pReturnsPeriodQuery->select('product_id', DB::raw('SUM(qty) as total'))
+            ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+
+        $salesPeriodQuery = DB::table('sales')
+            ->where('created_at', '<=', $endDateTime)
+            ->whereNotNull('product_code')
+            ->where(function($q) use ($productCodes) {
+                foreach ($productCodes as $code) {
+                    $q->orWhere('product_code', 'like', '%' . $code . '%');
+                }
+            });
+        if ($startDateTime) {
+            $salesPeriodQuery->where('created_at', '>=', $startDateTime);
+        }
+        $salesPeriod = $salesPeriodQuery->select('product_code', 'qty')->get();
+        
+        $soldPeriodMap = array_fill_keys($productCodes, 0);
+        foreach ($salesPeriod as $s) {
+            $codes = array_map('trim', explode(',', $s->product_code));
+            $qtys  = array_map('trim', explode(',', $s->qty));
+            foreach ($codes as $idx => $code) {
+                if (isset($soldPeriodMap[$code]) && isset($qtys[$idx])) {
+                    $soldPeriodMap[$code] += floatval($qtys[$idx]);
+                }
+            }
+        }
+
+        $srPeriodQuery = DB::table('sales_returns')
+            ->where('created_at', '<=', $endDateTime)
+            ->whereNotNull('product_code')
+            ->where(function($q) use ($productCodes) {
+                foreach ($productCodes as $code) {
+                    $q->orWhere('product_code', 'like', '%' . $code . '%');
+                }
+            });
+        if ($startDateTime) {
+            $srPeriodQuery->where('created_at', '>=', $startDateTime);
+        }
+        $srPeriod = $srPeriodQuery->select('product_code', 'qty')->get();
+
+        $srPeriodMap = array_fill_keys($productCodes, 0);
+        foreach ($srPeriod as $sr) {
+            $codes = array_map('trim', explode(',', $sr->product_code));
+            $qtys  = array_map('trim', explode(',', $sr->qty));
+            foreach ($codes as $idx => $code) {
+                if (isset($srPeriodMap[$code]) && isset($qtys[$idx])) {
+                    $srPeriodMap[$code] += floatval($qtys[$idx]);
+                }
+            }
+        }
+
+        // 🔹 ASSEMBLE DATA
+        $rows = [];
+        $grandTotalValue = 0;
+
+        foreach ($products as $product) {
+            $pid = $product->id;
+            $pcode = $product->item_code;
+
+            // 1. Calculate Opening Balance
+            $opening = (float)($product->initial_stock ?? 0)
+                + (float)($inwardsBefore[$pid] ?? 0)
+                + (float)($purchasesBefore[$pid] ?? 0)
+                - (float)($pReturnsBefore[$pid] ?? 0)
+                - (float)($soldBeforeMap[$pcode] ?? 0)
+                + (float)($srBeforeMap[$pcode] ?? 0);
+
+            // 2. Current Period Inwards & Purchases
+            $inwardQty = (float)($inwardsPeriodMap[$pid] ?? 0);
+            $totalPurchased = (float)($purchasesPeriod[$pid] ?? 0);
+            $totalPReturn = (float)($pReturnsPeriod[$pid] ?? 0);
+            $totalSold = (float)($soldPeriodMap[$pcode] ?? 0);
+            $totalSReturn = (float)($srPeriodMap[$pcode] ?? 0);
+
+            $balance = $opening + $inwardQty + $totalPurchased - $totalPReturn - $totalSold + $totalSReturn;
+
+            $stockValue = $balance * (float) ($product->wholesale_price ?? 0);
+            $grandTotalValue += $stockValue;
 
             $rows[] = [
                 'id' => $product->id,
@@ -156,12 +239,12 @@ class ReportingController extends Controller
                 'item_code' => $product->item_code,
                 'item_name' => $product->item_name,
                 'unit_id' => $product->unit_id,
-                'initial_stock' => (float) ($product->initial_stock ?? 0),
-                'inward_qty' => (float) ($inwardData->total_inward_qty ?? 0), // 👈 new field
-                'purchased' => (float) $purchaseData->total_qty,
-                'purchase_return' => (float) $purchaseReturnData->total_return_qty,
-                'sold' => (float) $sold,
-                'sale_return' => (float) $saleReturnQty,
+                'initial_stock' => $opening, // Displaying as Opening Stock
+                'inward_qty' => $inwardQty,
+                'purchased' => $totalPurchased,
+                'purchase_return' => $totalPReturn,
+                'sold' => $totalSold,
+                'sale_return' => $totalSReturn,
                 'balance' => $balance,
             ];
         }

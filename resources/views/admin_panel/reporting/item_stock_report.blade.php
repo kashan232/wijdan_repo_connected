@@ -145,7 +145,7 @@
                                     <th>Item Code</th>
                                     <th>Item Name</th>
                                     <th>UOM</th>
-                                    <th>Initial Stock</th>
+                                    <th>Opening Stock</th>
                                     <th>Inward Qty</th>
                                     <th>Purchased Qty</th>
                                     <th>Purchase Return</th>
@@ -279,7 +279,7 @@
         let currentPage = 1;
 
         // 🔹 Fetch report via AJAX
-        function fetchReport(page = 1) {
+        function fetchReport(page = 1, callback = null) {
             if (page < 1) return;
             currentPage = page;
 
@@ -304,14 +304,13 @@
 
                     if (response.data && response.data.length > 0) {
                         renderRows(response.data, response.grand_total);
-                        if (callback) callback(response.data);
+                        if (typeof callback === 'function') callback(response.data);
                     } else {
                         stockTable.clear().draw();
-                        $('#reportBody').html('<tr><td colspan="8" class="text-center text-danger">No records found</td></tr>');
+                        $('#reportBody').html('<tr><td colspan="12" class="text-center text-danger">No records found</td></tr>');
                         $('#grandStockValue').text('0.00');
                     }
 
-                    renderRows(response.data, response.grand_total);
                     renderPagination(response.pagination);
                 },
                 error: function(xhr) {
