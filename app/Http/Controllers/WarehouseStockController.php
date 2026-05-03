@@ -17,6 +17,8 @@ class WarehouseStockController extends Controller
         $endDate   = $request->end_date;
         $search    = $request->search;
 
+        $warehouses = Warehouse::all();
+
         $query = DB::table('products')
             ->leftJoin('brands', 'products.brand_id', '=', 'brands.id')
             ->select(
@@ -39,6 +41,12 @@ class WarehouseStockController extends Controller
         $shopSub = DB::table('stocks')
             ->selectRaw('COALESCE(SUM(qty), 0)')
             ->whereColumn('product_id', 'products.id');
+
+        // If specific warehouse or "All Warehouses" is selected, zero out Shop Stock
+        if ($type === 'warehouse' || is_numeric($type)) {
+            $shopSub->whereRaw('1 = 0'); 
+        }
+
         if ($startDate && $endDate) {
             $shopSub->whereBetween('updated_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
         }
@@ -48,17 +56,31 @@ class WarehouseStockController extends Controller
         $whSub = DB::table('warehouse_stocks')
             ->selectRaw('COALESCE(SUM(quantity), 0)')
             ->whereColumn('product_id', 'products.id');
+
+        // If "Shop Only" is selected, zero out Warehouse Stock
+        if ($type === 'shop') {
+            $whSub->whereRaw('1 = 0');
+        } elseif (is_numeric($type)) {
+            $whSub->where('warehouse_id', $type);
+        }
+
         if ($startDate && $endDate) {
             $whSub->whereBetween('updated_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
         }
         $query->selectSub($whSub, 'warehouse_stock');
 
-        // Subquery for First Warehouse Name
         $whNameSub = DB::table('warehouse_stocks')
             ->join('warehouses', 'warehouse_stocks.warehouse_id', '=', 'warehouses.id')
             ->select('warehouses.warehouse_name')
-            ->whereColumn('product_id', 'products.id')
-            ->limit(1);
+            ->whereColumn('product_id', 'products.id');
+
+        if ($type === 'shop') {
+            $whNameSub->whereRaw('1 = 0'); // Force empty result so it shows "Shop" in view
+        } elseif (is_numeric($type)) {
+            $whNameSub->where('warehouse_id', $type);
+        }
+        
+        $whNameSub->limit(1);
         $query->selectSub($whNameSub, 'warehouse_name');
 
         if ($type === 'shop') {
@@ -71,15 +93,22 @@ class WarehouseStockController extends Controller
                 $q->select(DB::raw(1))->from('warehouse_stocks')->whereColumn('product_id', 'products.id');
                 if ($startDate && $endDate) $q->whereBetween('updated_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
             });
+        } elseif (is_numeric($type)) {
+            $query->whereExists(function($q) use ($type, $startDate, $endDate) {
+                $q->select(DB::raw(1))->from('warehouse_stocks')
+                  ->whereColumn('product_id', 'products.id')
+                  ->where('warehouse_id', $type);
+                if ($startDate && $endDate) $q->whereBetween('updated_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+            });
         }
 
         $stocks = $query->orderBy('products.id', 'desc')->paginate(100)->withQueryString();
 
         if ($request->ajax()) {
-            return view('admin_panel.warehouses.warehouse_stocks.index', compact('stocks'))->render();
+            return view('admin_panel.warehouses.warehouse_stocks.index', compact('stocks', 'warehouses'))->render();
         }
 
-        return view('admin_panel.warehouses.warehouse_stocks.index', compact('stocks'));
+        return view('admin_panel.warehouses.warehouse_stocks.index', compact('stocks', 'warehouses'));
     }
 
     public function create()

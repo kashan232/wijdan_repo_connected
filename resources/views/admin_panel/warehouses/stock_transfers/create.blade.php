@@ -346,6 +346,7 @@
 
             if (type === 'shop') {
                 $('#toShopBox').removeClass('d-none');
+                $('input[name="shop_name"]').val('Shop');
             }
         });
 
@@ -642,21 +643,13 @@
         row.find('.price').val(res.price);
         row.find('.quantity').val(1).trigger('input');
 
-        // Fetch stock (must be AJAX as it's warehouse-specific)
-        const fromWarehouse = $('#from_warehouse_id').val();
-        if (fromWarehouse) {
-            $.get('/warehouse-stock-quantity', {
-                warehouse_id: fromWarehouse,
-                product_id: res.id
-            }, function(stock) {
-                row.find('.stock').val(stock.quantity ?? 0);
-            });
-        }
+        // Fetch stock
+        refreshStockForAllRows();
 
-        addNewRow();
+        // addNewRow(); // Remove auto-adding new row on barcode scan to allow qty edit
 
         setTimeout(() => {
-            $('#product_body tr:last .productSearch').focus();
+            row.find('.quantity').focus().select();
         }, 50);
     }
 
@@ -816,45 +809,40 @@
     });
 
     $(document).on('click', '.modal-product-item', function() {
-        let row = $('#product_body tr:last');
+        const p = $(this);
 
-        if (row.find('.product_id').val()) {
+        let $row = $('#product_body tr').filter(function() {
+            return !$(this).find('.product_id').val();
+        }).first();
+
+        if (!$row.length) {
             addNewRow();
-            row = $('#product_body tr:last');
+            $row = $('#product_body tr:last');
         }
 
-        row.find('.product_id').val($(this).data('id')).data('barcode', $(this).data('code'));
-        row.find('.productSearch').val($(this).data('name')).prop('readonly', true);
-        row.find('.unit').val($(this).data('unit'));
-        row.find('.price').val($(this).data('price'));
-        row.find('.quantity').val(1).trigger('input');
-        calculateCreateUnitTotals();
+        // Fill data
+        $row.find('.product_id').val(p.data('id'));
+        $row.find('.productSearch')
+            .val(p.data('name'))
+            .prop('readonly', true)
+            .addClass('bg-light');
 
-        const fromWarehouse = $('#from_warehouse_id').val();
-        if (fromWarehouse) {
-            $.get('/warehouse-stock-quantity', {
-                warehouse_id: fromWarehouse,
-                product_id: $(this).data('id')
-            }, function(stock) {
-                row.find('.stock').val(stock.quantity ?? 0);
-            });
-        } else {
-            row.find('.stock').val(0);
-        }
+        $row.find('.unit').val(p.data('unit'));
+        $row.find('.price').val(p.data('price'));
+        $row.find('.product-note').val(p.data('note') || '');
 
-        $('#productModal').modal('hide');
+        $row.find('.quantity').val(1).trigger('input');
 
-        // 🔥🔥 YEH LINE ADD / CONFIRM KARO
+        // Fetch stock
+        refreshStockForAllRows();
+
+        // ✅ IMPORTANT: focus ONLY qty
         setTimeout(() => {
-            row.find('.quantity')
-            .focus()
-            .select();
-            // Auto scroll to center the row (robust)
-            $('html, body').animate({
-                scrollTop: row.offset().top - ($(window).height() / 2) + (row.outerHeight() / 2)
-            }, 600);
-        }, 300);
+            $row.find('.quantity').focus().select();
+        }, 50);
 
+        // ❌ DO NOT append new row here
+        $('#productModal').modal('hide');
     });
 
 

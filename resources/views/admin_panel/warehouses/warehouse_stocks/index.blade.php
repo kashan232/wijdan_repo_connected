@@ -61,11 +61,14 @@
     <div class="card-body">
         <form method="GET" action="{{ route('warehouse_stocks.index') }}" class="row g-2 mb-3">
             <div class="col-12 col-md-2">
-                <label class="form-label fw-bold">Stock Type:</label>
+                <label class="form-label fw-bold">Stock Location:</label>
                 <select name="stock_type" class="form-control form-control-sm">
-                    <option value="all" {{ request('stock_type') == 'all' ? 'selected' : '' }}>All</option>
-                    <option value="shop" {{ request('stock_type') == 'shop' ? 'selected' : '' }}>Shop</option>
-                    <option value="warehouse" {{ request('stock_type') == 'warehouse' ? 'selected' : '' }}>Warehouse</option>
+                    <option value="all" {{ request('stock_type') == 'all' ? 'selected' : '' }}>All Locations</option>
+                    <option value="shop" {{ request('stock_type') == 'shop' ? 'selected' : '' }}>Shop Only</option>
+                    <option value="warehouse" {{ request('stock_type') == 'warehouse' ? 'selected' : '' }}>All Warehouses</option>
+                    @foreach($warehouses as $wh)
+                        <option value="{{ $wh->id }}" {{ request('stock_type') == $wh->id ? 'selected' : '' }}>{{ $wh->warehouse_name }}</option>
+                    @endforeach
                 </select>
             </div>
 
