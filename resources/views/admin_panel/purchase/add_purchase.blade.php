@@ -337,7 +337,7 @@
                                                                 <i class="bi bi-file-earmark-text text-primary me-1"></i>
                                                                 Company Inv #
                                                             </label>
-                                                            <input name="purchase_order_no" type="text" class="form-control">
+                                                            <input name="company_invoice_no" type="text" class="form-control">
                                                         </div>
 
                                                     </div>

@@ -145,6 +145,7 @@ class PurchaseController extends Controller
                     'vendor_id'     => $validated['vendor_id'] ?? null,
                     'purchase_date' => $validated['purchase_date'] ?? now(),
                     'invoice_no'    => $invoiceNo,
+                    'company_invoice_no' => $request->company_invoice_no ?? $request->purchase_order_no,
 
                     'purchase_to'   => $validated['purchase_to'], // 🔥 shop | warehouse
                     'warehouse_id'  => $validated['purchase_to'] === 'warehouse'
@@ -722,6 +723,7 @@ class PurchaseController extends Controller
                     'vendor_id'       => $validated['vendor_id'],
                     'purchase_date'   => $validated['purchase_date'],
                     'invoice_no'      => $validated['invoice_no'],
+                    'company_invoice_no' => $request->company_invoice_no ?? $request->purchase_order_no,
                     'note'            => $validated['note'],
                     'job_description' => $validated['job_description'],
                     'subtotal'        => $subtotal,

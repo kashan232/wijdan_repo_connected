@@ -936,10 +936,17 @@ class ReportingController extends Controller
             ->where('payment_date', '<', $start)
             ->sum('amount');
 
-        // 4. Prior Charges (New)
-        $prevCharges = DB::table('customer_charges')
+        // 4. Prior Charges
+        $prevPlusCharges = DB::table('customer_charges')
             ->where('customer_id', $customerId)
             ->where('date', '<', $start)
+            ->where('type', 'plus')
+            ->sum('amount');
+
+        $prevMinusCharges = DB::table('customer_charges')
+            ->where('customer_id', $customerId)
+            ->where('date', '<', $start)
+            ->where('type', 'minus')
             ->sum('amount');
 
         // 5. Returns that happened ON/AFTER StartDate, but belong to Prior Sales.
@@ -952,7 +959,7 @@ class ReportingController extends Controller
             ->where('sales.created_at', '<', $start)
             ->sum('sales_returns.total_net');
 
-        $opening = $initial + $prevSales + $prevCharges - $prevPayments + $addBackReturns;
+        $opening = $initial + $prevSales + $prevPlusCharges - $prevMinusCharges - $prevPayments + $addBackReturns;
 
         // ---------------- FETCH ALL SALE RETURNS FIRST ----------------
         $allSaleReturns = DB::table('sales_returns')
@@ -996,14 +1003,15 @@ class ReportingController extends Controller
             ->whereBetween('date', [$start, $end])
             ->get()
             ->map(function ($c) {
+                $isPlus = ($c->type === 'plus');
                 return [
                     'date' => $c->date . ' 23:59:59',
                     'sort_type' => 4,
                     'invoice' => $c->charge_no,
                     'reference' => $c->transporter_name,
-                    'description' => $c->note ?? 'To Charge / Expense A/c',
-                    'debit' => (float) $c->amount,
-                    'credit' => 0,
+                    'description' => $c->note ?? ($isPlus ? 'To Charge / Expense A/c' : 'By Deduction / Adjustment'),
+                    'debit' => $isPlus ? (float) $c->amount : 0,
+                    'credit' => !$isPlus ? (float) $c->amount : 0,
                 ];
             });
 
@@ -1133,14 +1141,14 @@ class ReportingController extends Controller
         $purchases = DB::table('purchases')
             ->where('vendor_id', $vendorId)
             ->whereBetween('purchase_date', [$start, $end])
-            ->select('purchase_date', 'invoice_no', 'net_amount', 'note') 
+            ->select('purchase_date', 'invoice_no', 'company_invoice_no', 'net_amount', 'note') 
             ->get()
             ->map(function ($p) {
                 return [
                     'date' => $p->purchase_date,
                     'invoice' => $p->invoice_no,
-                    'reference' => null, // Regular purchases don't have this field
-                    'description' => $p->note ?: 'Purchase Invoice',
+                    'reference' => $p->company_invoice_no,
+                    'description' => ($p->company_invoice_no ? "(" . $p->company_invoice_no . ") " : "") . ($p->note ?: 'Purchase Invoice'),
                     'debit' => $p->net_amount,
                     'credit' => 0,
                     'sort_date' => $p->purchase_date
@@ -1158,7 +1166,7 @@ class ReportingController extends Controller
                     'date' => $i->gatepass_date,
                     'invoice' => $i->invoice_no . ' (' . $i->gatepass_no . ')',
                     'reference' => $i->company_invoice_no, // Pass Company Inv#
-                    'description' => 'Inward Bill - ' . ($i->remarks ?? ''),
+                    'description' => ($i->company_invoice_no ? "(" . $i->company_invoice_no . ") " : "") . 'Inward Bill - ' . ($i->remarks ?? ''),
                     'debit' => $i->net_amount,
                     'credit' => 0,
                     'sort_date' => $i->gatepass_date

@@ -301,7 +301,7 @@
                                                 <div class="col-xl-12">
                                                     <div class="row g-3">
 
-                                                        <div class="col-xl-4 col-sm-6">
+                                                        <div class="col-xl-3 col-sm-6">
                                                             <label>
                                                                 <i class="bi bi-calendar-date text-primary me-1"></i>
                                                                 Current Date
@@ -312,7 +312,7 @@
                                                                 class="form-control">
                                                         </div>
 
-                                                        <div class="col-xl-4 col-sm-6">
+                                                        <div class="col-xl-3 col-sm-6">
                                                             <label>
                                                                 <i class="bi bi-receipt text-primary me-1"></i>
                                                                 Companies / Vendors
@@ -325,12 +325,20 @@
                                                             </select>
                                                         </div>
 
-                                                        <div class="col-xl-4 col-sm-6">
+                                                        <div class="col-xl-3 col-sm-6">
+                                                            <label>
+                                                                <i class="bi bi-file-earmark-text text-primary me-1"></i>
+                                                                Invoice No (Internal)
+                                                            </label>
+                                                            <input name="invoice_no" type="text" class="form-control" value="{{ $purchase->invoice_no }}" readonly>
+                                                        </div>
+
+                                                        <div class="col-xl-3 col-sm-6">
                                                             <label>
                                                                 <i class="bi bi-file-earmark-text text-primary me-1"></i>
                                                                 Company Inv #
                                                             </label>
-                                                            <input name="invoice_no" type="text" class="form-control" value="{{ $purchase->invoice_no }}">
+                                                            <input name="company_invoice_no" type="text" class="form-control" value="{{ $purchase->company_invoice_no }}">
                                                         </div>
 
                                                     </div>

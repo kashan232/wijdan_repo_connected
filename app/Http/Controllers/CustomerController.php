@@ -375,6 +375,7 @@ class CustomerController extends Controller
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'amount' => 'required|numeric|min:0',
+            'type' => 'required|in:plus,minus',
             'charge_no' => 'nullable|string',
             'date' => 'required|date',
             'vehicle_no' => 'nullable|string',
@@ -384,12 +385,13 @@ class CustomerController extends Controller
 
         $charge = CustomerCharge::create($request->all());
 
-        // Update ledger (Plus adjustment for customer charges/expenses)
+        // Update ledger
         $ledger = CustomerLedger::where('customer_id', $request->customer_id)->latest()->first();
         if ($ledger) {
+            $adjustment = $request->type === 'plus' ? $request->amount : -$request->amount;
             $ledger->update([
                 'previous_balance' => $ledger->closing_balance,
-                'closing_balance'  => $ledger->closing_balance + $request->amount,
+                'closing_balance'  => $ledger->closing_balance + $adjustment,
             ]);
         }
 
@@ -401,13 +403,17 @@ class CustomerController extends Controller
         $charge = CustomerCharge::findOrFail($id);
         $customerId = $charge->customer_id;
         $amount     = $charge->amount;
+        $type       = $charge->type;
 
-        // Reverse ledger update (Subtract from closing balance)
+        // Reverse ledger update
         $ledger = CustomerLedger::where('customer_id', $customerId)->latest()->first();
         if ($ledger) {
+            // If it was plus, subtract. If it was minus, add.
+            $reversal = $type === 'plus' ? -$amount : $amount;
+            
             $ledger->update([
                 'previous_balance' => $ledger->closing_balance,
-                'closing_balance'  => $ledger->closing_balance - $amount,
+                'closing_balance'  => $ledger->closing_balance + $reversal,
             ]);
         }
 

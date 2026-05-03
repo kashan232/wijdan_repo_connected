@@ -140,26 +140,26 @@
 
         <table style="margin-bottom:20px;">
             <tr>
-                <th>Invoice #</th>
+                <th>Invoice # (Internal)</th>
                 <td>{{ $purchase->invoice_no }}</td>
+                <th>Company Inv #</th>
+                <td>{{ $purchase->company_invoice_no ?? '-' }}</td>
+            </tr>
+            <tr>
                 <th>Date</th>
                 <td>{{ $purchase->purchase_date ? \Carbon\Carbon::parse($purchase->purchase_date)->format('d M Y') : 'N/A' }}</td>
-            </tr>
-            <tr>
                 <th>Vendor Name</th>
                 <td>{{ $purchase->vendor->name ?? 'N/A' }}</td>
+            </tr>
+            <tr>
                 <th>Vendor Contact</th>
                 <td>{{ $purchase->vendor->phone ?? 'N/A' }}</td>
-            </tr>
-            <tr>
-                <th>Address</th>
-                <td colspan="3">{{ $purchase->vendor->address ?? 'N/A' }}</td>
-            </tr>
-            <tr>
                 <th>Warehouse</th>
                 <td>{{ $purchase->warehouse->warehouse_name ?? 'N/A' }}</td>
-                <th>Location</th>
-                <td>{{ $purchase->warehouse->location ?? 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Vendor Address</th>
+                <td colspan="3">{{ $purchase->vendor->address ?? 'N/A' }}</td>
             </tr>
         </table>
 

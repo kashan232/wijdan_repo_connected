@@ -31,6 +31,7 @@
                                 <th>#</th>
                                 <th>Date</th>
                                 <th>Customer</th>
+                                <th>Type</th>
                                 <th>Amount</th>
                                 <th>Reason / Description</th>
                                 <th class="text-center">Action</th>
@@ -42,6 +43,13 @@
                                 <td>{{ $key+1 }}</td>
                                 <td>{{ $c->date }}</td>
                                 <td>{{ $c->customer->customer_name ?? 'N/A' }}</td>
+                                <td>
+                                    @if($c->type === 'plus')
+                                        <span class="badge badge-danger" style="font-size: 14px; min-width: 30px;">+</span>
+                                    @else
+                                        <span class="badge badge-success" style="font-size: 14px; min-width: 30px;">-</span>
+                                    @endif
+                                </td>
                                 <td>{{ number_format($c->amount, 2) }}</td>
                                 <td>{{ $c->note }}</td>
                                 <td class="text-center">
@@ -71,7 +79,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="font-weight-600">Customer</label>
                             <select name="customer_id" id="customer_select" class="form-control select2" style="width: 100%;" required>
                                 <option value="">Select Customer</option>
@@ -80,7 +88,14 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label class="font-weight-600">Type</label>
+                            <select name="type" class="form-control" required>
+                                <option value="plus">Addition (+)</option>
+                                <option value="minus">Deduction (-)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <label class="font-weight-600">Amount</label>
                             <input type="number" step="0.01" class="form-control" name="amount" placeholder="0.00" required>
                         </div>
@@ -126,6 +141,7 @@ $(document).ready(function() {
 function clearChargeForm() {
     try {
         $('#customer_select').val('').trigger('change');
+        $('#chargeModal select[name="type"]').val('plus');
         $('#chargeModal input[name="amount"]').val('');
         
         var today = new Date().toISOString().split('T')[0];

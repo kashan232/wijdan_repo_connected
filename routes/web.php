@@ -33,7 +33,7 @@ use App\Http\Controllers\WarehouseStockController;
 use App\Http\Controllers\ReportLockController;
 
 // shift to new repo
-// onilne deployed hogaya hai 
+// onilne deployed hogaya hai                                   
 /*
     |--------------------------------------------------------------------------
     | Web Routes

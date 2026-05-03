@@ -76,6 +76,7 @@
                                             <tr>
                                                 <th>ID</th>
                                                 <th>Invoice No</th>
+                                                <th>Company Inv</th>
                                                 <th>Branch</th>
                                                 <th>Type</th>
                                                 <th>Warehouse</th>
@@ -106,6 +107,7 @@
                                                     {{ $purchase->invoice_no }}
                                                     @endif
                                                 </td>
+                                                <td>{{ $purchase->company_invoice_no ?? '-' }}</td>
 
                                                 <td>{{ $purchase->branch->name ?? 'N/A' }}</td>
                                                 <td class="fw-semibold text-capitalize">
