@@ -306,7 +306,7 @@
                     res.transactions.forEach((t) => {
                         let debit = t.debit && t.debit > 0 ? parseFloat(t.debit) : 0;
                         let credit = t.credit && t.credit > 0 ? parseFloat(t.credit) : 0;
-                        let isReturn = t.description === 'By Sale Return';
+                        let isReturn = t.sort_type === 3;
 
                         totalDebit += debit;
                         totalCredit += credit;
@@ -321,7 +321,7 @@
         (${t.reference ?? '-'})
     </td>
     <td class="text-left">
-        ${isReturn ? '<strong class="text-danger">By Sale Return</strong>' : t.description}
+        ${isReturn ? '<strong class="text-danger">' + t.description + '</strong>' : t.description}
     </td>
     <td>${debit > 0 ? 'Rs. ' + debit.toFixed(2) : '-'}</td>
     <td>${credit > 0 ? 'Rs. ' + credit.toFixed(2) : '-'}</td>

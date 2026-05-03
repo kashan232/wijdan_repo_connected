@@ -1024,7 +1024,7 @@ class ReportingController extends Controller
                     'sort_type' => 3,
                     'invoice' => 'SR-' . $r->sale_id,
                     'reference' => $r->reference,
-                    'description' => 'By Sale Return',
+                    'description' => ($r->reference ? "(" . $r->reference . ") " : "") . 'By Sale Return',
                     'debit' => 0,
                     'credit' => $r->total_net,
                     'original_sale_id' => $r->sale_id
