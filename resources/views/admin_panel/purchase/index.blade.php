@@ -81,8 +81,7 @@
                                                 <th>Type</th>
                                                 <th>Warehouse</th>
                                                 <th>Vendor</th>
-                                                <th>Products</th>
-                                                <th>Qty</th>
+                                                <th>Items (Qty)</th>
                                                 <th>Note</th>
                                                 <th>Subtotal</th>
                                                 <th>Discount</th>
@@ -132,38 +131,20 @@
 
                                                 <td>{{ $purchase->vendor->name ?? 'N/A' }}</td>
                                                 <td class="text-start align-top">
-                                                    @php
-                                                    // prepare arrays of product names and qtys
-                                                    $prodNames = [];
-                                                    $qtys = [];
-                                                    @endphp
-
-                                                    @foreach($purchase->items as $item)
-                                                    @php
-                                                    $prodNames[] = $item->product->item_name ?? 'N/A';
-                                                    $qtys[] = $item->qty ?? 0;
-                                                    @endphp
-                                                    @endforeach
-
-                                                    {{-- Print product names stacked --}}
-                                                    @if(count($prodNames))
-                                                    @foreach($prodNames as $pName)
-                                                    <div style="line-height:1.4;">{{ $pName }}</div>
-                                                    @endforeach
-                                                    @else
-                                                    <div>-</div>
-                                                    @endif
-                                                </td>
-
-                                                {{-- Qty column: show corresponding quantities line-by-line --}}
-                                                <td class="text-center align-top">
-                                                    @if(count($qtys))
-                                                    @foreach($qtys as $q)
-                                                    <div style="line-height:1.4;"><strong>{{ $q }}</strong></div>
-                                                    @endforeach
-                                                    @else
-                                                    <div>0</div>
-                                                    @endif
+                                                    <div style="max-height: 150px; overflow-y: auto; font-size: 0.85rem; min-width: 200px;">
+                                                        @if($purchase->items && count($purchase->items) > 0)
+                                                            <table class="table table-sm table-borderless mb-0">
+                                                                @foreach($purchase->items as $item)
+                                                                <tr style="border-bottom: 1px solid #eee;">
+                                                                    <td class="p-1">{{ $item->product->item_name ?? 'N/A' }}</td>
+                                                                    <td class="p-1 text-end"><strong>{{ $item->qty ?? 0 }}</strong></td>
+                                                                </tr>
+                                                                @endforeach
+                                                            </table>
+                                                        @else
+                                                            <div class="text-center">-</div>
+                                                        @endif
+                                                    </div>
                                                 </td>
                                                 <td>{{ $purchase->note }}</td>
                                                 <td>{{ number_format($purchase->subtotal ?? 0, 2) }}</td>
