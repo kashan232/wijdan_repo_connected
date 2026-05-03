@@ -267,7 +267,10 @@
     $(document).ready(function() {
         $('#purchase-table').DataTable({
             "pageLength": 10,
-            "lengthMenu": [5, 10, 25, 50, 100],
+            "lengthMenu": [
+                [5, 10, 25, 50, 100, -1],
+                [5, 10, 25, 50, 100, "All"]
+            ],
             "ordering": false, // 👈 VERY IMPORTANT
             "language": {
                 "search": "Search Purchase:",
