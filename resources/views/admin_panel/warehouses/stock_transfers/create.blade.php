@@ -340,30 +340,12 @@
             $('select[name="to_warehouse_id"]').val('').trigger('change');
             $('input[name="shop_name"]').val('');
 
-            // reset stock for all rows
-            $('#product_body tr').each(function() {
-                $(this).find('.stock').val('');
-                $(this).find('.quantity').removeAttr('max');
-            });
-
             if (type === 'warehouse') {
                 $('#toWarehouseBox').removeClass('d-none');
             }
 
             if (type === 'shop') {
                 $('#toShopBox').removeClass('d-none');
-
-                // reload stock for shop (optional, e.g., all products = 0)
-                $('#product_body tr').each(function() {
-                    const productId = $(this).find('.product_id').val();
-                    if (!productId) return;
-                    $.get('/warehouse-stock-quantity', {
-                        warehouse_id: null,
-                        product_id: productId
-                    }, function(response) {
-                        $(this).find('.stock').val(response.quantity ?? 0);
-                    }.bind(this));
-                });
             }
         });
 
@@ -420,101 +402,29 @@
             calculateCreateUnitTotals();
         });
 
-        // ---------- Helper: initialize a product-select element with Select2 ----------
-        function initProductSelect($sel) {
-            // prevent double-init
-            if ($sel.data('select2')) return;
-
-            $sel.select2({
-                placeholder: 'Select Product',
-                allowClear: true,
-                width: '100%',
-                dropdownParent: $sel.closest('td') // keeps dropdown aligned
-            });
-
-            // when product changes — fetch stock for this row
-            $sel.off('change.initStock').on('change.initStock', function() {
-                var $currentRow = $(this).closest('tr');
-                var selectedProduct = $(this).val();
-                var fromWarehouse = $('#from_warehouse_id').val();
-
-                // clear stock & qty if no product selected
-                if (!selectedProduct) {
-                    $currentRow.find('.stock').val('');
-                    $currentRow.find('.quantity').removeAttr('max').val('');
-                    return;
-                }
-
-                if (fromWarehouse) {
-                    // WAREHOUSE CASE
-                    $.get('/warehouse-stock-quantity', {
-                        warehouse_id: fromWarehouse,
-                        product_id: selectedProduct
-                    }, function(response) {
-                        $currentRow.find('.stock').val(response.quantity ?? 0);
-                    });
-                } else {
-                    // SHOP CASE
-                    $.get('/warehouse-stock-quantity', {
-                        warehouse_id: null, // blank ya null bhejna zaruri
-                        product_id: selectedProduct
-                    }, function(response) {
-                        $currentRow.find('.stock').val(response.quantity ?? 0);
-                        $row.find('.quantity').removeAttr('max');
-                    });
-                }
-
-                // auto add new row if last row
-                if ($('#product_body tr:last').is($currentRow)) {
-                    addNewRow();
-                    setTimeout(function() {
-                        $('#product_body tr:last').find('.product-select').select2('open');
-                    }, 100);
-                }
-            });
-        }
-
-        // initialize existing product-select(s)
-        $('#product_body').find('.product-select').each(function() {
-            initProductSelect($(this));
-        });
-
-        // When 'From Warehouse' changes, clear all stock cells & refetch on current selects
-        $('#from_warehouse_id').on('change', function() {
-            var fromWarehouse = $(this).val();
+        function refreshStockForAllRows() {
+            var fromWarehouse = $('#from_warehouse_id').val();
+            if (!fromWarehouse) {
+                $('#product_body tr').find('.stock').val('');
+                return;
+            }
 
             $('#product_body tr').each(function() {
                 var $row = $(this);
                 var productId = $row.find('.product_id').val();
-
-                if (!productId) {
-                    $row.find('.stock').val('');
-                    $row.find('.quantity').removeAttr('max').val('');
-                    return;
-                }
-
-                if (fromWarehouse && fromWarehouse !== 'Shop') {
-                    // fetch stock from selected warehouse
+                if (productId) {
                     $.get('/warehouse-stock-quantity', {
                         warehouse_id: fromWarehouse,
                         product_id: productId
                     }, function(response) {
                         $row.find('.stock').val(response.quantity ?? 0);
                     });
-                } else if (fromWarehouse === 'Shop') {
-                    // fetch stock from Shop (warehouse_id = null or handle in controller)
-                    $.get('/warehouse-stock-quantity', {
-                        warehouse_id: null, // Shop stock
-                        product_id: productId
-                    }, function(response) {
-                        $row.find('.stock').val(response.quantity ?? 0);
-                    });
-                } else {
-                    // no warehouse selected → clear
-                    $row.find('.stock').val('');
-                    $row.find('.quantity').removeAttr('max');
                 }
             });
+        }
+
+        $('#from_warehouse_id').on('change', function() {
+            refreshStockForAllRows();
         });
 
         // Enter on quantity opens new row (existing behavior)
@@ -734,12 +644,14 @@
 
         // Fetch stock (must be AJAX as it's warehouse-specific)
         const fromWarehouse = $('#from_warehouse_id').val();
-        $.get('/warehouse-stock-quantity', {
-            warehouse_id: (fromWarehouse === 'Shop') ? null : fromWarehouse,
-            product_id: res.id
-        }, function(stock) {
-            row.find('.stock').val(stock.quantity ?? 0);
-        });
+        if (fromWarehouse) {
+            $.get('/warehouse-stock-quantity', {
+                warehouse_id: fromWarehouse,
+                product_id: res.id
+            }, function(stock) {
+                row.find('.stock').val(stock.quantity ?? 0);
+            });
+        }
 
         addNewRow();
 
@@ -926,6 +838,8 @@
             }, function(stock) {
                 row.find('.stock').val(stock.quantity ?? 0);
             });
+        } else {
+            row.find('.stock').val(0);
         }
 
         $('#productModal').modal('hide');
