@@ -148,7 +148,7 @@
                                                     </td>
 
                                                     <!-- Date -->
-                                                    <td style="white-space:nowrap;">
+                                                    <td style="white-space:nowrap; font-weight: 900; font-size: 16px;">
                                                         {{ \Carbon\Carbon::parse($gp->gatepass_date)->format('d-m-Y') }}
                                                     </td>
 

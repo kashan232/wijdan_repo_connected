@@ -370,8 +370,76 @@
         }, 10);
     }
 
-    $(document).ready(function() {
+    function calculateCreateUnitTotals() {
+        let totals = {};
 
+        $('#product_table tbody tr').each(function() {
+            let qtyVal = $(this).find('.quantity').val();
+            let unitVal = $(this).find('.unit').val();
+
+            if (!qtyVal || !unitVal) return;
+
+            let qty = parseFloat(qtyVal);
+            let unit = unitVal.trim();
+
+            if (isNaN(qty) || qty <= 0) return;
+
+            totals[unit] = (totals[unit] || 0) + qty;
+        });
+
+        let html = '';
+
+        if (Object.keys(totals).length === 0) {
+            html = `<span class="text-muted">No quantities entered</span>`;
+        } else {
+            html += `<div class="d-flex gap-2 justify-content-end align-items-center">`;
+
+            Object.keys(totals).forEach(unit => {
+                let color = unitColors[unit] || 'secondary';
+
+                html += `
+            <div class="unit-total-box bg-${color} text-${color === 'warning' ? 'dark' : 'white'}">
+                <div class="label">${unit}</div>
+                <input type="text" value="${totals[unit].toFixed(2)}" readonly>
+            </div>
+        `;
+            });
+
+            html += `</div>`;
+        }
+
+        $('#unitTotalsFooter').html(html);
+    }
+
+    function refreshStockForAllRows() {
+        var fromWarehouse = $('.fromLocation:checked').val();
+        if (!fromWarehouse) {
+            $('#product_body tr').find('.stock').val('');
+            return;
+        }
+
+        $('#product_body tr').each(function() {
+            var $row = $(this);
+            var productId = $row.find('.product_id').val();
+            if (productId) {
+                $.get('/warehouse-stock-quantity', {
+                    warehouse_id: fromWarehouse,
+                    product_id: productId
+                }, function(response) {
+                    $row.find('.stock').val(response.quantity ?? 0);
+                });
+            }
+        });
+    }
+
+    const unitColors = {
+        Yard: 'primary',
+        Piece: 'success',
+        Meter: 'warning'
+    };
+
+    $(document).ready(function() {
+        calculateCreateUnitTotals();
 
         $('.transferType').on('change', function() {
             let type = $(this).val();
@@ -393,80 +461,6 @@
                 $('input[name="shop_name"]').val('Shop');
             }
         });
-
-        const unitColors = {
-            Yard: 'primary',
-            Piece: 'success',
-            Meter: 'warning'
-        };
-
-        function calculateCreateUnitTotals() {
-            let totals = {};
-
-            $('#product_table tbody tr').each(function() {
-                let qtyVal = $(this).find('.quantity').val();
-                let unitVal = $(this).find('.unit').val();
-
-                if (!qtyVal || !unitVal) return;
-
-                let qty = parseFloat(qtyVal);
-                let unit = unitVal.trim();
-
-                if (isNaN(qty) || qty <= 0) return;
-
-                totals[unit] = (totals[unit] || 0) + qty;
-            });
-
-            let html = '';
-
-            if (Object.keys(totals).length === 0) {
-                html = `<span class="text-muted">No quantities entered</span>`;
-            } else {
-                html += `<div class="d-flex gap-2 justify-content-end align-items-center">`;
-
-                Object.keys(totals).forEach(unit => {
-                    let color = unitColors[unit] || 'secondary';
-
-                    html += `
-                <div class="unit-total-box bg-${color} text-${color === 'warning' ? 'dark' : 'white'}">
-                    <div class="label">${unit}</div>
-                    <input type="text" value="${totals[unit].toFixed(2)}" readonly>
-                </div>
-            `;
-                });
-
-                html += `</div>`;
-            }
-
-            $('#unitTotalsFooter').html(html);
-        }
-
-
-
-        $(document).ready(function() {
-            calculateCreateUnitTotals();
-        });
-
-        function refreshStockForAllRows() {
-            var fromWarehouse = $('.fromLocation:checked').val();
-            if (!fromWarehouse) {
-                $('#product_body tr').find('.stock').val('');
-                return;
-            }
-
-            $('#product_body tr').each(function() {
-                var $row = $(this);
-                var productId = $row.find('.product_id').val();
-                if (productId) {
-                    $.get('/warehouse-stock-quantity', {
-                        warehouse_id: fromWarehouse,
-                        product_id: productId
-                    }, function(response) {
-                        $row.find('.stock').val(response.quantity ?? 0);
-                    });
-                }
-            });
-        }
 
         $(document).on('change', '.fromLocation', function() {
             refreshStockForAllRows();
@@ -742,7 +736,15 @@
         activeIndex = 0;
         setActiveItem(activeIndex); // First item active
     });
+$('#productModal').on('hidden.bs.modal', function () {
+    setTimeout(() => {
+        let $row = $('#product_body tr').filter(function () {
+            return $(this).find('.product_id').val();
+        }).last();
 
+        $row.find('.quantity').focus().select();
+    }, 100);
+});
 
     function openProductModal() {
 
@@ -880,11 +882,7 @@
         // Fetch stock
         refreshStockForAllRows();
 
-        // ✅ IMPORTANT: focus ONLY qty
-        setTimeout(() => {
-            $row.find('.quantity').focus().select();
-        }, 50);
-
+        
         // ❌ DO NOT append new row here
         $('#productModal').modal('hide');
     });
