@@ -95,7 +95,7 @@
                         <td><input type="checkbox" class="selectProduct" value="{{ $product->id }}"></td>
                         <td>{{ $products->firstItem() + $key }}</td>
                         <td class="fw-bold">{{ $product->item_code }}</td>
-                        <td>{{ $product->barcode_path ?? '—' }}</td>
+                        <td class="fw-bold text-primary">{{ $product->barcode_path ?? '—' }}</td>
 
                         <td>
                             @if ($product->image)

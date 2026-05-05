@@ -632,6 +632,48 @@
                 allowClear: true,
                 width: 'resolve'
             });
+
+            // Improve Tab Navigation for Select2
+            // Open Select2 on focus
+            $(document).on('focus', '.select2-selection--single', function(e) {
+                $(this).closest(".select2-container").siblings('select:enabled').select2('open');
+            });
+
+            // Handle Tab key in Select2 search field
+            $(document).on('keydown', '.select2-search__field', function(e) {
+                if (e.which === 9) { // Tab key
+                    var select2 = $(this).closest('.select2-container').prev('select');
+                    select2.select2('close');
+                    
+                    // Move to next focusable element
+                    var focusables = $(':focusable');
+                    var next = focusables.eq(focusables.index(this) + 1);
+                    if (next.length) {
+                        next.focus();
+                    }
+                }
+            });
+
+            // Generic "Enter to Tab" or just ensuring Tab works
+            $('input, select, textarea').on('keydown', function(e) {
+                if (e.which === 9) { // Tab
+                    // Let default happen, but for Select2 we might need help
+                }
+            });
         });
+
+        // jQuery UI :focusable selector polyfill if not present
+        if (!$.expr[':'].focusable) {
+            $.expr[':'].focusable = function(element) {
+                var nodeName = element.nodeName.toLowerCase(),
+                    tabIndex = $(element).attr('tabindex');
+                return (/^(input|select|textarea|button|object)$/.test(nodeName) ?
+                    !element.disabled :
+                    'a' === nodeName ?
+                    element.href || !isNaN(tabIndex) :
+                    !isNaN(tabIndex)
+                ) && $(element).is(':visible');
+            };
+        }
     </script>
     @endsection

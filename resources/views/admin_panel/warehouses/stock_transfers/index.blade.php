@@ -109,7 +109,11 @@
 
                     <td class="text-start align-top">
                         @forelse($transfer->items as $item)
-                        <div>{{ $item['name'] }}</div>
+                        <div>
+                            {{ $item['name'] }}
+                            <br>
+                            <small class="text-muted fw-bold">{{ $item['barcode'] ?? '-' }}</small>
+                        </div>
                         @empty
                         <div>-</div>
                         @endforelse

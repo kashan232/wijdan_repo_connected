@@ -59,9 +59,10 @@ class StockTransferController extends Controller
                     ->values()
                     ->map(function ($product) use ($qtyMap) {
                         return [
-                            'name' => $product->item_name,
-                            'qty'  => $qtyMap[$product->id] ?? 0,
-                            'unit' => $product->unit_id,
+                            'name'    => $product->item_name,
+                            'barcode' => $product->barcode_path,
+                            'qty'     => $qtyMap[$product->id] ?? 0,
+                            'unit'    => $product->unit_id,
                         ];
                     });
 
