@@ -58,6 +58,63 @@
                         </a>
                         <div class="submenu">
                             <div class="col-group-wrapper row">
+                                <!-- Customers & Sales -->
+                                <div class="col-group col-md-3">
+                                    <p class="category-heading">Sales & Customers</p>
+
+                                    <ul class="submenu-item">
+
+                                        @can('Sales')
+                                        <li>
+                                            <a href="{{ url('sale') }}">
+                                                <i class="fas fa-receipt"></i> <strong style="font-weight: 900; font-size: 16px; color: #000;">Sales</strong>
+                                            </a>
+                                        </li>
+                                        @endcan
+
+                                        @can('Sale Return')
+                                        <li>
+                                            <a href="{{ url('sale-returns') }}">
+                                                <i class="fas fa-receipt"></i> Sale Return
+                                            </a>
+                                        </li>
+                                        @endcan
+
+                                        @can('Bookings')
+                                        <li>
+                                            <a href="{{ route('bookings.index') }}">
+                                                <i class="fas fa-receipt"></i> Bookings
+                                            </a>
+                                        </li>
+                                        @endcan
+
+                                        @can('Customer')
+                                        <li>
+                                            <a href="{{ url('customers') }}">
+                                                <i class="fas fa-user"></i> Customer
+                                            </a>
+                                        </li>
+                                        @endcan
+
+                                        @can('Sales Officer')
+                                        <li>
+                                            <a href="{{ url('sales-officers') }}">
+                                                <i class="fas fa-user-tie"></i> Sales Officer
+                                            </a>
+                                        </li>
+                                        @endcan
+
+                                        @can('Zone')
+                                        <li>
+                                            <a href="{{ url('zone') }}">
+                                                <i class="fas fa-map-marker-alt"></i> Zone
+                                            </a>
+                                        </li>
+                                        @endcan
+
+                                    </ul>
+                                </div>
+
                                 <!-- Products & Categories -->
                                 <div class="col-group col-md-3">
                                     <p class="category-heading">Products & Categories</p>
@@ -183,62 +240,6 @@
                                         <li>
                                             <a href="{{ url('stock_transfers') }}">
                                                 <i class="fas fa-exchange-alt"></i> Stock Transfer
-                                            </a>
-                                        </li>
-                                        @endcan
-
-                                    </ul>
-                                </div>
-                                <!-- Customers & Sales -->
-                                <div class="col-group col-md-3">
-                                    <p class="category-heading">Sales & Customers</p>
-
-                                    <ul class="submenu-item">
-
-                                        @can('Sales')
-                                        <li>
-                                            <a href="{{ url('sale') }}">
-                                                <i class="fas fa-receipt"></i> Sales
-                                            </a>
-                                        </li>
-                                        @endcan
-
-                                        @can('Sale Return')
-                                        <li>
-                                            <a href="{{ url('sale-returns') }}">
-                                                <i class="fas fa-receipt"></i> Sale Return
-                                            </a>
-                                        </li>
-                                        @endcan
-
-                                        @can('Bookings')
-                                        <li>
-                                            <a href="{{ route('bookings.index') }}">
-                                                <i class="fas fa-receipt"></i> Bookings
-                                            </a>
-                                        </li>
-                                        @endcan
-
-                                        @can('Customer')
-                                        <li>
-                                            <a href="{{ url('customers') }}">
-                                                <i class="fas fa-user"></i> Customer
-                                            </a>
-                                        </li>
-                                        @endcan
-
-                                        @can('Sales Officer')
-                                        <li>
-                                            <a href="{{ url('sales-officers') }}">
-                                                <i class="fas fa-user-tie"></i> Sales Officer
-                                            </a>
-                                        </li>
-                                        @endcan
-
-                                        @can('Zone')
-                                        <li>
-                                            <a href="{{ url('zone') }}">
-                                                <i class="fas fa-map-marker-alt"></i> Zone
                                             </a>
                                         </li>
                                         @endcan

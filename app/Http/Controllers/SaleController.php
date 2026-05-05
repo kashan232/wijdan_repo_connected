@@ -184,11 +184,11 @@ class SaleController extends Controller
                 }
 
                 // Action Buttons
-                $actions = '<div class="btn-group" role="group">
-                    <a href="'.route('sales.return.create', $sale->id).'" class="btn btn-sm btn-warning">Return</a>
-                    <a href="'.route('sales.edit', $sale->id).'" class="btn btn-sm btn-primary">Edit</a>
-                    <a href="'.route('sales.invoice', $sale->id).'" class="btn btn-sm btn-info text-white">Invoice</a>
-                    <a href="'.route('sales.dc', $sale->id).'" class="btn btn-sm btn-success text-white">DC</a>
+                $actions = '<div class="btn-group gap-1" role="group">
+                    <a href="'.route('sales.return.create', $sale->id).'" class="btn btn-warning btn-mini">Return</a>
+                    <a href="'.route('sales.edit', $sale->id).'" class="btn btn-primary btn-mini">Edit</a>
+                    <a href="'.route('sales.invoice', $sale->id).'" class="btn btn-dark btn-mini text-white">Invoice</a>
+                    <a href="'.route('sales.dc', $sale->id).'" class="btn btn-success btn-mini text-white">DC</a>
                 </div>';
                 
                 // Date formatting

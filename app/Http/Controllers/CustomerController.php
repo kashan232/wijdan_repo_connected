@@ -376,14 +376,32 @@ class CustomerController extends Controller
             'customer_id' => 'required|exists:customers,id',
             'amount' => 'required|numeric|min:0',
             'type' => 'required|in:plus,minus',
-            'charge_no' => 'nullable|string',
             'date' => 'required|date',
             'vehicle_no' => 'nullable|string',
             'transporter_name' => 'nullable|string',
             'note' => 'nullable|string',
         ]);
 
-        $charge = CustomerCharge::create($request->all());
+        // 🔹 Auto-generate Charge No
+        $lastCharge = CustomerCharge::latest('id')->first();
+        if ($lastCharge && $lastCharge->charge_no) {
+            $lastNumber = (int) str_replace('CHG-', '', $lastCharge->charge_no);
+            $nextNumber = $lastNumber + 1;
+        } else {
+            $nextNumber = 1;
+        }
+        $chargeNo = 'CHG-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+
+        $charge = CustomerCharge::create([
+            'charge_no'        => $chargeNo,
+            'customer_id'      => $request->customer_id,
+            'amount'           => $request->amount,
+            'type'             => $request->type,
+            'date'             => $request->date,
+            'vehicle_no'       => $request->vehicle_no,
+            'transporter_name' => $request->transporter_name,
+            'note'             => $request->note,
+        ]);
 
         // Update ledger
         $ledger = CustomerLedger::where('customer_id', $request->customer_id)->latest()->first();

@@ -127,6 +127,14 @@
         font-size: 1.1em;
         padding: 5px 10px;
     }
+
+    /* Smallest buttons for action row */
+    .btn-mini {
+        padding: 2px 8px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        border-radius: 4px !important;
+    }
 </style>
 <script>
     $(document).ready(function() {
@@ -175,7 +183,7 @@
                 { data: 13 }, // Status
                 { data: 14, orderable: false, searchable: false } // Action
             ],
-            responsive: true,
+            responsive: false,
             pageLength: 10,
             lengthMenu: [
                 [10, 25, 50, 100],

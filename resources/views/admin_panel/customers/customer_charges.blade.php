@@ -29,6 +29,7 @@
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th>Charge No #</th>
                                 <th>Date</th>
                                 <th>Customer</th>
                                 <th>Type</th>
@@ -41,6 +42,7 @@
                             @foreach($charges as $key => $c)
                             <tr>
                                 <td>{{ $key+1 }}</td>
+                                <td><span class="badge badge-light font-weight-bold text-dark">{{ $c->charge_no ?? 'N/A' }}</span></td>
                                 <td>{{ $c->date }}</td>
                                 <td>{{ $c->customer->customer_name ?? 'N/A' }}</td>
                                 <td>
