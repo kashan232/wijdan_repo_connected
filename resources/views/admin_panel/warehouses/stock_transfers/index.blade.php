@@ -73,14 +73,11 @@
                     <th>From Location</th>
                     <th>Transfer Type</th>
                     <th>To Warehouse / Shop</th>
-                    <th>Products</th>
-                    <th>Qty</th>
-                    <th>UOM</th>
+                    <th style="width: 250px;">Items (Qty)</th>
                     <th>Remarks</th>
                     <th>Action</th>
                 </tr>
             </thead>
-
 
             <tbody>
                 @foreach($transfers as $transfer)
@@ -108,31 +105,28 @@
                     </td>
 
                     <td class="text-start align-top">
-                        @forelse($transfer->items as $item)
-                        <div>
-                            {{ $item['name'] }}
-                            <br>
-                            <small class="text-muted fw-bold">{{ $item['barcode'] ?? '-' }}</small>
+                        <div style="max-height: 180px; overflow-y: auto; font-size: 0.85rem; min-width: 240px;">
+                            @if($transfer->items && count($transfer->items) > 0)
+                                <table class="table table-sm table-borderless mb-0">
+                                    @foreach($transfer->items as $item)
+                                    <tr style="border-bottom: 1px solid #eee;">
+                                        <td class="p-1">
+                                            {{ $item['name'] }}
+                                            @if(!empty($item['barcode']))
+                                                <br><small class="text-muted fw-bold">{{ $item['barcode'] }}</small>
+                                            @endif
+                                        </td>
+                                        <td class="p-1 text-end text-nowrap">
+                                            <strong>{{ $item['qty'] ?? 0 }}</strong>
+                                            <small class="text-muted ms-1">{{ $item['unit'] }}</small>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </table>
+                            @else
+                                <div class="text-center">-</div>
+                            @endif
                         </div>
-                        @empty
-                        <div>-</div>
-                        @endforelse
-                    </td>
-
-                    {{-- QTY column --}}
-                    <td class="text-center align-top">
-                        @forelse($transfer->items as $item)
-                        <div><strong>{{ $item['qty'] }}</strong></div>
-                        @empty
-                        <div>0</div>
-                        @endforelse
-                    </td>
-                    <td class="text-center align-top">
-                        @forelse($transfer->items as $item)
-                        <div>{{ $item['unit'] }}</div>
-                        @empty
-                        <div>-</div>
-                        @endforelse
                     </td>
 
                     <td>{{ $transfer->remarks ?? '-' }}</td>
@@ -240,35 +234,45 @@
             var date = trimText($tds.eq(2).text());
             var from = trimText($tds.eq(3).text());
             var to = trimText($tds.eq(5).text());
-            var remarks = trimText($tds.eq(9).text()); // ⚠️ index change
+            var remarks = trimText($tds.eq(7).text()); 
 
-            // Products
+            // Items (Qty) is at index 6
             var productLines = [];
-            $tds.eq(6).find('div').each(function() {
-                var t = trimText($(this).text());
-                if (t) productLines.push(t);
-            });
+            var qtyLines     = [];
+            var uomLines     = [];
 
-            // Qty
-            var qtyLines = [];
-            $tds.eq(7).find('div').each(function() {
-                var t = trimText($(this).text());
-                if (t) qtyLines.push(t);
-            });
+            // Find the inner table rows
+            $tds.eq(6).find('table tr').each(function() {
+                var $rowTds = $(this).find('td');
+                if($rowTds.length >= 2) {
+                    // Left TD: Name + Barcode
+                    // We can either keep them together or separate. 
+                    // Let's take the name (usually first text node or just text())
+                    // Actually let's just take the text() and maybe cleanup barcode.
+                    var nameText = trimText($rowTds.eq(0).text());
+                    productLines.push(nameText);
 
-            // ✅ UOM (NEW)
-            var uomLines = [];
-            $tds.eq(8).find('div').each(function() {
-                var t = trimText($(this).text());
-                if (t) uomLines.push(t);
+                    // Right TD: Qty + Unit
+                    var qtyUnitText = trimText($rowTds.eq(1).text());
+                    // qtyUnitText looks like "50 pcs"
+                    var parts = qtyUnitText.split(/\s+/);
+                    qtyLines.push(parts[0] || '0');
+                    uomLines.push(parts.slice(1).join(' ') || '');
+                }
             });
 
             var rows = [];
             var maxLen = Math.max(
                 productLines.length,
                 qtyLines.length,
-                uomLines.length
+                uomLines.length,
+                1
             );
+
+            if(maxLen === 1 && productLines.length === 0) {
+                 // Fallback for empty row
+                 return [[date, from, to, '', '', '', remarks]];
+            }
 
             for (var i = 0; i < maxLen; i++) {
                 rows.push([
