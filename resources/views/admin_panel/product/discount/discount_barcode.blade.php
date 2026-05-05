@@ -97,7 +97,7 @@
         </div>
 
         <div class="price">
-            SALE: {{ number_format($discount->final_price) }}
+            SALE: {{ number_format($discount->final_price, 2) }}
         </div>
     </div>
 </body>

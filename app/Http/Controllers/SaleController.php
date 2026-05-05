@@ -244,7 +244,7 @@ class SaleController extends Controller
 
     public function getAllProductsForSearch()
     {
-        $products = Product::with(['brand', 'activeDiscount'])
+        $products = Product::with(['brand', 'unit', 'activeDiscount'])
             ->get()
             ->map(function ($product) {
                 $price = (float) $product->price;
@@ -258,7 +258,7 @@ class SaleController extends Controller
                     'item_code'        => $product->item_code,
                     'barcode'          => $product->barcode_path, // Included for client-side barcode lookup
                     'brand'            => $product->brand?->name,
-                    'unit_id'          => $product->unit_id,
+                    'unit_id'          => $product->unit->name ?? $product->unit_id,
                     'note'             => $product->note,
                     'wholesale_price'  => $product->wholesale_price,
                     'price'            => $price,

@@ -124,14 +124,14 @@
                             </span><br>
 
                             <del class="text-muted">
-                                PKR {{ number_format($product->price) }}
+                                PKR {{ number_format($product->price, 2) }}
                             </del><br>
 
                             <strong class="text-success">
-                                PKR {{ number_format($discountedPrice) }}
+                                PKR {{ number_format($discountedPrice, 2) }}
                             </strong>
                             @else
-                            PKR {{ number_format($product->price) }}
+                            PKR {{ number_format($product->price, 2) }}
                             @endif
                         </td>
 

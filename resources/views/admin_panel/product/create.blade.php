@@ -277,19 +277,19 @@
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Alert Quantity</label>
                                                     <input type="number" name="alert_quantity"
-                                                        class="form-control" value="0">
+                                                        class="form-control" value="0" step="any">
                                                 </div>
 
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Wholesale Price</label>
                                                     <input type="number" name="wholesale_price"
-                                                        class="form-control" value="Null">
+                                                        class="form-control" value="Null" step="any">
                                                 </div>
 
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Retail Price</label>
                                                     <input type="number" name="retail_price"
-                                                        class="form-control" value="Null">
+                                                        class="form-control" value="Null" step="any">
                                                 </div>
 
                                                 <div class="col-sm-8">

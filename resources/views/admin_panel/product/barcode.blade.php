@@ -97,12 +97,7 @@
             {{ $product->item_name }}
         </div>
         <div class="price">
-            PKR:
-            {{ number_format(
-        $product->activeDiscount
-            ? $product->activeDiscount->final_price
-            : $product->price
-    ) }}
+            PKR: {{ number_format($product->activeDiscount ? $product->activeDiscount->final_price : $product->price, 2) }}
         </div>
     </div>
 </body>

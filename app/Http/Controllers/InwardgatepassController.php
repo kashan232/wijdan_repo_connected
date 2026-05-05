@@ -338,7 +338,7 @@ class InwardgatepassController extends Controller
             'name'      => $product->item_name,
             'code'      => $product->item_code,
             'brand'     => $product->brand->name ?? '',
-            'unit'      => $product->unit_id ?? '',
+            'unit'      => $product->unit->name ?? $product->unit_id ?? '',
             'wholesale_price'      => $product->wholesale_price ?? '',
             'price'     => $finalPrice,
             'has_discount' => $product->activeDiscount ? true : false,

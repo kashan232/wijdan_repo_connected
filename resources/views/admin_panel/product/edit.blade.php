@@ -124,21 +124,6 @@
                                                         value="{{ $product->item_name }}" required>
                                                 </div>
 
-                                                <!-- Category -->
-                                                {{-- <div class="col-sm-4">
-                                                    <label class="form-label">Category</label>
-                                                    <select name="category_id" id="category">
-                                                        <option value="">Select Category</option>
-                                                        @foreach ($categories as $category)
-                                                           
-                                                            <option value="{{ $category->id }}"
-                                                                {{ $product->category_id == $category->id ? 'selected' : '' }}>
-                                                                {{ $category->name }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </div> --}}
-
                                                  <div class="col-sm-4">
                                                     <label class="form-label">Category</label>
                                                     <select name="category_id" id="category" class="form-select" required>
@@ -163,8 +148,6 @@
                                                     </select>
                                                 </div>
 
-                                               
-
                                                 <!-- Brand -->
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Brand</label>
@@ -177,12 +160,12 @@
                                                         @endforeach
                                                     </select>
                                                 </div>
-<!-- Item Code -->
-<div class="col-sm-4">
-    <label class="form-label">Item Code</label>
-    <input type="text" name="item_code" class="form-control"
-        value="{{ $product->item_code }}" readonly>
-</div>
+                                                <!-- Item Code -->
+                                                <div class="col-sm-4">
+                                                    <label class="form-label">Item Code</label>
+                                                    <input type="text" name="item_code" class="form-control"
+                                                        value="{{ $product->item_code }}" readonly>
+                                                </div>
                                                 <!-- Barcode -->
                                                 <div class="col-sm-4">
                                                     <label for="barcodeInput" class="form-label">Barcode</label>
@@ -208,28 +191,28 @@
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Stock</label>
                                                     <input type="number" name="Stock" class="form-control"
-                                                        value="{{ $product->initial_stock }}">
+                                                        value="{{ $product->initial_stock }}" step="any">
                                                 </div>
 
                                                 <!-- Alert Quantity -->
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Alert Quantity</label>
                                                     <input type="number" name="alert_quantity" class="form-control"
-                                                        value="{{ $product->alert_quantity }}">
+                                                        value="{{ $product->alert_quantity }}" step="any">
                                                 </div>
 
                                                 <!-- Wholesale Price -->
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Wholesale Price</label>
                                                     <input type="number" name="wholesale_price" class="form-control"
-                                                        value="{{ $product->wholesale_price }}">
+                                                        value="{{ $product->wholesale_price }}" step="any">
                                                 </div>
 
                                                 <!-- Retail Price -->
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Retail Price</label>
                                                     <input type="number" name="retail_price" class="form-control"
-                                                        value="{{ $product->price }}">
+                                                        value="{{ $product->price }}" step="any">
                                                 </div>
 
                                                 <!-- Note -->

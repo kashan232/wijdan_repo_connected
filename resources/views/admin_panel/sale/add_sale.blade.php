@@ -1326,10 +1326,26 @@
             }
         });
 
+        // Determine default qty based on unit
+        let defaultQty = 1;
+        let unitName = (res.unit || "").toString().toLowerCase();
+        let isFabric = unitName.includes('meter') || unitName.includes('yard');
+
+        if (isFabric) {
+            defaultQty = 4.5;
+        }
+
         if (foundRow) {
             const qtyInput = foundRow.find('.quantity');
-            let currentQty = parseInt(qtyInput.val()) || 0;
-            qtyInput.val(currentQty + 1);
+
+            if (isFabric) {
+                // For Meter/Yard, maybe they just want to focus and potentially override or keep 4.5
+                // If it's already there, we just focus it
+                qtyInput.focus().select();
+            } else {
+                let currentQty = parseInt(qtyInput.val()) || 0;
+                qtyInput.val(currentQty + 1);
+            }
 
             recalcRow(foundRow);
             recalcSummary();
@@ -1339,7 +1355,9 @@
             qtyInput.addClass('qty-pulse');
 
             const badge = $('<span class="qty-indicator">+1</span>');
-            qtyInput.closest('td').css('position', 'relative').append(badge);
+            if (!isFabric) {
+                qtyInput.closest('td').css('position', 'relative').append(badge);
+            }
 
             setTimeout(() => {
                 foundRow.removeClass('qty-highlight');
@@ -1366,14 +1384,21 @@
         $lastRow.find('.unit input').val(res.unit);
         $lastRow.find('.price').val(res.price);
         $lastRow.find('.product-note').val(res.note || '');
-        $lastRow.find('.quantity').val(1);
+        
+        $lastRow.find('.quantity').val(defaultQty);
         $lastRow.find('.item_disc').val(0);
 
         recalcRow($lastRow);
         recalcSummary();
 
-        $lastRow.find('.quantity').focus();
-        appendBlankRow(true);
+        // Focus Qty
+        setTimeout(() => {
+            $lastRow.find('.quantity').focus().select();
+        }, 100);
+        
+        if (!isFabric) {
+            appendBlankRow(true);
+        }
     }
 
 
@@ -1549,7 +1574,14 @@
         $row.find('.price').val(p.data('price'));
         $row.find('.product-note').val(p.data('note') || '');
 
-        $row.find('.quantity').val(1);
+        // Default Qty check
+        let defaultQty = 1;
+        let unitName = (p.data('unit') || "").toString().toLowerCase();
+        if (unitName.includes('meter') || unitName.includes('yard')) {
+            defaultQty = 4.5;
+        }
+
+        $row.find('.quantity').val(defaultQty);
         $row.find('.item_disc').val(0);
 
         recalcRow($row);
