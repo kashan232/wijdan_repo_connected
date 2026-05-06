@@ -231,13 +231,18 @@
         function parseTransferRow(tr) {
             var $tds = $(tr).find('td');
 
-            var date = trimText($tds.eq(2).text());
-            var from = trimText($tds.eq(3).text());
-            var to = trimText($tds.eq(5).text());
-            var remarks = trimText($tds.eq(7).text()); 
+            var date    = trimText($tds.eq(2).text());
+            var from    = trimText($tds.eq(3).text());
+            var to      = trimText($tds.eq(5).text());
+            
+            // Cleanly extract Remarks from index 7
+            var $remarksCell = $tds.eq(7).clone();
+            $remarksCell.find('small, br').remove();
+            var remarks = trimText($remarksCell.text()); 
 
             // Items (Qty) is at index 6
             var productLines = [];
+            var barcodeLines = [];
             var qtyLines     = [];
             var uomLines     = [];
 
@@ -245,12 +250,18 @@
             $tds.eq(6).find('table tr').each(function() {
                 var $rowTds = $(this).find('td');
                 if($rowTds.length >= 2) {
-                    // Left TD: Name + Barcode
-                    // We can either keep them together or separate. 
-                    // Let's take the name (usually first text node or just text())
-                    // Actually let's just take the text() and maybe cleanup barcode.
-                    var nameText = trimText($rowTds.eq(0).text());
+                    var $prodCell = $rowTds.eq(0);
+                    
+                    // Extract barcode from <small>
+                    var barcode = trimText($prodCell.find('small').text());
+                    
+                    // Extract product name by removing <small> and <br> from a clone
+                    var $nameClone = $prodCell.clone();
+                    $nameClone.find('small, br').remove();
+                    var nameText = trimText($nameClone.text());
+
                     productLines.push(nameText);
+                    barcodeLines.push(barcode);
 
                     // Right TD: Qty + Unit
                     var qtyUnitText = trimText($rowTds.eq(1).text());
@@ -264,14 +275,15 @@
             var rows = [];
             var maxLen = Math.max(
                 productLines.length,
+                barcodeLines.length,
                 qtyLines.length,
                 uomLines.length,
                 1
             );
 
             if(maxLen === 1 && productLines.length === 0) {
-                 // Fallback for empty row
-                 return [[date, from, to, '', '', '', remarks]];
+                 // Fallback for empty row: Date, From, To, Product, Barcode, Qty, UOM, Remarks
+                 return [[date, from, to, '', '', '', '', remarks]];
             }
 
             for (var i = 0; i < maxLen; i++) {
@@ -280,6 +292,7 @@
                     from,
                     to,
                     productLines[i] || '',
+                    barcodeLines[i] || '',
                     qtyLines[i] || '',
                     uomLines[i] || '',
                     remarks
@@ -299,6 +312,7 @@
                 'From Warehouse',
                 'To Warehouse / Shop',
                 'Product',
+                'Barcode',
                 'Qty',
                 'UOM',
                 'Remarks'
@@ -306,25 +320,28 @@
             var aoa = [header].concat(rowsArray);
             var ws = XLSX.utils.aoa_to_sheet(aoa);
             ws['!cols'] = [{
-                    wpx: 90
+                    wpx: 120 // Date
                 },
                 {
-                    wpx: 160
+                    wpx: 160 // From
                 },
                 {
-                    wpx: 160
+                    wpx: 160 // To
                 },
                 {
-                    wpx: 300
+                    wpx: 250 // Product
                 },
                 {
-                    wpx: 100
+                    wpx: 150 // Barcode
                 },
                 {
-                    wpx: 90
-                }, // ✅ UOM
+                    wpx: 80 // Qty
+                },
                 {
-                    wpx: 200
+                    wpx: 80 // UOM
+                },
+                {
+                    wpx: 200 // Remarks
                 }
             ];
             var wb = XLSX.utils.book_new();
