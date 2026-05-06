@@ -1340,7 +1340,9 @@
         let unitName = (res.unit || "").toString().toLowerCase();
         let isFabric = unitName.includes('meter') || unitName.includes('yard');
 
-        if (isFabric) {
+        if (unitName.includes('yard')) {
+            defaultQty = 8;
+        } else if (unitName.includes('meter')) {
             defaultQty = 4.5;
         }
 
@@ -1587,7 +1589,9 @@
         // Default Qty check
         let defaultQty = 1;
         let unitName = (p.data('unit') || "").toString().toLowerCase();
-        if (unitName.includes('meter') || unitName.includes('yard')) {
+        if (unitName.includes('yard')) {
+            defaultQty = 8;
+        } else if (unitName.includes('meter')) {
             defaultQty = 4.5;
         }
 
