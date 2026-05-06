@@ -1087,8 +1087,17 @@
             // 🔥 HIDE SUGGESTIONS PROPERLY
             $row.find('.searchResults').empty().hide();
             $row.attr('data-scanned', '1');
-            // 🔥 MOVE TO QTY
-            $row.find('.quantity').focus();
+
+            let unitName = ($li.data('product-unit') || "").toString().toLowerCase();
+            let isFabric = unitName.includes('meter') || unitName.includes('yard');
+
+            if (isFabric) {
+                // 🔥 MOVE TO QTY
+                $row.find('.quantity').focus().select();
+            } else {
+                // For Piece, automatically add next row and focus its scanner
+                appendBlankRow();
+            }
         });
 
         // ✅ Add new row only when Enter is pressed inside Qty input
@@ -1391,12 +1400,13 @@
         recalcRow($lastRow);
         recalcSummary();
 
-        // Focus Qty
-        setTimeout(() => {
-            $lastRow.find('.quantity').focus().select();
-        }, 100);
-        
-        if (!isFabric) {
+        if (isFabric) {
+            // Focus Qty for Meter/Yard
+            setTimeout(() => {
+                $lastRow.find('.quantity').focus().select();
+            }, 100);
+        } else {
+            // For Piece, automatically add next row and keep focus on scanner
             appendBlankRow(true);
         }
     }
@@ -1587,12 +1597,19 @@
         recalcRow($row);
         recalcSummary();
 
-        // ✅ IMPORTANT: focus ONLY qty
-        setTimeout(() => {
-            $row.find('.quantity').focus().select();
-        }, 50);
+        let isFabric = unitName.includes('meter') || unitName.includes('yard');
 
-        // ❌ DO NOT append new row here
+        if (isFabric) {
+            // ✅ IMPORTANT: focus ONLY qty
+            setTimeout(() => {
+                $row.find('.quantity').focus().select();
+            }, 50);
+        } else {
+            // For Piece, automatically add next row and focus its scanner
+            appendBlankRow();
+        }
+
+        // ❌ Modal hide
         $('#productModal').modal('hide');
     });
 
