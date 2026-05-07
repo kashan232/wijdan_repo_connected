@@ -148,19 +148,35 @@
 <script>
     $(document).ready(function() {
         $('#transferTable').DataTable({
+            "dom": '<"d-flex justify-content-between align-items-center mb-3"lf>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
             "lengthMenu": [
-                [10, 25, 50, 100, -1],
-                [10, 25, 50, 100, "All"]
-            ], // <-- add "All" option
-            "pageLength": 25, // default rows per page
+                [25, 50, 100, -1],
+                [25, 50, 100, "All"]
+            ],
+            "pageLength": 25,
             "columnDefs": [{
                     "orderable": false,
-                    "targets": [0, 9]
-                } // disable sorting on checkbox & Action column
+                    "targets": [0, 8]
+                }
             ],
             "ordering": false,
-            "scrollX": true, // horizontal scroll if needed
-            "autoWidth": false
+            "scrollX": true,
+            "autoWidth": false,
+            "language": {
+                "search": "",
+                "searchPlaceholder": "Search transfers...",
+                "lengthMenu": "_MENU_ entries"
+            }
+        });
+
+        // Style the search input to look more premium
+        $('.dataTables_filter input').addClass('form-control form-control-sm shadow-sm').css({
+            'width': '250px',
+            'border-radius': '20px',
+            'padding-left': '15px'
+        });
+        $('.dataTables_length select').addClass('form-select form-select-sm shadow-sm').css({
+            'border-radius': '8px'
         });
     });
 </script>
