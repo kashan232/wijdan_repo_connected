@@ -111,10 +111,15 @@
                                     @foreach($transfer->items as $item)
                                     <tr style="border-bottom: 1px solid #eee;">
                                         <td class="p-1">
-                                            {{ $item['name'] }}
-                                            @if(!empty($item['barcode']))
-                                                <br><small class="text-muted fw-bold">{{ $item['barcode'] }}</small>
-                                            @endif
+                                             {{ $item['name'] }}
+                                            <div class="d-flex gap-2 align-items-center">
+                                                @if(!empty($item['brand']))
+                                                    <span class="badge bg-light text-dark border" style="font-size: 0.75rem;">{{ $item['brand'] }}</span>
+                                                @endif
+                                                @if(!empty($item['barcode']))
+                                                    <small class="text-muted fw-bold">[{{ $item['barcode'] }}]</small>
+                                                @endif
+                                            </div>
                                         </td>
                                         <td class="p-1 text-end text-nowrap">
                                             <strong>{{ $item['qty'] ?? 0 }}</strong>
@@ -245,7 +250,7 @@
 
         // parse a table row (returns array in export column order)
         function parseTransferRow(tr) {
-            var $tds = $(tr).find('td');
+            var $tds = $(tr).children('td');
 
             var date    = trimText($tds.eq(2).text());
             var from    = trimText($tds.eq(3).text());
@@ -258,6 +263,7 @@
 
             // Items (Qty) is at index 6
             var productLines = [];
+            var brandLines   = [];
             var barcodeLines = [];
             var qtyLines     = [];
             var uomLines     = [];
@@ -268,15 +274,19 @@
                 if($rowTds.length >= 2) {
                     var $prodCell = $rowTds.eq(0);
                     
-                    // Extract barcode from <small>
-                    var barcode = trimText($prodCell.find('small').text());
+                    // Extract barcode from <small> (format is [barcode])
+                    var barcode = trimText($prodCell.find('small').text()).replace(/[\[\]]/g, '');
                     
-                    // Extract product name by removing <small> and <br> from a clone
+                    // Extract brand from <span> badge
+                    var brand = trimText($prodCell.find('span.badge').text());
+
+                    // Extract product name by removing span, small, div from a clone
                     var $nameClone = $prodCell.clone();
-                    $nameClone.find('small, br').remove();
+                    $nameClone.find('span, small, div').remove();
                     var nameText = trimText($nameClone.text());
 
                     productLines.push(nameText);
+                    brandLines.push(brand);
                     barcodeLines.push(barcode);
 
                     // Right TD: Qty + Unit
@@ -298,8 +308,8 @@
             );
 
             if(maxLen === 1 && productLines.length === 0) {
-                 // Fallback for empty row: Date, From, To, Product, Barcode, Qty, UOM, Remarks
-                 return [[date, from, to, '', '', '', '', remarks]];
+                 // Fallback for empty row: Date, From, To, Product, Brand, Barcode, Qty, UOM, Remarks
+                 return [[date, from, to, '', '', '', '', '', remarks]];
             }
 
             for (var i = 0; i < maxLen; i++) {
@@ -308,6 +318,7 @@
                     from,
                     to,
                     productLines[i] || '',
+                    brandLines[i] || '',
                     barcodeLines[i] || '',
                     qtyLines[i] || '',
                     uomLines[i] || '',
@@ -328,6 +339,7 @@
                 'From Warehouse',
                 'To Warehouse / Shop',
                 'Product',
+                'Brand',
                 'Barcode',
                 'Qty',
                 'UOM',
@@ -346,6 +358,9 @@
                 },
                 {
                     wpx: 250 // Product
+                },
+                {
+                    wpx: 120 // Brand
                 },
                 {
                     wpx: 150 // Barcode

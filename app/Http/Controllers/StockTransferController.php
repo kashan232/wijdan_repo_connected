@@ -53,7 +53,7 @@ class StockTransferController extends Controller
                 }
 
                 // products in SAME order
-                $items = \App\Models\Product::whereIn('id', $productIds)
+                $items = \App\Models\Product::with('brand')->whereIn('id', $productIds)
                     ->get()
                     ->sortBy(fn($p) => array_search($p->id, $productIds))
                     ->values()
@@ -61,6 +61,7 @@ class StockTransferController extends Controller
                         return [
                             'name'    => $product->item_name,
                             'barcode' => $product->barcode_path,
+                            'brand'   => $product->brand->name ?? '-',
                             'qty'     => $qtyMap[$product->id] ?? 0,
                             'unit'    => $product->unit_id,
                         ];
@@ -257,7 +258,7 @@ class StockTransferController extends Controller
         }
 
         // Products in correct order + attach qty
-        $products = \App\Models\Product::whereIn('id', $productIds)
+        $products = \App\Models\Product::with('brand')->whereIn('id', $productIds)
             ->get()
             ->sortBy(fn($p) => array_search($p->id, $productIds))
             ->values()
