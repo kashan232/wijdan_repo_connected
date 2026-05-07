@@ -1442,6 +1442,11 @@
             e.preventDefault();
         }
 
+        // Disable Shift + W (User reported it closes the page)
+        if (e.shiftKey && (e.key === 'W' || e.key === 'w')) {
+            e.preventDefault();
+        }
+
         if (e.key === 'F2') {
             e.preventDefault();
             openProductModal();
