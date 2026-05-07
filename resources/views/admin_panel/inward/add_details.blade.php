@@ -451,6 +451,11 @@
             }
         });
 
+        /* ================= AUTO SELECT ON FOCUS ================= */
+        $(document).on('focus', '.quantity', function() {
+            $(this).select();
+        });
+
     });
 
 

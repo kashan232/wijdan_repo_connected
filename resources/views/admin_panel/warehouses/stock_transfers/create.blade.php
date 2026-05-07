@@ -48,8 +48,19 @@
     }
 
     /* Modal Product Search Styles */
-    .modal-product-item.active .product-price {
+    .modal-product-item.active {
+        background-color: #2563eb !important;
         color: #fff !important;
+    }
+    .modal-product-item.active .product-price,
+    .modal-product-item.active .text-muted,
+    .modal-product-item.active .text-primary,
+    .modal-product-item.active small,
+    .modal-product-item.active strong {
+        color: #fff !important;
+    }
+    .modal-product-item strong {
+        color: #000;
     }
 </style>
 
@@ -816,9 +827,14 @@ $('#productModal').on('hidden.bs.modal', function () {
                     data-note="${noteText}">
                     <strong>${p.item_name}</strong>
                     <br>
-                    <span class="product-price" style="font-weight: 800; font-size: 1.2rem; color: #2563eb;">Rs: ${p.price}</span> | <small>${p.brand ?? '-'}</small>
-                    <br>
-                    <strong class="text-Dark">Note: ${noteText}</strong>
+                    <div class="mt-1">
+                        <span class="product-price" style="font-weight: 800; font-size: 1.2rem; color: #2563eb;">Rs: ${p.price}</span> | 
+                        <small class="text-muted fw-bold">${p.brand ?? '-'}</small> | 
+                        <small class="text-primary fw-bold">${p.barcode || '-'}</small>
+                    </div>
+                    <div class="mt-1">
+                        <strong>Note: ${noteText}</strong>
+                    </div>
                 </li>`;
         });
 
