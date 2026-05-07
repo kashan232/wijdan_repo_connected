@@ -664,6 +664,14 @@
             setTimeout(() => foundRow.removeClass('table-success'), 1000);
 
             foundRow[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // 🔥 Move focus to blank row (or add one)
+            let $blank = $('#product_body tr').filter(function() { return !$(this).find('.product_id').val(); }).first();
+            if (!$blank.length) {
+                addNewRow();
+            } else {
+                $blank.find('.productSearch').focus();
+            }
             return;
         }
 
@@ -684,11 +692,8 @@
         // Fetch stock
         refreshStockForAllRows();
 
-        // addNewRow(); // Remove auto-adding new row on barcode scan to allow qty edit
-
-        setTimeout(() => {
-            row.find('.quantity').focus().select();
-        }, 50);
+        // 🔥 Auto add next row and focus for next scan
+        addNewRow();
     }
 
 

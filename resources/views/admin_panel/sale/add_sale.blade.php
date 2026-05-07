@@ -1347,12 +1347,19 @@
             const qtyInput = foundRow.find('.quantity');
 
             if (isFabric) {
-                // For Meter/Yard, maybe they just want to focus and potentially override or keep 4.5
-                // If it's already there, we just focus it
+                // For Meter/Yard, focus it so they can enter length
                 qtyInput.focus().select();
             } else {
                 let currentQty = parseInt(qtyInput.val()) || 0;
                 qtyInput.val(currentQty + 1);
+
+                // 🔥 Move focus to blank row (or add one) for Piece scan
+                let $blank = $('#purchaseItems tr').filter(function() { return !$(this).find('.product_id').val(); }).first();
+                if (!$blank.length) {
+                    appendBlankRow(true);
+                } else {
+                    $blank.find('.productSearch').focus();
+                }
             }
 
             recalcRow(foundRow);
