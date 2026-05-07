@@ -1091,13 +1091,10 @@
             let unitName = ($li.data('product-unit') || "").toString().toLowerCase();
             let isFabric = unitName.includes('meter') || unitName.includes('yard');
 
-            if (isFabric) {
-                // 🔥 MOVE TO QTY
+            // 🔥 ALWAYS MOVE TO QTY and don't add row automatically
+            setTimeout(() => {
                 $row.find('.quantity').focus().select();
-            } else {
-                // For Piece, automatically add next row and focus its scanner
-                appendBlankRow();
-            }
+            }, 50);
         });
 
         // ✅ Add new row only when Enter is pressed inside Qty input
@@ -1603,15 +1600,11 @@
 
         let isFabric = unitName.includes('meter') || unitName.includes('yard');
 
-        if (isFabric) {
-            // ✅ IMPORTANT: focus ONLY qty
-            setTimeout(() => {
-                $row.find('.quantity').focus().select();
-            }, 50);
-        } else {
-            // For Piece, automatically add next row and focus its scanner
-            appendBlankRow();
-        }
+        // ✅ Focus ONLY qty for all items (Fabric or Piece)
+        // New row will be added when Enter is pressed in Qty field
+        setTimeout(() => {
+            $row.find('.quantity').focus().select();
+        }, 50);
 
         // ❌ Modal hide
         $('#productModal').modal('hide');
