@@ -238,7 +238,8 @@
                                                     <label for="color-select">Color Name</label>
                                                     <select name="color[]" id="color-select" class="form-select"
                                                         multiple="multiple" style="width: 100%">
-                                                        <option value="Black" selected>Black</option>
+                                                        <option value="Mix" selected>Mix</option>
+                                                        <option value="Black">Black</option>
                                                         <option value="White">White</option>
                                                         <option value="Red">Red</option>
                                                         <option value="Blue">Blue</option>

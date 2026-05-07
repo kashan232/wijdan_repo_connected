@@ -178,6 +178,30 @@
                                                     </div>
                                                 </div>
 
+                                                <!-- Color -->
+                                                <div class="col-sm-4">
+                                                    <label for="color-select">Color Name</label>
+                                                    <select name="color[]" id="color-select" class="form-select"
+                                                        multiple="multiple" style="width: 100%">
+                                                        @php
+                                                            $selectedColors = [];
+                                                            if ($product->color) {
+                                                                $decoded = json_decode($product->color, true);
+                                                                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                                                                    $selectedColors = $decoded;
+                                                                } else {
+                                                                    $selectedColors = [$product->color];
+                                                                }
+                                                            }
+                                                        @endphp
+                                                        <option value="Mix" {{ in_array('Mix', $selectedColors) ? 'selected' : '' }}>Mix</option>
+                                                        <option value="Black" {{ in_array('Black', $selectedColors) ? 'selected' : '' }}>Black</option>
+                                                        <option value="White" {{ in_array('White', $selectedColors) ? 'selected' : '' }}>White</option>
+                                                        <option value="Red" {{ in_array('Red', $selectedColors) ? 'selected' : '' }}>Red</option>
+                                                        <option value="Blue" {{ in_array('Blue', $selectedColors) ? 'selected' : '' }}>Blue</option>
+                                                    </select>
+                                                </div>
+
                                                 <!-- Unit -->
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Unit (UOM)</label>
@@ -258,6 +282,12 @@
             });
             $('#unit').select2({
                 placeholder: "Select Unit",
+                width: '100%'
+            });
+            $('#color-select').select2({
+                tags: true,
+                placeholder: "Select or type color(s)",
+                allowClear: true,
                 width: '100%'
             });
 

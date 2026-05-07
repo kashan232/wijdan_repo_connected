@@ -1437,6 +1437,11 @@
         setActiveItem(activeIndex); // First item active
     });
     $(document).on('keydown', function(e) {
+        // Disable F1 (Help) and F3 (Find) browser defaults
+        if (e.key === 'F1' || e.key === 'F3') {
+            e.preventDefault();
+        }
+
         if (e.key === 'F2') {
             e.preventDefault();
             openProductModal();
