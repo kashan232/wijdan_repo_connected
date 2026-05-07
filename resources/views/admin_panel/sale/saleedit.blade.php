@@ -856,6 +856,16 @@
 
         // ⌨️ Shortcuts
         $(document).on('keydown', function(e) {
+            // Disable F1 (Help) and F3 (Find) browser defaults
+            if (e.key === 'F1' || e.key === 'F3') {
+                e.preventDefault();
+            }
+
+            // Disable Shift + W (User reported it closes the page)
+            if (e.shiftKey && (e.key === 'W' || e.key === 'w')) {
+                e.preventDefault();
+            }
+
             // Ctrl + S
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
                 e.preventDefault();
@@ -898,6 +908,11 @@
             recalcRow($(this));
         });
         recalcSummary();
+
+        // ✅ AUTO SELECT ON FOCUS
+        $(document).on('focus', '.quantity', function() {
+            $(this).select();
+        });
     });
 </script>
 
@@ -1340,17 +1355,36 @@
             $lastRow.find('.unit input').val(res.unit);
             $lastRow.find('.price').val(res.price);
             $lastRow.find('.product-note').val(res.note || '');
-            $lastRow.find('.quantity').val(1);
+
+            // Default Qty check
+            let defaultQty = 1;
+            let unitName = (res.unit || "").toString().toLowerCase();
+            let isFabric = unitName.includes('meter') || unitName.includes('yard');
+
+            if (unitName.includes('yard')) {
+                defaultQty = 8;
+            } else if (unitName.includes('meter')) {
+                defaultQty = 4.5;
+            }
+
+            $lastRow.find('.quantity').val(defaultQty);
             $lastRow.find('.item_disc').val(0);
 
             recalcRow($lastRow);
             recalcSummary();
 
-            // Move focus to Qty of this row
-            $lastRow.find('.quantity').focus();
-
-            // Add next blank row automatically for the next scan
-            appendBlankRow(true);
+            if (isFabric) {
+                // For Meter/Yard, focus it so they can enter length
+                $lastRow.find('.quantity').focus().select();
+            } else {
+                // For Piece, move focus to blank row (or add one)
+                let $blank = $('#purchaseItems tr').filter(function() { return !$(this).find('.product_id').val(); }).first();
+                if (!$blank.length) {
+                    appendBlankRow(true);
+                } else {
+                    $blank.find('.productSearch').focus();
+                }
+            }
         });
     }
 
@@ -1511,7 +1545,16 @@
         $row.find('.price').val(p.data('price'));
         $row.find('.product-note').val(p.data('note') || '');
 
-        $row.find('.quantity').val(1);
+        // Default Qty check
+        let defaultQty = 1;
+        let unitName = (p.data('unit') || "").toString().toLowerCase();
+        if (unitName.includes('yard')) {
+            defaultQty = 8;
+        } else if (unitName.includes('meter')) {
+            defaultQty = 4.5;
+        }
+
+        $row.find('.quantity').val(defaultQty);
         $row.find('.item_disc').val(0);
 
         recalcRow($row);
