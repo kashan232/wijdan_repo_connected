@@ -17,6 +17,7 @@ class BiometricDevice extends Model
         'username',
         'password',
         'model',
+        'protocol',
         'is_active',
         'last_sync_at',
         'notes',

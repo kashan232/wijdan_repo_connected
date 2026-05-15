@@ -15,7 +15,10 @@ class BiometricDeviceService
      */
     protected function isZkDevice(BiometricDevice $device): bool
     {
-        // Many ZK devices use port 4370. BlackCopper BC-K40 is ZK base.
+        if ($device->protocol === 'zkteco') return true;
+        if ($device->protocol === 'hikvision') return false;
+
+        // Auto-detect: Many ZK devices use port 4370. BlackCopper BC-K40 is ZK base.
         return $device->port == 4370 ||
                stripos($device->model ?? '', 'BC') !== false ||
                stripos($device->model ?? '', 'K40') !== false ||
@@ -44,19 +47,27 @@ class BiometricDeviceService
 
     /**
      * Connect (Test Connection)
-     * Throws exception on failure for detailed error reporting
      */
-    public function connect(BiometricDevice $device): bool
+    public function connect(BiometricDevice $device, string $forceProtocol = null): bool
     {
-        if ($this->isZkDevice($device)) {
+        $protocol = $forceProtocol;
+        
+        if (!$protocol) {
+            $protocol = $this->isZkDevice($device) ? 'zkteco' : 'hikvision';
+        }
+
+        if ($protocol === 'zkteco') {
             $zk = new ZKTecoService($device->ip_address, $device->port);
             return $zk->connect();
         }
 
-        $client = $this->getClient($device);
-        $response = $client->get('ISAPI/System/deviceInfo');
-
-        return $response->getStatusCode() === 200;
+        try {
+            $client = $this->getClient($device);
+            $response = $client->get('ISAPI/System/deviceInfo', ['timeout' => 5]);
+            return $response->getStatusCode() === 200;
+        } catch (Exception $e) {
+            return false;
+        }
     }
 
     /**
@@ -65,25 +76,48 @@ class BiometricDeviceService
     public function testConnection(BiometricDevice $device): array
     {
         try {
-            if ($this->isZkDevice($device)) {
+            $zkAttempted = false;
+            $isAuto = empty($device->protocol) || $device->protocol === 'auto';
+
+            // Try ZKTeco if explicit or auto
+            if ($device->protocol === 'zkteco' || ($isAuto && $this->isZkDevice($device))) {
+                $zkAttempted = true;
                 $zk = new ZKTecoService($device->ip_address, $device->port);
                 if ($zk->connect()) {
                     return [
                         'success' => true,
-                        'message' => "✅ <b>ZKTeco Connected!</b><br>Device (BlackCopper/ZK) at <b>{$device->ip_address}:{$device->port}</b> responded successfully via Binary Protocol."
+                        'message' => "✅ <b>ZKTeco Connected!</b><br>Device at <b>{$device->ip_address}:{$device->port}</b> responded successfully via Binary Protocol."
                     ];
                 }
+                
+                // If it was explicit ZK, return failure now
+                if ($device->protocol === 'zkteco') {
+                    return [
+                        'success' => false,
+                        'message' => "❌ <b>ZKTeco Connection Failed!</b><br>Could not establish binary handshake on port {$device->port}. <br><br><b>Recommendations:</b><br>1. Check if IP/Port is correct<br>2. Ensure device is online<br>3. Verify Network connectivity"
+                    ];
+                }
+            }
+
+            // Try ISAPI if explicit or auto (and ZK failed or wasn't tried)
+            if ($device->protocol === 'hikvision' || $isAuto) {
+                if ($this->connect($device, 'hikvision')) {
+                    return [
+                        'success' => true, 
+                        'message' => "✅ <b>Hikvision Connected!</b><br>Device at <b>{$device->ip_address}:{$device->port}</b> responded properly via ISAPI (HTTP)."
+                    ];
+                }
+            }
+
+            // Final failure message
+            if ($zkAttempted) {
                 return [
                     'success' => false,
-                    'message' => "❌ <b>ZKTeco Connection Failed!</b><br>Could not establish binary handshake on port {$device->port}. <br><br><b>Recommendations:</b><br>1. Check if IP/Port is correct<br>2. Ensure device is online<br>3. Verify Network connectivity"
+                    'message' => "❌ <b>Connection Failed!</b><br>Tried ZKTeco Binary on port {$device->port} but handshake failed. " . ($isAuto ? "Tried ISAPI fallback but it also failed." : "") . "<br><br><b>Recommendations:</b><br>1. Check if IP/Port is correct<br>2. Ensure device is online<br>3. <b>Hikvision Users:</b> Use the <b>HTTP Port</b> (e.g. 80, 90) instead of the SDK Port (e.g. 8000, 9090).<br>4. Select the correct <b>Protocol</b> explicitly in device settings."
                 ];
             }
 
-            if ($this->connect($device)) {
-                return ['success' => true, 'message' => '✅ Connection Successful! Device responded properly.'];
-            }
-
-            return ['success' => false, 'message' => '❌ Connection Failed: Device returned non-200 status.'];
+            return ['success' => false, 'message' => "❌ <b>Connection Failed:</b> Device at {$device->ip_address}:{$device->port} did not respond via ISAPI."];
         } catch (\GuzzleHttp\Exception\ConnectException $e) {
             return [
                 'success' => false, 
@@ -166,9 +200,10 @@ class BiometricDeviceService
             $searchPosition = 0;
             $hasMore = true;
 
-            // Filter logs for the last 30 days to ensure performance
-            $startTime = date('Y-m-d\TH:i:s', strtotime('-30 days'));
-            $endTime = date('Y-m-d\TH:i:s');
+            // Filter logs for a wider range to handle timezone discrepancies
+            // Using a very early start and a future end time
+            $startTime = date('Y-m-d\T00:00:00', strtotime('-30 days'));
+            $endTime = date('Y-m-d\T23:59:59', strtotime('+1 day'));
 
             while ($hasMore) {
                 // JSON Query for attendance events
@@ -201,12 +236,17 @@ class BiometricDeviceService
 
                 $data = json_decode($body, true);
                 $batchCount = 0;
+                $totalMatches = $data['AcsEvent']['totalMatches'] ?? 0;
+                $responseStatus = $data['AcsEvent']['responseStatusStrg'] ?? 'OK';
 
                 // Parse JSON response
                 if (isset($data['AcsEvent']['InfoList'])) {
                     foreach ($data['AcsEvent']['InfoList'] as $info) {
+                        $id = (string) ($info['employeeNoString'] ?? $info['employeeNo'] ?? '0');
+                        if ($id === '0' || empty($id)) continue;
+
                         $allLogs[] = [
-                            'id' => (string) ($info['employeeNoString'] ?? $info['employeeNo'] ?? '0'),
+                            'id' => $id,
                             'timestamp' => (string) ($info['time'] ?? ''),
                             'state' => 1,
                             'uid' => (string) ($info['serialNo'] ?? 0),
@@ -215,16 +255,16 @@ class BiometricDeviceService
                     }
                 }
 
-                Log::info("JSON batch pulled: {$batchCount} logs at position {$searchPosition}");
+                Log::info("JSON batch pulled: {$batchCount} logs at position {$searchPosition}. Total matches on device: {$totalMatches}");
 
-                if ($batchCount < 100) {
-                    $hasMore = false;
+                if ($responseStatus === 'MORE' && $batchCount > 0) {
+                    $searchPosition += $batchCount;
                 } else {
-                    $searchPosition += 100;
+                    $hasMore = false;
                 }
 
                 // Safety break
-                if ($searchPosition > 10000) {
+                if ($searchPosition > 10000 || count($allLogs) > 5000) {
                     $hasMore = false;
                 }
             }
@@ -292,11 +332,16 @@ class BiometricDeviceService
                 }
 
                 $batchCount = 0;
+                $totalMatches = (int) ($xml->totalMatches ?? 0);
+                $responseStatus = (string) ($xml->responseStatusStrg ?? 'OK');
 
                 if (isset($xml->InfoList) && isset($xml->InfoList->Info)) {
                     foreach ($xml->InfoList->Info as $info) {
+                        $id = (string) ($info->employeeNoString ?? $info->employeeNo ?? '0');
+                        if ($id === '0' || empty($id)) continue;
+
                         $allLogs[] = [
-                            'id' => (string) ($info->employeeNoString ?? $info->employeeNo ?? '0'),
+                            'id' => $id,
                             'timestamp' => (string) ($info->time->time ?? $info->time),
                             'state' => 1,
                             'uid' => (string) ($info->serialNo ?? 0),
@@ -305,16 +350,16 @@ class BiometricDeviceService
                     }
                 }
 
-                Log::info("XML batch pulled: {$batchCount} logs at position {$searchPosition}");
+                Log::info("XML batch pulled: {$batchCount} logs at position {$searchPosition}. Total matches: {$totalMatches}");
 
-                if ($batchCount < 100) {
-                    $hasMore = false; // Less than maxResults means we reached the end
+                if ($responseStatus === 'MORE' && $batchCount > 0) {
+                    $searchPosition += $batchCount;
                 } else {
-                    $searchPosition += 100;
+                    $hasMore = false;
                 }
 
                 // Safety break
-                if ($searchPosition > 10000) {
+                if ($searchPosition > 10000 || count($allLogs) > 5000) {
                     $hasMore = false;
                 }
             }
@@ -330,27 +375,34 @@ class BiometricDeviceService
         }
     }
 
-    /**
-     * Sync Device Time
-     */
+
     public function syncTime(BiometricDevice $device): bool
     {
         try {
+            if ($this->isZkDevice($device)) {
+                $zk = new ZKTecoService($device->ip_address, $device->port);
+                if ($zk->connect()) {
+                    return false; // Not yet implemented for standalone ZK
+                }
+                return false;
+            }
+
             $client = $this->getClient($device);
             $time = date('Y-m-d\TH:i:s');
             $xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
                     <Time>
                         <timeMode>manual</timeMode>
                         <localTime>$time</localTime>
-                        <timeZone>CST-5:00:00</timeZone>
                     </Time>";
 
-            $client->put('ISAPI/System/time', ['body' => $xml]);
+            $response = $client->put('ISAPI/System/time', [
+                'body' => $xml,
+                'http_errors' => false
+            ]);
 
-            return true;
+            return $response->getStatusCode() === 200;
         } catch (Exception $e) {
-            Log::error('Hikvision Time Sync Failed: '.$e->getMessage());
-
+            Log::error('Biometric Time Sync Failed: '.$e->getMessage());
             return false;
         }
     }

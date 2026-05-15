@@ -293,6 +293,12 @@
                                 @can('hr.biometric.devices.view')
                                 <li class="nav-item"><a class="nav-link" href="{{ route('hr.biometric-devices.index') }}"><i class="fas fa-fingerprint mr-2"></i> <span class="menu-title">Biometric Devices</span></a></li>
                                 @endcan
+                                @can('hr.attendance.view')
+                                <li class="nav-item"><a class="nav-link" href="{{ route('hr.attendance.report') }}"><i class="fas fa-file-invoice mr-2"></i> <span class="menu-title">Attendance Record</span></a></li>
+                                @endcan
+                                @can('hr.payroll.view')
+                                <li class="nav-item"><a class="nav-link" href="{{ route('hr.payroll.report') }}"><i class="fas fa-receipt mr-2"></i> <span class="menu-title">Payroll Record</span></a></li>
+                                @endcan
                                 <li class="nav-item"><a class="nav-link" href="{{ route('my-attendance') }}"><i class="fas fa-user-clock mr-2"></i> <span class="menu-title">My Attendance</span></a></li>
                             </ul>
                         </div>

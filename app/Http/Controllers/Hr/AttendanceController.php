@@ -366,7 +366,7 @@ class AttendanceController extends Controller
         $faceDescriptor = $request->input('face_descriptor');
 
         // Validate descriptor format
-        $faceService = app(\App\Services\FaceRecognitionService::class);
+        $faceService = app(\App\Services\Hr\FaceRecognitionService::class);
         if (! $faceService->isValidDescriptor($faceDescriptor)) {
             return response()->json([
                 'error' => 'Invalid face descriptor format.',
@@ -644,7 +644,7 @@ class AttendanceController extends Controller
             // Face Verification
             $faceDescriptor = $request->input('face_descriptor');
             if ($faceDescriptor) {
-                $faceService = app(\App\Services\FaceRecognitionService::class);
+                $faceService = app(\App\Services\Hr\FaceRecognitionService::class);
 
                 // Validate descriptor format
                 if (! $faceService->isValidDescriptor($faceDescriptor)) {
@@ -921,7 +921,7 @@ class AttendanceController extends Controller
             
             \Log::info("Pull Attendance: Found {$devices->count()} active device(s)");
             
-            $syncService = app(\App\Services\BiometricSyncService::class);
+            $syncService = app(\App\Services\Hr\BiometricSyncService::class);
 
             $results = [
                 'created' => 0,
@@ -1101,5 +1101,113 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function report(Request $request)
+    {
+        if (! auth()->user()->can('hr.attendance.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $selectedMonth = $request->get('month', Carbon::now()->format('Y-m'));
+        $selectedDepartment = $request->get('department_id');
+        $selectedDesignation = $request->get('designation_id');
+        $selectedEmployee = $request->get('employee_id');
+
+        $monthDate = Carbon::parse($selectedMonth . '-01');
+        $daysInMonth = $monthDate->daysInMonth;
+        $monthLabel = $monthDate->format('F Y');
+
+        $query = Employee::with(['department', 'designation'])
+            ->where('status', 'active');
+
+        if ($selectedDepartment && $selectedDepartment != 'all') {
+            $query->where('department_id', $selectedDepartment);
+        }
+
+        if ($selectedDesignation && $selectedDesignation != 'all') {
+            $query->where('designation_id', $selectedDesignation);
+        }
+
+        if ($selectedEmployee && $selectedEmployee != 'all') {
+            $query->where('id', $selectedEmployee);
+        }
+
+        $employees = $query->orderBy('department_id')
+            ->orderBy('designation_id')
+            ->orderBy('first_name')
+            ->get()
+            ->groupBy(['department.name', 'designation.name']);
+
+        $startOfMonth = $monthDate->copy()->startOfMonth()->format('Y-m-d');
+        $endOfMonth = $monthDate->copy()->endOfMonth()->format('Y-m-d');
+
+        $attendances = Attendance::whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->get()
+            ->groupBy('employee_id');
+
+        // Prepare a structured attendance map for easier view access
+        $attendanceMap = [];
+        foreach ($attendances as $empId => $empAttendances) {
+            $attendanceMap[$empId] = $empAttendances->keyBy(function($item) {
+                return Carbon::parse($item->date)->format('Y-m-d');
+            });
+        }
+
+        $leaves = Leave::where('status', 'approved')
+            ->where(function($q) use ($startOfMonth, $endOfMonth) {
+                $q->whereBetween('start_date', [$startOfMonth, $endOfMonth])
+                  ->orWhereBetween('end_date', [$startOfMonth, $endOfMonth])
+                  ->orWhere(function($sq) use ($startOfMonth, $endOfMonth) {
+                      $sq->where('start_date', '<', $startOfMonth)
+                         ->where('end_date', '>', $endOfMonth);
+                  });
+            })
+            ->get();
+
+        // Structure leaves map
+        $leavesMap = [];
+        foreach ($leaves as $leave) {
+            $start = Carbon::parse($leave->start_date);
+            $end = Carbon::parse($leave->end_date);
+            $current = $start->copy();
+            while ($current->lte($end)) {
+                if ($current->between($startOfMonth, $endOfMonth)) {
+                    $leavesMap[$leave->employee_id][$current->format('Y-m-d')] = $leave->leave_type;
+                }
+                $current->addDay();
+            }
+        }
+
+        $holidays = Holiday::where(function($q) use ($startOfMonth, $endOfMonth) {
+                $q->whereBetween('date', [$startOfMonth, $endOfMonth])
+                  ->orWhereBetween('end_date', [$startOfMonth, $endOfMonth]);
+            })
+            ->get();
+
+        // Structure holidays map
+        $holidaysMap = [];
+        foreach ($holidays as $holiday) {
+            $start = Carbon::parse($holiday->date);
+            $end = Carbon::parse($holiday->end_date);
+            $current = $start->copy();
+            while ($current->lte($end)) {
+                if ($current->between($startOfMonth, $endOfMonth)) {
+                    $holidaysMap[$current->format('Y-m-d')] = $holiday->name;
+                }
+                $current->addDay();
+            }
+        }
+
+        $departments = Department::orderBy('name')->get();
+        $designations = Designation::orderBy('name')->get();
+        $allEmployees = Employee::where('status', 'active')->orderBy('first_name')->get();
+
+        return view('hr.attendance.report', compact(
+            'employees', 'attendanceMap', 'leavesMap', 'holidaysMap',
+            'selectedMonth', 'selectedDepartment', 'selectedDesignation', 'selectedEmployee',
+            'daysInMonth', 'monthDate', 'monthLabel',
+            'departments', 'designations', 'allEmployees'
+        ));
     }
 }

@@ -135,33 +135,39 @@ class BiometricSyncService
             $employee = Employee::where('device_user_id', $log['id'])->first();
 
             if (! $employee) {
+                if ($log['id'] != '0') {
+                    \Log::warning("Biometric Pull: No employee found with device_user_id '{$log['id']}'. Log timestamp: {$log['timestamp']}");
+                }
                 $skipped++;
                 continue;
             }
 
-            // Parse timestamp
-            $timestamp = Carbon::parse($log['timestamp']);
+            // Parse timestamp - strip timezone offset to treat as local time
+            $timestamp = Carbon::parse(substr($log['timestamp'], 0, 19));
             $gap = $this->getPunchGapMinutes();
 
             // 1. Check for OPEN Session
             $openSession = Attendance::where('employee_id', $employee->id)
                 ->whereNotNull('check_in_time')
                 ->whereNull('check_out_time')
-                ->latest('check_in_time')
+                ->orderBy('date', 'desc')
+                ->orderBy('check_in_time', 'desc')
                 ->first();
 
             // Safety check: If open session is too old (e.g., > 20 hours), assume it's a forgotten check-out
             // and treat this new punch as a NEW Check-In for the current day.
             if ($openSession) {
-                $checkInTime = Carbon::parse($openSession->check_in_time);
+                // Combine date and time to get actual check-in timestamp
+                $checkInTime = Carbon::parse($openSession->date . ' ' . $openSession->check_in_time);
+                
                 if ($checkInTime->diffInHours($timestamp) > 20) {
                     $openSession = null; // Ignore old session, force new check-in
                 }
             }
 
             if ($openSession) {
-                // We have an open session. Check if this punch updates it (OUT) or is duplicate (IN)
-                $checkInTime = Carbon::parse($openSession->check_in_time);
+                // Combine date and time to get actual check-in timestamp
+                $checkInTime = Carbon::parse($openSession->date . ' ' . $openSession->check_in_time);
                 
                 if ($timestamp->lte($checkInTime)) {
                      $duplicates++; // Out of order
@@ -217,7 +223,8 @@ class BiometricSyncService
                     ->first();
 
                 if ($lastClosedSession) {
-                     $lastOut = Carbon::parse($lastClosedSession->check_out_time);
+                     // Combine date and time
+                     $lastOut = Carbon::parse($lastClosedSession->date . ' ' . $lastClosedSession->check_out_time);
                      if ($timestamp->lte($lastOut)) { $duplicates++; continue; }
                      if ($timestamp->diffInMinutes($lastOut) < $gap) {
                          $duplicates++; // Duplicate OUT
@@ -267,9 +274,38 @@ class BiometricSyncService
                         $existingAttendance->is_late = $isLate;
                         $existingAttendance->late_minutes = $lateMinutes;
                     } else {
-                        // Keep the original check_in_time (First In) and clear the check_out_time to re-open
-                        $existingAttendance->check_out_time = null;
-                        $existingAttendance->check_out_location = null;
+                        // We have an existing record with a check-in. 
+                        // If it has a check-out, see if this new punch is a LATER check-out
+                        if ($existingAttendance->check_out_time) {
+                            $currentOut = Carbon::parse($existingAttendance->date . ' ' . $existingAttendance->check_out_time);
+                            if ($timestamp->gt($currentOut)) {
+                                $diff = $currentOut->diffInMinutes($timestamp);
+                                if ($diff >= $gap) {
+                                    $existingAttendance->check_out_time = $timestamp->toDateTimeString();
+                                    $existingAttendance->check_out_location = 'Biometric Device';
+                                    $this->calculateTotalHours($existingAttendance);
+                                } else {
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
+                        } else {
+                            // If it's open for today, treat this as the check-out!
+                            $checkInTime = Carbon::parse($existingAttendance->date . ' ' . $existingAttendance->check_in_time);
+                            if ($timestamp->gt($checkInTime)) {
+                                $diff = $checkInTime->diffInMinutes($timestamp);
+                                if ($diff >= $gap) {
+                                    $existingAttendance->check_out_time = $timestamp->toDateTimeString();
+                                    $existingAttendance->check_out_location = 'Biometric Device';
+                                    $this->calculateTotalHours($existingAttendance);
+                                } else {
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
                     }
                     $existingAttendance->save();
                     
@@ -315,9 +351,19 @@ class BiometricSyncService
     protected function calculateTotalHours(Attendance $attendance): void
     {
         if ($attendance->check_in_time && $attendance->check_out_time) {
-            $checkIn  = Carbon::parse($attendance->check_in_time);
+            // Be careful here: check_out might be on the next day
+            // We use the 'date' column as the base for check_in
+            $checkIn = Carbon::parse($attendance->date . ' ' . $attendance->check_in_time);
+            
+            // For check_out, we parse it directly. If it only has time, it might need date adjustment
             $checkOut = Carbon::parse($attendance->check_out_time);
-            // Handle overnight shift: if checkout is before checkin, add 1 day
+            
+            // If checkOut doesn't have a date part (or is same day but earlier than checkIn), 
+            // it's likely an overnight shift.
+            if ($checkOut->year < 2000) { // Likely only time was stored
+                 $checkOut = Carbon::parse($attendance->date . ' ' . $attendance->check_out_time);
+            }
+
             if ($checkOut->lt($checkIn)) {
                 $checkOut->addDay();
             }

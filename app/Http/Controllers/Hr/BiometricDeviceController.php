@@ -42,6 +42,7 @@ class BiometricDeviceController extends Controller
             'username' => 'nullable|string',
             'password' => 'nullable|string',
             'model' => 'nullable|string',
+            'protocol' => 'nullable|string|in:auto,zkteco,hikvision',
             'notes' => 'nullable|string',
         ]);
 
@@ -82,6 +83,7 @@ class BiometricDeviceController extends Controller
             'username' => 'nullable|string',
             'password' => 'nullable|string',
             'model' => 'nullable|string',
+            'protocol' => 'nullable|string|in:auto,zkteco,hikvision',
             'notes' => 'nullable|string',
             'is_active' => 'boolean',
         ]);
@@ -122,6 +124,26 @@ class BiometricDeviceController extends Controller
         $result = $this->deviceService->testConnection($device);
 
         return response()->json($result);
+    }
+
+    /**
+     * Sync Device Time
+     */
+    public function syncTime(BiometricDevice $device)
+    {
+        $success = $this->deviceService->syncTime($device);
+
+        if ($success) {
+            return response()->json([
+                'success' => true,
+                'message' => "🕒 <b>Time Synced!</b><br>Device <b>'{$device->name}'</b> clock has been synchronized with the server.",
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => "❌ <b>Sync Failed!</b><br>Could not synchronize time with <b>'{$device->name}'</b>. Ensure the device is online and supports time synchronization.",
+        ], 500);
     }
 
     /**

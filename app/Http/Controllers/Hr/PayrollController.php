@@ -63,6 +63,50 @@ class PayrollController extends Controller
     }
 
     /**
+     * Display Payroll Record Report
+     */
+    public function report(Request $request)
+    {
+        if (! auth()->user()->can('hr.payroll.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $query = Payroll::with(['employee.designation', 'employee.department', 'details', 'reviewer']);
+
+        // Apply filters
+        $selectedMonth = $request->get('month', date('Y-m'));
+        $query->where('month', $selectedMonth);
+
+        if ($request->filled('department_id') && $request->department_id !== 'all') {
+            $query->whereHas('employee', function($q) use ($request) {
+                $q->where('department_id', $request->department_id);
+            });
+        }
+
+        if ($request->filled('employee_id') && $request->employee_id !== 'all') {
+            $query->where('employee_id', $request->employee_id);
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        $payrolls = $query->get();
+
+        $departments = \App\Models\Hr\Department::all();
+        $employees = Employee::all();
+        $monthLabel = Carbon::parse($selectedMonth . '-01')->format('F Y');
+
+        return view('hr.payroll.report', compact(
+            'payrolls', 
+            'departments', 
+            'employees', 
+            'selectedMonth',
+            'monthLabel'
+        ));
+    }
+
+    /**
      * Show monthly payrolls only
      */
     public function monthly(Request $request)

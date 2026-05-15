@@ -157,9 +157,13 @@
                                                 <i class="fa fa-plug"></i> Test
                                             </button>
                                             <button class="btn btn-sm btn-info sync-employees-btn"
-                                                data-id="{{ $device->id }}">
-                                                <i class="fa fa-users"></i> Sync
-                                            </button>
+                                                 data-id="{{ $device->id }}">
+                                                 <i class="fa fa-users"></i> Sync
+                                             </button>
+                                             <button class="btn btn-sm btn-dark sync-time-btn"
+                                                 data-id="{{ $device->id }}">
+                                                 <i class="fa fa-clock"></i> Time
+                                             </button>
                                         @endcan
                                     </div>
 
@@ -169,6 +173,7 @@
                                                 data-id="{{ $device->id }}" data-name="{{ $device->name }}"
                                                 data-ip="{{ $device->ip_address }}" data-port="{{ $device->port }}"
                                                 data-username="{{ $device->username }}" data-model="{{ $device->model }}"
+                                                data-protocol="{{ $device->protocol }}"
                                                 data-notes="{{ $device->notes }}" data-active="{{ $device->is_active }}">
                                                 <i class="fa fa-edit"></i> Edit
                                             </button>
@@ -252,10 +257,19 @@
                                     placeholder="Optional">
                             </div>
 
-                            <div class="col-12 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label"><i class="fa fa-info-circle"></i> Model</label>
                                 <input type="text" name="model" id="device_model" class="form-control"
                                     placeholder="e.g., BC-K40">
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-code"></i> Protocol</label>
+                                <select name="protocol" id="device_protocol" class="form-control">
+                                    <option value="auto">Auto-Detect</option>
+                                    <option value="zkteco">ZKTeco (Binary)</option>
+                                    <option value="hikvision">Hikvision (ISAPI)</option>
+                                </select>
                             </div>
 
                             <div class="col-12 mb-3">
@@ -334,6 +348,7 @@
                 $('#device_port').val($(this).data('port'));
                 $('#device_username').val($(this).data('username'));
                 $('#device_model').val($(this).data('model'));
+                $('#device_protocol').val($(this).data('protocol') || 'auto');
                 $('#device_notes').val($(this).data('notes'));
                 $('#device_active').prop('checked', $(this).data('active') == 1);
                 $('#modalTitle').text('Edit Device');
@@ -452,6 +467,32 @@
                             });
                     }
                 });
+            });
+
+            // Sync Time
+            $('.sync-time-btn').click(function() {
+                const deviceId = $(this).data('id');
+                const btn = $(this);
+
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Syncing...');
+
+                $.post(`{{ route('hr.biometric-devices.index') }}/${deviceId}/sync-time`, {
+                        _token: '{{ csrf_token() }}'
+                    })
+                    .done(response => {
+                        Swal.fire({
+                            title: 'Success!',
+                            html: response.message,
+                            icon: 'success'
+                        });
+                    })
+                    .fail(xhr => {
+                        Swal.fire('Error!', xhr.responseJSON?.message ||
+                            'Failed to sync time', 'error');
+                    })
+                    .always(() => {
+                        btn.prop('disabled', false).html('<i class="fa fa-clock"></i> Time');
+                    });
             });
 
             // Pull Attendance
