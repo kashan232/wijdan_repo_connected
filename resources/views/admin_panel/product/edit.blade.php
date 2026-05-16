@@ -126,7 +126,7 @@
 
                                                  <div class="col-sm-4">
                                                     <label class="form-label">Category</label>
-                                                    <select name="category_id" id="category" class="form-select" required>
+                                                    <select name="category_id" id="category" class="form-control" required>
                                                         @foreach ($categories as $category)
                                                             <option value="{{ $category->id }}"
                                                                 {{ $category->id == $product->category_id ? 'selected' : '' }}>
@@ -138,7 +138,7 @@
 
                                                  <div class="col-sm-4">
                                                     <label class="form-label">Sub Category</label>
-                                                    <select name="sub_category_id" id="subcategory" class="form-select" required>
+                                                    <select name="sub_category_id" id="subcategory" class="form-control" required>
                                                         @foreach ($subcategories as $subcategory)
                                                             <option value="{{ $subcategory->id }}"
                                                                 {{ $subcategory->id == $product->sub_category_id ? 'selected' : '' }}>
@@ -151,7 +151,7 @@
                                                 <!-- Brand -->
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Brand</label>
-                                                    <select name="brand_id" class="form-select" required>
+                                                    <select name="brand_id" class="form-control" required>
                                                         @foreach ($brands as $brand)
                                                             <option value="{{ $brand->id }}"
                                                                 {{ $brand->id == $product->brand_id ? 'selected' : '' }}>
@@ -181,7 +181,7 @@
                                                 <!-- Color -->
                                                 <div class="col-sm-4">
                                                     <label for="color-select">Color Name</label>
-                                                    <select name="color[]" id="color-select" class="form-select"
+                                                    <select name="color[]" id="color-select" class="form-control"
                                                         multiple="multiple" style="width: 100%">
                                                         @php
                                                             $selectedColors = [];
@@ -205,7 +205,7 @@
                                                 <!-- Unit -->
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Unit (UOM)</label>
-                                                    <select name="unit" id="unit" class="form-select" required>
+                                                    <select name="unit" id="unit" class="form-control" required>
                                                         <option value="Piece" {{ $product->unit_id == 'Piece' ? 'selected' : '' }}>Piece</option>
                                                         <option value="Meter" {{ $product->unit_id == 'Meter' ? 'selected' : '' }}>Meter</option>
                                                         <option value="Yards" {{ $product->unit_id == 'Yards' ? 'selected' : '' }}>Yards</option>
@@ -267,71 +267,90 @@
 @section('scripts')
     <script>
         $(document).ready(function() {
-            // Initialize Select2
-            $('#category').select2({
-                placeholder: "Select Category",
-                width: '100%'
-            });
-            $('#subcategory').select2({
-                placeholder: "Select Subcategory",
-                width: '100%'
-            });
+            // --- Select2 Initialization ---
+            const select2Options = {
+                width: '100%',
+                allowClear: true
+            };
+
             $('select[name="brand_id"]').select2({
-                placeholder: "Select Brand",
-                width: '100%'
+                ...select2Options,
+                placeholder: "Select Brand"
             });
             $('#unit').select2({
-                placeholder: "Select Unit",
-                width: '100%'
+                ...select2Options,
+                placeholder: "Select Unit"
             });
             $('#color-select').select2({
+                ...select2Options,
                 tags: true,
-                placeholder: "Select or type color(s)",
-                allowClear: true,
-                width: '100%'
+                placeholder: "Select or type color(s)"
             });
 
-            // Handle Category Change
+            // --- Smooth Tab Navigation for Select2 ---
+            
+            // 1. Open Select2 on focus
+            $(document).on('focus', '.select2-selection--single, .select2-selection--multiple', function(e) {
+                const $select = $(this).closest(".select2-container").siblings('select:enabled');
+                if ($select.length && !$select.data('select2').isOpen()) {
+                    $select.select2('open');
+                }
+            });
+
+            // 2. Handle Tab key in Select2 search field
+            $(document).on('keydown', '.select2-search__field', function(e) {
+                if (e.which === 9) { // Tab key
+                    const $container = $(this).closest('.select2-container');
+                    const $select = $container.prev('select');
+                    
+                    if ($select.length) {
+                        $select.select2('close');
+                        
+                        setTimeout(() => {
+                            const $focusables = $(':focusable');
+                            const nextIndex = $focusables.index($select) + 1;
+                            if (nextIndex < $focusables.length) {
+                                $focusables.eq(nextIndex).focus();
+                            }
+                        }, 50);
+                        e.preventDefault();
+                    }
+                }
+            });
+
+            // --- Category/Subcategory Logic ---
             $('#category').on('change', function() {
                 var categoryId = $(this).val();
+                var $subcategory = $('#subcategory');
                 if (categoryId) {
                     $.ajax({
                         url: '/get-subcategories/' + categoryId,
                         type: "GET",
                         dataType: "json",
                         success: function(data) {
-                            $('#subcategory').empty();
-                            $('#subcategory').append('<option value="">Select Subcategory</option>');
+                            $subcategory.empty();
+                            $subcategory.append('<option value="">Select Subcategory</option>');
                             $.each(data, function(key, value) {
-                                $('#subcategory').append('<option value="' + value.id + '">' + value.name + '</option>');
+                                $subcategory.append('<option value="' + value.id + '">' + value.name + '</option>');
                             });
-                            $('#subcategory').trigger('change');
                         }
                     });
                 } else {
-                    $('#subcategory').empty();
-                    $('#subcategory').append('<option value="">Select Subcategory</option>');
-                    $('#subcategory').trigger('change');
+                    $subcategory.empty().append('<option value="">Select Subcategory</option>');
                 }
             });
 
-            // Barcode Generation
+            // --- Barcode Generation ---
             $('#generateBarcodeBtn').on('click', function(e) {
                 e.preventDefault();
-                $.ajax({
-                    url: '{{ route("generate-barcode-image") }}',
-                    type: 'GET',
-                    success: function(data) {
-                        $('#barcodeInput').val(data.barcode_number);
-                        // alert("Barcode generated: " + data.barcode_number);
-                    },
-                    error: function() {
-                        alert("Error generating barcode.");
-                    }
+                $.getJSON('{{ route("generate-barcode-image") }}', function(data) {
+                    $('#barcodeInput').val(data.barcode_number);
+                }).fail(function() {
+                    Swal.fire('Error', 'Error generating barcode.', 'error');
                 });
             });
 
-            // Image Preview
+            // --- Image Preview ---
             $('#imageInput').on('change', function(event) {
                 let file = event.target.files[0];
                 if (file) {
@@ -349,37 +368,9 @@
                 $('#preview').attr('src', "{{ asset('uploads/products/' . $product->image) }}");
                 $(this).hide();
             });
-
-            // Improve Tab Navigation for Select2
-            // Open Select2 on focus
-            $(document).on('focus', '.select2-selection--single', function(e) {
-                $(this).closest(".select2-container").siblings('select:enabled').select2('open');
-            });
-
-            // Handle Tab key in Select2 search field
-            $(document).on('keydown', '.select2-search__field', function(e) {
-                if (e.which === 9) { // Tab key
-                    var select2 = $(this).closest('.select2-container').prev('select');
-                    select2.select2('close');
-                    
-                    // Move to next focusable element
-                    var focusables = $(':focusable');
-                    var next = focusables.eq(focusables.index(this) + 1);
-                    if (next.length) {
-                        next.focus();
-                    }
-                }
-            });
-
-            // Generic "Enter to Tab" or just ensuring Tab works
-            $('input, select, textarea').on('keydown', function(e) {
-                if (e.which === 9) { // Tab
-                    // Let default happen, but for Select2 we might need help
-                }
-            });
         });
 
-        // jQuery UI :focusable selector polyfill if not present
+        // Focusable polyfill
         if (!$.expr[':'].focusable) {
             $.expr[':'].focusable = function(element) {
                 var nodeName = element.nodeName.toLowerCase(),

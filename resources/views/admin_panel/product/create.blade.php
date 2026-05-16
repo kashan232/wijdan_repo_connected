@@ -187,7 +187,7 @@
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Category</label>
                                                     <select id="category-dropdown" name="category_id"
-                                                        class="form-select">
+                                                        class="form-control">
                                                         <option value="">Select Category</option>
                                                         @foreach ($categories as $cat)
                                                         <option value="{{ $cat->id }}">{{ $cat->name }}
@@ -199,7 +199,7 @@
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Sub Category</label>
                                                     <select id="subcategory-dropdown" name="sub_category_id"
-                                                        class="form-select">
+                                                        class="form-control">
                                                         <option value="">Select Subcategory</option>
                                                     </select>
                                                 </div>
@@ -212,7 +212,7 @@
 
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Brand</label>
-                                                    <select name="brand_id[]" class="form-select brand-select" multiple required>
+                                                    <select name="brand_id" class="form-control brand-select" required>
                                                         @foreach ($brands as $brand)
                                                         <option value="{{ $brand->id }}">{{ $brand->name }}</option>
                                                         @endforeach
@@ -229,14 +229,14 @@
                                                             <button type="button" id="generateBarcodeBtn"
                                                                 class="btn btn-primary">Generate Barcode</button>
                                                         </div>
-                                                        {{-- <div id="barcodePreview" class="mt-3"></div> --}}
+                                                        <div id="barcodePreview" class="mt-2 text-center"></div>
                                                     </div>
                                                 </div>
 
 
                                                 <div class="col-sm-4">
                                                     <label for="color-select">Color Name</label>
-                                                    <select name="color[]" id="color-select" class="form-select"
+                                                    <select name="color[]" id="color-select" class="form-control"
                                                         multiple="multiple" style="width: 100%">
                                                         <option value="Mix" selected>Mix</option>
                                                         <option value="Black">Black</option>
@@ -256,7 +256,7 @@
 
                                                 <div class="col-sm-4">
                                                     <label class="form-label">Unit (UOM)</label>
-                                                    <select name="unit" class="form-select" required>
+                                                    <select name="unit" class="form-control" required>
                                                         <option value="" disabled selected>Select One
                                                         </option>
                                                         <option value="Piece">Piece</option>
@@ -327,7 +327,7 @@
                         <i class="las la-times"></i>
                     </button>
                 </div>
-                <form action="{{ route('manual.category') }}" method="POST">
+                <form action="{{ route('manual.category') }}" method="POST" id="categoryForm">
                     @csrf
                     <div class="modal-body">
                         <input type="hidden" name="redirect_url" value="{{ route('product') }}">
@@ -354,12 +354,12 @@
                         <i class="las la-times"></i>
                     </button>
                 </div>
-                <form action="{{ route('manual.subcategory') }}" method="POST">
+                <form action="{{ route('manual.subcategory') }}" method="POST" id="subcategoryForm">
                     @csrf
                     <div class="modal-body">
                         <div class="form-group">
                             <label>Category Name</label>
-                            <select name="category_id" class="form-select">
+                            <select name="category_id" class="form-control">
                                 {{-- <option selected disabled>Select Category</option> --}}
                                 @foreach ($categories as $item)
                                 <option value="{{ $item->id }}">{{ $item->name }}</option>
@@ -415,7 +415,7 @@
                         <i class="las la-times"></i>
                     </button>
                 </div>
-                <form action="{{ route('manual.Brand') }}" method="POST">
+                <form action="{{ route('manual.Brand') }}" method="POST" id="brandForm">
                     @csrf
                     <div class="modal-body">
                         <div class="form-group">
@@ -435,25 +435,61 @@
     @section('scripts')
     <script>
         $(document).ready(function() {
+            // --- Select2 Initialization ---
+            const select2Options = {
+                width: '100%',
+                allowClear: true
+            };
+
             $('.brand-select').select2({
-                placeholder: "Select Brand",
-                allowClear: true,
-                width: '100%'
+                ...select2Options,
+                placeholder: "Select Brand"
             });
-            $('#category-dropdown').select2({
-                placeholder: "Select Category",
-                width: '100%'
-            });
-            $('#subcategory-dropdown').select2({
-                placeholder: "Select Subcategory",
-                width: '100%'
-            });
+
             $('select[name="unit"]').select2({
-                placeholder: "Select Unit",
-                width: '100%'
+                ...select2Options,
+                placeholder: "Select Unit"
             });
-        });
-        $(document).ready(function() {
+
+            $('#color-select').select2({
+                ...select2Options,
+                tags: true,
+                placeholder: "Select or type color(s)"
+            });
+
+            // --- Smooth Tab Navigation for Select2 ---
+            
+            // 1. Open Select2 on focus (Tab in)
+            $(document).on('focus', '.select2-selection--single, .select2-selection--multiple', function(e) {
+                const $select = $(this).closest(".select2-container").siblings('select:enabled');
+                if ($select.length && !$select.data('select2').isOpen()) {
+                    $select.select2('open');
+                }
+            });
+
+            // 2. Handle Tab key in Select2 search field (Tab out)
+            $(document).on('keydown', '.select2-search__field', function(e) {
+                if (e.which === 9) { // Tab key
+                    const $container = $(this).closest('.select2-container');
+                    const $select = $container.prev('select');
+                    
+                    if ($select.length) {
+                        $select.select2('close');
+                        
+                        // Move to next focusable element
+                        setTimeout(() => {
+                            const $focusables = $(':focusable');
+                            const nextIndex = $focusables.index($select) + 1;
+                            if (nextIndex < $focusables.length) {
+                                $focusables.eq(nextIndex).focus();
+                            }
+                        }, 50);
+                        e.preventDefault();
+                    }
+                }
+            });
+
+            // --- AJAX Form Submission for Modals ---
             function handleAjaxFormSubmit(formId, modalId) {
                 $(formId).on('submit', function(e) {
                     e.preventDefault();
@@ -467,203 +503,123 @@
                         url: url,
                         data: data,
                         success: function(response) {
-                            if (response.success) {
-                                alert(response
-                                    .message); // Ya toastr, sweetalert use kar sakte ho
+                            if (response.success || response.id) { // Handle different response formats
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: response.message || 'Saved successfully',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
                                 form[0].reset();
                                 $(modalId).modal('hide');
+                                
+                                 // Refresh for Category, Subcategory, or Brand
+                                 if (formId === '#categoryForm' || formId === '#subcategoryForm' || formId === '#brandForm') {
+                                     location.reload();
+                                 }
                             } else {
-                                alert("Something went wrong.");
+                                Swal.fire('Error', 'Something went wrong.', 'error');
                             }
                         },
                         error: function(xhr) {
                             let errors = xhr.responseJSON.errors;
-                            let message = 'Validation Error:\n';
-                            for (let key in errors) {
-                                message += errors[key][0] + '\n';
+                            let message = '';
+                            if (errors) {
+                                for (let key in errors) {
+                                    message += errors[key][0] + '<br>';
+                                }
+                            } else {
+                                message = xhr.responseJSON.message || 'Server error';
                             }
-                            alert(message);
+                            Swal.fire('Validation Error', message, 'error');
                         }
                     });
                 });
             }
 
-            // Call for each form
             handleAjaxFormSubmit('#categoryForm', '#categoryModal');
             handleAjaxFormSubmit('#subcategoryForm', '#subcategoryModal');
-            handleAjaxFormSubmit('#unitForm', '#modelModal');
             handleAjaxFormSubmit('#brandForm', '#cuModal');
-        });
-    </script>
+            // Unit form (using modelModal as per previous code)
+            handleAjaxFormSubmit('#unitForm', '#modelModal');
 
-    <script>
-        (function() {
-            const form = document.getElementById('productForm');
-
-            // 1) Enter key se submit rok do (textarea & select2 search me allow)
-            form.addEventListener('keydown', function(e) {
-                if (e.key !== 'Enter') return;
-
-                const el = e.target;
-                const tag = el.tagName.toLowerCase();
-
-                // allow newline in textarea
-                if (tag === 'textarea') return;
-
-                // allow select2 search box to work
-                if (el.classList && el.classList.contains('select2-search__field')) return;
-
-                // baki sab me prevent (inputs, selects, etc.)
-                e.preventDefault();
-            });
-
-            // 2) Sirf submit button click par hi submit allow
-            form.addEventListener('submit', function(e) {
-                // e.submitter modern browsers me mil jata hai; safety fallback bhi
-                const byButton = e.submitter && e.submitter.id === 'submitProductBtn';
-                if (!byButton) {
-                    e.preventDefault();
+            // --- Barcode Generation ---
+            $('#generateBarcodeBtn').on('click', function() {
+                let currentValue = $('#barcodeInput').val().trim();
+                let url = '{{ route("generate-barcode-image") }}';
+                
+                if (currentValue !== "") {
+                    url += '?code=' + encodeURIComponent(currentValue);
                 }
-            });
-        })();
-    </script>
 
-
-    <script>
-        document.getElementById('generateBarcodeBtn').addEventListener('click', function() {
-            let currentValue = document.getElementById('barcodeInput').value.trim();
-
-            // Agar manually enter kiya hai to uska barcode show karo
-            if (currentValue !== "") {
-                fetch('/generate-barcode-image?code=' + currentValue)
-                    .then(res => res.json())
-                    .then(data => {
-                        document.getElementById('barcodePreview').innerHTML =
-                            `<img src="${data.barcode_image}" alt="Barcode" class="img-fluid border p-2">`;
-                    });
-            }
-            // Agar empty hai to auto-generate karo
-            else {
-                fetch('{{ route('generate-barcode-image') }}')
-                    .then(res => res.json())
-                    .then(data => {
-                        document.getElementById('barcodeInput').value = data.barcode_number;
-                        document.getElementById('barcodePreview').innerHTML =
-                            `<img src="${data.barcode_image}" alt="Barcode" class="img-fluid border p-2">`;
-                    });
-            }
-        });
-    </script>
-
-    <script>
-        const imageInput = document.getElementById('imageInput');
-        const preview = document.getElementById('preview');
-        const clearImageBtn = document.getElementById('clearImageBtn');
-
-        imageInput.addEventListener('change', function() {
-            const file = this.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                }
-                reader.readAsDataURL(file);
-            }
-        });
-
-        clearImageBtn.addEventListener('click', function() {
-            preview.src = "";
-            imageInput.value = "";
-        });
-
-
-
-        $('#category-dropdown').on('change', function() {
-            // alert("sd");
-            var categoryId = $(this).val();
-
-            if (categoryId) {
-                $.ajax({
-                    url: '/get-subcategories/' + categoryId,
-                    type: "GET",
-                    dataType: "json",
-                    success: function(data) {
-                        $('#subcategory-dropdown').empty();
-                        $('#subcategory-dropdown').append(
-                            '<option selected disabled>Select Subcategory</option>');
-                        $.each(data, function(key, value) {
-                            $('#subcategory-dropdown').append('<option value="' + value.id +
-                                '">' + value.name + '</option>');
-                        });
-                    }
+                $.getJSON(url, function(data) {
+                    $('#barcodeInput').val(data.barcode_number);
+                    $('#barcodePreview').html(`<img src="${data.barcode_image}" alt="Barcode" class="img-fluid border p-2 mt-2 shadow-sm" style="max-height: 80px;">`);
+                }).fail(function(xhr) {
+                    Swal.fire('Error', xhr.responseJSON?.message || 'Barcode generation failed', 'error');
                 });
-            } else {
-                $('#subcategory-dropdown').empty();
-            }
-        });
-    </script>
+            });
 
-
-    <script>
-        document.getElementById('imageUpload').addEventListener('change', function(event) {
-            let file = event.target.files[0];
-            if (file) {
-                let reader = new FileReader();
-                reader.onload = function(e) {
-                    let preview = document.getElementById('previewImage');
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                    document.getElementById('removeImage').style.display = 'inline-block';
+            // --- Image Preview ---
+            $('#imageInput').on('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#preview').attr('src', e.target.result);
+                    }
+                    reader.readAsDataURL(file);
                 }
-                reader.readAsDataURL(file);
-            }
-        });
-
-        document.getElementById('removeImage').addEventListener('click', function() {
-            document.getElementById('imageUpload').value = "";
-            document.getElementById('previewImage').style.display = 'none';
-            this.style.display = 'none';
-        });
-    </script>
-    <script>
-        $(document).ready(function() {
-            $('#color-select').select2({
-                tags: true,
-                placeholder: "Select or type color(s)",
-                allowClear: true,
-                width: 'resolve'
             });
 
-            // Improve Tab Navigation for Select2
-            // Open Select2 on focus
-            $(document).on('focus', '.select2-selection--single', function(e) {
-                $(this).closest(".select2-container").siblings('select:enabled').select2('open');
+            $('#clearImageBtn').on('click', function() {
+                $('#preview').attr('src', '');
+                $('#imageInput').val('');
             });
 
-            // Handle Tab key in Select2 search field
-            $(document).on('keydown', '.select2-search__field', function(e) {
-                if (e.which === 9) { // Tab key
-                    var select2 = $(this).closest('.select2-container').prev('select');
-                    select2.select2('close');
-                    
-                    // Move to next focusable element
-                    var focusables = $(':focusable');
-                    var next = focusables.eq(focusables.index(this) + 1);
-                    if (next.length) {
-                        next.focus();
+            // --- Cascading Dropdowns ---
+            $('#category-dropdown').on('change', function() {
+                var categoryId = $(this).val();
+                var $subcategory = $('#subcategory-dropdown');
+
+                if (categoryId) {
+                    $.ajax({
+                        url: '/get-subcategories/' + categoryId,
+                        type: "GET",
+                        dataType: "json",
+                        success: function(data) {
+                            $subcategory.empty();
+                            $subcategory.append('<option value="">Select Subcategory</option>');
+                            $.each(data, function(key, value) {
+                                $subcategory.append('<option value="' + value.id + '">' + value.name + '</option>');
+                            });
+                        }
+                    });
+                } else {
+                    $subcategory.empty().append('<option value="">Select Subcategory</option>');
+                }
+            });
+
+            // --- Prevent Enter Key Submission except on Submit Button ---
+            $('#productForm').on('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    const el = e.target;
+                    const tag = el.tagName.toLowerCase();
+                    if (tag !== 'textarea' && !$(el).hasClass('select2-search__field') && el.id !== 'submitProductBtn') {
+                        e.preventDefault();
+                        // Optional: move to next field on Enter
+                        const $focusables = $(':focusable');
+                        const nextIndex = $focusables.index(el) + 1;
+                        if (nextIndex < $focusables.length) {
+                            $focusables.eq(nextIndex).focus();
+                        }
                     }
                 }
             });
-
-            // Generic "Enter to Tab" or just ensuring Tab works
-            $('input, select, textarea').on('keydown', function(e) {
-                if (e.which === 9) { // Tab
-                    // Let default happen, but for Select2 we might need help
-                }
-            });
         });
 
-        // jQuery UI :focusable selector polyfill if not present
+        // Focusable polyfill
         if (!$.expr[':'].focusable) {
             $.expr[':'].focusable = function(element) {
                 var nodeName = element.nodeName.toLowerCase(),
