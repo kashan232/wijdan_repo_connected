@@ -153,7 +153,9 @@ class PayrollController extends Controller
         }
 
         if ($request->filled('month')) {
-            $query->where('month', $request->month);
+            // For daily payroll, 'month' column stores the full date (YYYY-MM-DD)
+            // So we use LIKE to match all days in that month
+            $query->where('month', 'like', $request->month . '%');
         }
 
         $payrolls = $query->latest()->paginate(12);
@@ -1026,8 +1028,23 @@ class PayrollController extends Controller
 
             DB::commit();
 
+            if ($generated === 0) {
+                $errorMsg = "❌ <b>No payrolls were generated.</b><br>";
+                if ($skipped > 0) $errorMsg .= "• {$skipped} employees already had records for this date.<br>";
+                if (!empty($errors)) $errorMsg .= "• Issues found: " . implode(', ', array_slice($errors, 0, 2));
+                
+                return response()->json([
+                    'error' => $errorMsg,
+                    'errors' => $errors
+                ], 422);
+            }
+
+            $msg = "✅ <b>Success!</b><br>Daily payroll documented for <b>{$generated}</b> employees.";
+            if ($skipped > 0) $msg .= "<br>ℹ️ {$skipped} employees were skipped (already processed).";
+            if (!empty($errors)) $msg .= "<br>⚠️ Note: " . count($errors) . " employees had issues (e.g., missing clock-out).";
+
             return response()->json([
-                'success' => "✅ Daily payroll successfully documented for {$generated} employees. " . ($skipped > 0 ? "({$skipped} already processed)" : ""),
+                'success' => $msg,
                 'errors' => $errors,
                 'reload' => true,
             ]);

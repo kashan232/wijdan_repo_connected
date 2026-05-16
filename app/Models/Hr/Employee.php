@@ -276,18 +276,13 @@ class Employee extends Model
 
     /**
      * Scope: Employees eligible for daily payroll
-     * Includes: employees with daily wages AND no commission
+     * Includes: employees with daily wages enabled
      */
     public function scopeForDailyPayroll($query)
     {
         return $query->active()
             ->whereHas('activeSalaryStructure', function ($q) {
-                $q->where('use_daily_wages', true)
-                  ->where(function ($sq) {
-                      // No commission OR commission is 0
-                      $sq->whereNull('commission_percentage')
-                         ->orWhere('commission_percentage', '=', 0);
-                  });
+                $q->where('use_daily_wages', true);
             });
     }
 

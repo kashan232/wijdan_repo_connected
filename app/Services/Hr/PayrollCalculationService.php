@@ -573,29 +573,51 @@ class PayrollCalculationService
             }
         }
 
+        // Calculate allowances and fixed deductions
+        $allowanceData = $this->calculateAllowances($structure);
+        $fixedDeductionData = $this->calculateFixedDeductions($structure);
+        
+        $totalAllowances = $allowanceData['total'];
+        $totalFixedDeductions = $fixedDeductionData['total'];
+        
+        $allowanceDetails = $allowanceData['details'];
+        $fixedDeductionDetails = $fixedDeductionData['details'];
+
+        // If employee has a base salary, we assume allowances/deductions are monthly and pro-rate them
+        // If no base salary (purely daily), we treat them as daily amounts
+        if (($structure->base_salary ?? 0) > 0) {
+            $totalAllowances = $totalAllowances / 26;
+            $totalFixedDeductions = $totalFixedDeductions / 26;
+            
+            // Update details to show pro-rated amounts
+            foreach ($allowanceDetails as &$detail) { $detail['amount'] = $detail['amount'] / 26; }
+            foreach ($fixedDeductionDetails as &$detail) { $detail['amount'] = $detail['amount'] / 26; }
+        }
+
         // Handle carried forward deductions from previous day
         $carriedForwardDeduction = $employee->pending_deductions ?? 0;
-        $totalDeductions = $dayDeduction + $carriedForwardDeduction;
+        $totalDeductions = $dayDeduction + $carriedForwardDeduction + $totalFixedDeductions;
 
         // Determine net payable and remaining carry-forward
         $netSalary = 0;
         $newPendingDeductions = 0;
+        $dayEarningWithAllowances = $dayEarning + $totalAllowances;
 
-        if ($totalDeductions <= $dayEarning) {
+        if ($totalDeductions <= $dayEarningWithAllowances) {
             // Can pay full amount after deductions
-            $netSalary = $dayEarning - $totalDeductions;
+            $netSalary = $dayEarningWithAllowances - $totalDeductions;
             $newPendingDeductions = 0;
         } else {
             // Deductions exceed daily earning
             if ($carryForward) {
                 // Carry forward is allowed
                 $netSalary = 0;
-                $newPendingDeductions = $totalDeductions - $dayEarning;
+                $newPendingDeductions = $totalDeductions - $dayEarningWithAllowances;
             } else {
                 // Carry forward not allowed - cap deductions at daily earning
                 $netSalary = 0;
                 $newPendingDeductions = 0;
-                $totalDeductions = $dayEarning;
+                $totalDeductions = $dayEarningWithAllowances;
             }
         }
 
@@ -606,9 +628,9 @@ class PayrollCalculationService
             'payroll_type' => 'daily',
             'month' => Carbon::parse($attendance->date)->format('Y-m-d'), // Store full date for daily
             'basic_salary' => $dailyRate,
-            'gross_salary' => $dailyRate,
-            'allowances' => 0,
-            'deductions' => 0, // Fixed deductions don't apply to daily
+            'gross_salary' => $dayEarning + $totalAllowances,
+            'allowances' => $totalAllowances,
+            'deductions' => $totalFixedDeductions,
             'attendance_deductions' => $dayDeduction,
             'manual_deductions' => 0,
             'manual_allowances' => 0,
@@ -619,8 +641,8 @@ class PayrollCalculationService
             'status' => 'generated',
             'carried_forward_to_next' => $newPendingDeductions,
             'new_pending_deductions' => $newPendingDeductions,
-            'deduction_details' => $deductionDetails,
-            'allowance_details' => [],
+            'deduction_details' => array_merge($deductionDetails, $fixedDeductionDetails),
+            'allowance_details' => $allowanceDetails,
             'attendance_breakdown' => [
                 'has_data' => true,
                 'date' => $attendance->date,
