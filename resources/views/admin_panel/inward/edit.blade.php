@@ -49,7 +49,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('InwardGatepass.update', $gatepass->id) }}" method="POST">
+                <form action="{{ route('InwardGatepass.update', $gatepass->id) }}" method="POST" data-ajax-validate="true">
                     @csrf
                     @method('PUT')
 

@@ -210,10 +210,7 @@ class InwardgatepassController extends Controller
 
         $gatepass = InwardGatepass::findOrFail($id);
 
-        // ❌ do not allow edit after items added
-        if ($gatepass->items()->count() > 0) {
-            return back()->with('error', 'Items already added. You cannot edit header.');
-        }
+        // Check removed allowing edits
 
         $gatepass->update([
             'branch_id'      => $request->branch_id,
@@ -226,8 +223,10 @@ class InwardgatepassController extends Controller
             'receive_type'   => $request->receive_type,
         ]);
 
-        return redirect()->route('InwardGatepass.home')
-            ->with('success', 'Gatepass updated successfully');
+        return response()->json([
+            'success' => 'Gatepass updated successfully',
+            'redirect' => route('InwardGatepass.home')
+        ]);
     }
 
     public function destroy($id)
