@@ -51,9 +51,14 @@ class ZKTecoService
         $this->reply_id = 0;
 
         $header = $this->createHeader(self::CMD_CONNECT, '', 0, 65535);
-        fwrite($this->socket, $header);
+        $written = @fwrite($this->socket, $header);
+        
+        if ($written === false) {
+            @fclose($this->socket);
+            return false;
+        }
 
-        $response = fread($this->socket, 1024);
+        $response = @fread($this->socket, 1024);
         if (strlen($response) >= 8) {
             $reply = unpack('vcommand/vchecksum/vsession/vreply', substr($response, 0, 8));
             if ($reply['command'] == self::CMD_ACK_OK) {
@@ -78,8 +83,8 @@ class ZKTecoService
     {
         if ($this->socket) {
             $header = $this->createHeader(self::CMD_EXIT);
-            fwrite($this->socket, $header);
-            fclose($this->socket);
+            @fwrite($this->socket, $header);
+            @fclose($this->socket);
         }
     }
 
@@ -122,9 +127,13 @@ class ZKTecoService
         if (!$this->socket) return [];
 
         $header = $this->createHeader(self::CMD_ATTLOG_RRQ);
-        fwrite($this->socket, $header);
+        $written = @fwrite($this->socket, $header);
+        
+        if ($written === false) {
+            return [];
+        }
 
-        $response = fread($this->socket, 1024);
+        $response = @fread($this->socket, 1024);
         if (strlen($response) < 8) return [];
 
         $header_data = unpack('v4', substr($response, 0, 8));
@@ -133,8 +142,8 @@ class ZKTecoService
             $data = '';
             
             while (strlen($data) < $size) {
-                $chunk = fread($this->socket, 1024);
-                if (strlen($chunk) == 0) break;
+                $chunk = @fread($this->socket, 1024);
+                if ($chunk === false || strlen($chunk) == 0) break;
                 
                 // Skip header of data chunks if present (ZKTeco protocol quirk)
                 if (strlen($chunk) > 8 && unpack('v', substr($chunk, 0, 2))[1] == self::CMD_DATA) {
