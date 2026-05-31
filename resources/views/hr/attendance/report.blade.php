@@ -108,6 +108,49 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.12);
             text-shadow: 0 1px 1px rgba(0,0,0,0.2);
             margin: auto;
+            cursor: pointer;
+            position: relative;
+        }
+
+        /* Custom Premium CSS Tooltip */
+        .status-badge[data-tooltip]:not([data-tooltip=""]):hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            opacity: 0;
+            animation: tooltipFadeIn 0.2s forwards;
+            pointer-events: none;
+        }
+
+        .status-badge[data-tooltip]:not([data-tooltip=""]):hover::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px;
+            border-style: solid;
+            border-color: #1e293b transparent transparent transparent;
+            z-index: 1000;
+            opacity: 0;
+            animation: tooltipFadeIn 0.2s forwards;
+            pointer-events: none;
+        }
+
+        @keyframes tooltipFadeIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(5px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
 
         .status-P { background: linear-gradient(135deg, #22c55e, #16a34a); border: 1px solid #15803d; }
@@ -417,7 +460,20 @@
                                             @endphp
                                             <td class="{{ $currentDayName == 'sunday' ? 'sunday' : '' }} {{ $isToday ? 'today-col' : '' }}">
                                                 @if ($status)
-                                                    <span class="status-badge status-{{ $status }}" title="{{ $status == 'H' ? $holidayName : ($status == 'LV' ? $leaveType : '') }}">
+                                                    @php
+                                                        $tooltip = '';
+                                                        if ($status == 'H') $tooltip = $holidayName;
+                                                        elseif ($status == 'LV') $tooltip = $leaveType;
+                                                        elseif ($status == 'L' && $attendance && $attendance->late_minutes) {
+                                                            $hours = floor($attendance->late_minutes / 60);
+                                                            $mins = $attendance->late_minutes % 60;
+                                                            $timeString = '';
+                                                            if ($hours > 0) $timeString .= $hours . ' hr' . ($hours > 1 ? 's' : '') . ' ';
+                                                            if ($mins > 0 || $hours == 0) $timeString .= $mins . ' min' . ($mins > 1 ? 's' : '');
+                                                            $tooltip = trim($timeString) . ' late';
+                                                        }
+                                                    @endphp
+                                                    <span class="status-badge status-{{ $status }}" {!! $tooltip ? 'data-tooltip="'.$tooltip.'"' : '' !!}>
                                                         {{ $status }}
                                                     </span>
                                                 @endif
