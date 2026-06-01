@@ -296,18 +296,40 @@
 
         // Export ALL
         $('#exportStockAllBtn').on('click', function() {
-            var rows = [];
-            $('#stockTable tbody tr').each(function() {
-                // skip any hidden rows
-                if ($(this).is(':hidden')) return;
-                rows.push(parseStockRow(this));
-            });
-            if (rows.length === 0) {
-                alert('No rows to export.');
-                return;
-            }
-            var ts = new Date().toISOString().replace(/[:\-T]/g, '').slice(0, 14);
-            buildAndDownload(rows, 'warehouse_stock_all_' + ts + '.xlsx');
+            var btn = $(this);
+            var originalText = btn.html();
+            btn.html('⏳ Exporting All...');
+            btn.css('pointer-events', 'none');
+
+            // Collect current filters
+            var type = $('select[name="stock_type"]').val() || 'all';
+            var start = $('input[name="start_date"]').val() || '';
+            var end = $('input[name="end_date"]').val() || '';
+            var search = $('#warehouseStockSearch').val() || '';
+
+            var queryStr = "?stock_type=" + type + "&start_date=" + start + "&end_date=" + end + "&search=" + search;
+
+            fetch("{{ route('warehouse_stocks.export_all') }}" + queryStr)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.length === 0) {
+                        alert('No rows to export.');
+                        btn.html(originalText);
+                        btn.css('pointer-events', 'auto');
+                        return;
+                    }
+                    var ts = new Date().toISOString().replace(/[:\-T]/g, '').slice(0, 14);
+                    buildAndDownload(data, 'warehouse_stock_all_' + ts + '.xlsx');
+                    
+                    btn.html(originalText);
+                    btn.css('pointer-events', 'auto');
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Error fetching stock data.");
+                    btn.html(originalText);
+                    btn.css('pointer-events', 'auto');
+                });
         });
 
         // Export SELECTED

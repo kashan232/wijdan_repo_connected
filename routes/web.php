@@ -292,6 +292,7 @@ Route::middleware('auth')->group(function () {
 
     // narratiions
     Route::get('/get-customers-by-type', [CustomerController::class, 'getByType']);
+    Route::get('warehouse_stocks/export-all', [WarehouseStockController::class, 'exportAll'])->name('warehouse_stocks.export_all');
     Route::resource('warehouse_stocks', WarehouseStockController::class)->middleware('permission:Warehouse Stock');
     Route::resource('stock_transfers', StockTransferController::class)->middleware('permission:Stock Transfer');
 
