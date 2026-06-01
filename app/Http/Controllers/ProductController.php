@@ -348,6 +348,41 @@ class ProductController extends Controller
         return view('admin_panel.product.barcode', compact('product'));
     }
 
+    public function getAllProductsExport()
+    {
+        $products = Product::with([
+            'category_relation',
+            'sub_category_relation',
+            'unit',
+            'brand',
+            'stock',
+            'discountProduct'
+        ])
+        ->orderBy('item_code', 'desc')
+        ->get()
+        ->map(function ($product) {
+            $price = (float)$product->price;
+            if ($product->discountProduct) {
+                $price = (float)$product->discountProduct->final_price;
+            }
+
+            return [
+                $product->item_code ?? '',
+                $product->barcode_path ?? '—',
+                $product->category_relation->name ?? '-',
+                $product->sub_category_relation->name ?? '-',
+                $product->item_name ?? '',
+                $product->unit_id ?? '-',
+                $price,
+                $product->stock->qty ?? 0,
+                $product->brand->name ?? '-',
+                $product->note ?? '-'
+            ];
+        });
+
+        return response()->json($products);
+    }
+
     // public function searchProducts(Request $request)
     // {
     //     $query = $request->get('q');

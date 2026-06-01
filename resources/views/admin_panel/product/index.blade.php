@@ -443,65 +443,37 @@
 
         // read a table row and return array of cell values matching your visible columns
         function parseRow($tr) {
-            // Column order in your table: checkbox | # | Item Code | Barcode | Image | Category/Sub | Item Name | Unit | Price | Stock | Alert | Brand | Note | Action
-            // We'll export: Item Code, Barcode, Category, Sub-Category, Item Name, Unit, Price, Stock, Alert Qty, Brand, Note
+            // Column order in your table: checkbox | # | Item Code | Barcode | Image | Category/Sub | Item Name | Unit | Price | Stock | Brand | Note | Action
+            // We'll export: Item Code, Barcode, Category, Sub-Category, Item Name, Unit, Price, Stock, Brand, Note
             var $tds = $tr.find('td');
 
-            // map tds indexes according to your markup (first td is checkbox)
             var itemCode = $tds.eq(2).text().trim();
             var barcode = $tds.eq(3).text().trim();
-            // category cell contains <strong>cat</strong><br><small>sub</small>
-            var catHtml = $tds.eq(5).html() || '';
             var cat = $tds.eq(5).find('strong').text().trim() || '';
             var sub = $tds.eq(5).find('small').text().trim() || '';
             var itemName = $tds.eq(6).text().trim();
             var unit = $tds.eq(7).text().trim();
             var price = extractNumber($tds.eq(8).text().trim());
             var stock = extractNumber($tds.eq(9).text().trim());
-            var alertQty = extractNumber($tds.eq(10).text().trim());
-            var brand = $tds.eq(11).text().trim();
-            var note = $tds.eq(12).text().trim();
+            var brand = $tds.eq(10).text().trim();
+            var note = $tds.eq(11).text().trim();
 
-            return [itemCode, barcode, cat, sub, itemName, unit, price, stock, alertQty, brand, note];
+            return [itemCode, barcode, cat, sub, itemName, unit, price, stock, brand, note];
         }
 
         function buildWorkbook(dataArray, sheetName) {
-            // dataArray = [ ['head1','head2',...], [r1c1, r1c2,...], ... ]
             var ws = XLSX.utils.aoa_to_sheet(dataArray);
-            // adjust column widths a bit
-            var wscols = [{
-                    wpx: 90
-                }, // item code
-                {
-                    wpx: 80
-                }, // barcode
-                {
-                    wpx: 110
-                }, // cat
-                {
-                    wpx: 110
-                }, // sub
-                {
-                    wpx: 160
-                }, // item name
-                {
-                    wpx: 60
-                }, // unit
-                {
-                    wpx: 70
-                }, // price
-                {
-                    wpx: 60
-                }, // stock
-                {
-                    wpx: 60
-                }, // alert
-                {
-                    wpx: 110
-                }, // brand
-                {
-                    wpx: 200
-                } // note
+            var wscols = [
+                { wpx: 90 }, // item code
+                { wpx: 80 }, // barcode
+                { wpx: 110 }, // cat
+                { wpx: 110 }, // sub
+                { wpx: 160 }, // item name
+                { wpx: 60 }, // unit
+                { wpx: 70 }, // price
+                { wpx: 60 }, // stock
+                { wpx: 110 }, // brand
+                { wpx: 200 } // note
             ];
             ws['!cols'] = wscols;
             var wb = XLSX.utils.book_new();
@@ -510,40 +482,44 @@
         }
 
         function downloadWorkbook(wb, filename) {
-            // XLSX writeFile will trigger download
             XLSX.writeFile(wb, filename);
         }
 
-        // Create header row
-        var HEADERS = ['Item Code', 'Barcode', 'Category', 'Sub-Category', 'Item Name', 'Unit', 'Price', 'Stock Qty', 'Alert Qty', 'Brand', 'Note'];
+        var HEADERS = ['Item Code', 'Barcode', 'Category', 'Sub-Category', 'Item Name', 'Unit', 'Price', 'Stock Qty', 'Brand', 'Note'];
 
         // Export All button
         document.getElementById('exportAllBtn')?.addEventListener('click', function() {
-            var rows = Array.from(document.querySelectorAll('#datatable tbody tr'));
-            if (!rows.length) {
-                alert('No products found to export.');
-                return;
-            }
-            var out = [HEADERS];
-            rows.forEach(function(tr) {
-                // skip rows that are perhaps template or hidden
-                if (tr.style.display === 'none') return;
-                // only parse actual <tr> with tds
-                var $ = window.jQuery;
-                if (!$) return;
-                var rowData = parseRow($(tr));
-                out.push(rowData);
-            });
-            var wb = buildWorkbook(out, 'Products_All');
-            var ts = new Date().toISOString().replace(/[:\-T]/g, '').slice(0, 14);
-            downloadWorkbook(wb, 'products_all_' + ts + '.xlsx');
+            var btn = this;
+            var originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Exporting All...';
+            btn.style.pointerEvents = 'none';
+
+            fetch("{{ route('products.export_all') }}")
+                .then(res => res.json())
+                .then(data => {
+                    var out = [HEADERS];
+                    data.forEach(function(row) {
+                        out.push(row);
+                    });
+                    var wb = buildWorkbook(out, 'Products_All');
+                    var ts = new Date().toISOString().replace(/[:\-T]/g, '').slice(0, 14);
+                    downloadWorkbook(wb, 'products_all_' + ts + '.xlsx');
+                    
+                    btn.innerHTML = originalText;
+                    btn.style.pointerEvents = 'auto';
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Error fetching all products. Please try again.");
+                    btn.innerHTML = originalText;
+                    btn.style.pointerEvents = 'auto';
+                });
         });
 
         // Export Selected button
         document.getElementById('exportSelectedBtn')?.addEventListener('click', function() {
             var selectedBoxes = Array.from(document.querySelectorAll('.selectProduct:checked'));
             if (selectedBoxes.length === 0) {
-                // fallback to exporting visible rows
                 Swal.fire ? Swal.fire({
                     icon: 'info',
                     title: 'No selection',
