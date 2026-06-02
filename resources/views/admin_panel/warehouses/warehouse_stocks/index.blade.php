@@ -261,34 +261,35 @@
             var location = $tds.eq(2).text().trim();
             var product = $tds.eq(3).text().trim();
             var barcode = $tds.eq(4).text().trim();
+            var unit = $tds.eq(5).text().trim();
+            var brand = $tds.eq(6).text().trim();
+            var price = toNumber($tds.eq(7).text());
             var shopStock = toNumber($tds.eq(8).text());
             var warehouseStock = toNumber($tds.eq(9).text());
             var totalStock = toNumber($tds.eq(10).text());
             var remarks = $tds.eq(11).text().trim();
-            return [date, location, product, barcode, shopStock, warehouseStock, totalStock, remarks];
+            return [date, location, product, barcode, unit, brand, price, shopStock, warehouseStock, totalStock, remarks];
         }
 
         // build workbook and download
         function buildAndDownload(rowsArray, filename) {
-            var header = ['Date', 'Location', 'Product', 'Barcode', 'Shop Stock', 'Warehouse Stock', 'Total Stock', 'Remarks'];
+            var header = ['Date', 'Location', 'Product', 'Barcode', 'Unit', 'Brand', 'Price', 'Shop Stock', 'Warehouse Stock', 'Total Stock', 'Remarks'];
             var aoa = [header].concat(rowsArray);
             var ws = XLSX.utils.aoa_to_sheet(aoa);
             // set column widths
-            ws['!cols'] = [{
-                wpx: 80
-            }, {
-                wpx: 140
-            }, {
-                wpx: 200
-            }, {
-                wpx: 80
-            }, {
-                wpx: 100
-            }, {
-                wpx: 100
-            }, {
-                wpx: 180
-            }];
+            ws['!cols'] = [
+                { wpx: 80 },  // Date
+                { wpx: 140 }, // Location
+                { wpx: 200 }, // Product
+                { wpx: 80 },  // Barcode
+                { wpx: 60 },  // Unit
+                { wpx: 100 }, // Brand
+                { wpx: 80 },  // Price
+                { wpx: 80 },  // Shop Stock
+                { wpx: 100 }, // Warehouse Stock
+                { wpx: 80 },  // Total Stock
+                { wpx: 120 }  // Remarks
+            ];
             var wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'WarehouseStock');
             XLSX.writeFile(wb, filename);
