@@ -465,9 +465,20 @@ class InwardgatepassController extends Controller
         if ($type === 'warehouse') {
 
             $wid = $gatepass->warehouse_id;
+            
+            // Validate if the warehouse actually exists
+            if ($wid && !\App\Models\Warehouse::where('id', $wid)->exists()) {
+                $wid = null;
+            }
+
             if (!$wid) {
                 $defaultWarehouse = \App\Models\Warehouse::first();
-                $wid = $defaultWarehouse ? $defaultWarehouse->id : 1;
+                if (!$defaultWarehouse) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'error' => 'No valid warehouse found. Please create a warehouse or assign one to this gatepass before saving.'
+                    ]);
+                }
+                $wid = $defaultWarehouse->id;
             }
 
             $ws = \App\Models\WarehouseStock::firstOrCreate(
