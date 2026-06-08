@@ -1498,7 +1498,8 @@
             const name = (p.item_name || "").toLowerCase();
             const code = (p.item_code || "").toLowerCase();
             const brand = (p.brand || "").toLowerCase();
-            return name.includes(q) || code.includes(q) || brand.includes(q);
+            const barcode = (p.barcode || "").toLowerCase();
+            return name.includes(q) || code.includes(q) || brand.includes(q) || barcode.includes(q);
         });
 
         // Limit to 50 results for UI performance
