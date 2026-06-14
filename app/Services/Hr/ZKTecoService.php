@@ -25,6 +25,8 @@ class ZKTecoService
     const CMD_PREPARE_DATA = 1500;
     const CMD_DATA = 1501;
 
+    public $is_tcp = false;
+
     public function __construct($ip, $port = 4370)
     {
         $this->ip = $ip;
@@ -33,49 +35,65 @@ class ZKTecoService
 
     public function connect()
     {
-        // Try TCP first (Modern devices often use TCP on 4370)
-        $this->socket = @fsockopen($this->ip, $this->port, $errno, $errstr, 3);
+        // Try UDP first, as it is the most common protocol for ZKTeco binary
+        $this->socket = @fsockopen("udp://{$this->ip}", $this->port, $errno, $errstr, 2);
         
-        // If TCP fails, try UDP
-        if (!$this->socket) {
-            $this->socket = @fsockopen("udp://{$this->ip}", $this->port, $errno, $errstr, 3);
-        }
+        if ($this->socket) {
+            stream_set_timeout($this->socket, 2);
+            $this->session_id = 0;
+            $this->reply_id = 0;
 
-        if (!$this->socket) {
-            return false;
-        }
-
-        stream_set_timeout($this->socket, 3);
-
-        $this->session_id = 0;
-        $this->reply_id = 0;
-
-        $header = $this->createHeader(self::CMD_CONNECT, '', 0, 65535);
-        $written = @fwrite($this->socket, $header);
-        
-        if ($written === false) {
-            @fclose($this->socket);
-            return false;
-        }
-
-        $response = @fread($this->socket, 1024);
-        if (strlen($response) >= 8) {
-            $reply = unpack('vcommand/vchecksum/vsession/vreply', substr($response, 0, 8));
-            if ($reply['command'] == self::CMD_ACK_OK) {
-                $this->session_id = $reply['vsession'] ?? $reply['session']; // Unpack might name it session
-                // Some versions of unpack use the name from string, some add index
-                if (isset($reply['session'])) $this->session_id = $reply['session'];
-                
-                // Re-parsing carefully
-                $u = unpack('v4', substr($response, 0, 8));
-                $this->session_id = $u[3];
-                $this->reply_id = $u[4];
-                
-                return true;
+            $header = $this->createHeader(self::CMD_CONNECT, '', 0, 65535);
+            @fwrite($this->socket, $header);
+            
+            $response = @fread($this->socket, 1024);
+            if (strlen($response) >= 8) {
+                $reply = unpack('vcommand/vchecksum/vsession/vreply', substr($response, 0, 8));
+                if ($reply['command'] == self::CMD_ACK_OK) {
+                    $u = unpack('v4', substr($response, 0, 8));
+                    $this->session_id = $u[3];
+                    $this->reply_id = $u[4];
+                    $this->is_tcp = false;
+                    return true;
+                }
             }
+            @fclose($this->socket);
         }
 
-        fclose($this->socket);
+        // If UDP fails (or times out), try TCP with length prefix
+        $this->socket = @fsockopen($this->ip, $this->port, $errno, $errstr, 2);
+        if ($this->socket) {
+            stream_set_timeout($this->socket, 2);
+            $this->session_id = 0;
+            $this->reply_id = 0;
+
+            $header = $this->createHeader(self::CMD_CONNECT, '', 0, 65535);
+            // Some TCP devices expect size prefix: pack('V', length)
+            $tcp_header = pack('V', strlen($header)) . $header;
+            @fwrite($this->socket, $tcp_header);
+            
+            $response = @fread($this->socket, 1024);
+            // TCP response might include the size prefix, or it might just be the raw packet.
+            if (strlen($response) > 4) {
+                $length = unpack('V', substr($response, 0, 4))[1];
+                if ($length > 0 && $length <= strlen($response) - 4) {
+                    $response = substr($response, 4);
+                }
+            }
+
+            if (strlen($response) >= 8) {
+                $reply = unpack('vcommand/vchecksum/vsession/vreply', substr($response, 0, 8));
+                if ($reply['command'] == self::CMD_ACK_OK) {
+                    $u = unpack('v4', substr($response, 0, 8));
+                    $this->session_id = $u[3];
+                    $this->reply_id = $u[4];
+                    $this->is_tcp = true;
+                    return true;
+                }
+            }
+            @fclose($this->socket);
+        }
+
         return false;
     }
 
@@ -83,6 +101,9 @@ class ZKTecoService
     {
         if ($this->socket) {
             $header = $this->createHeader(self::CMD_EXIT);
+            if ($this->is_tcp) {
+                $header = pack('V', strlen($header)) . $header;
+            }
             @fwrite($this->socket, $header);
             @fclose($this->socket);
         }
@@ -127,6 +148,9 @@ class ZKTecoService
         if (!$this->socket) return [];
 
         $header = $this->createHeader(self::CMD_ATTLOG_RRQ);
+        if ($this->is_tcp) {
+            $header = pack('V', strlen($header)) . $header;
+        }
         $written = @fwrite($this->socket, $header);
         
         if ($written === false) {
@@ -134,6 +158,14 @@ class ZKTecoService
         }
 
         $response = @fread($this->socket, 1024);
+        
+        if ($this->is_tcp && strlen($response) > 4) {
+            $length = unpack('V', substr($response, 0, 4))[1];
+            if ($length > 0 && $length <= strlen($response) - 4) {
+                $response = substr($response, 4);
+            }
+        }
+        
         if (strlen($response) < 8) return [];
 
         $header_data = unpack('v4', substr($response, 0, 8));
@@ -144,6 +176,14 @@ class ZKTecoService
             while (strlen($data) < $size) {
                 $chunk = @fread($this->socket, 1024);
                 if ($chunk === false || strlen($chunk) == 0) break;
+                
+                if ($this->is_tcp && strlen($chunk) > 4) {
+                    // It may or may not have length prefix for subsequent chunks
+                    $length = unpack('V', substr($chunk, 0, 4))[1];
+                    if ($length > 0 && $length <= strlen($chunk) - 4) {
+                        $chunk = substr($chunk, 4);
+                    }
+                }
                 
                 // Skip header of data chunks if present (ZKTeco protocol quirk)
                 if (strlen($chunk) > 8 && unpack('v', substr($chunk, 0, 2))[1] == self::CMD_DATA) {
