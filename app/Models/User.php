@@ -52,4 +52,9 @@ class User extends Authenticatable
 //                     ->where('model_type', User::class);
 //     }
     
+    public function employee()
+    {
+        return $this->hasOne(\App\Models\Hr\Employee::class, 'user_id', 'id');
+    }
+    
 }

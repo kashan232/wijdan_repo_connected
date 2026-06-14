@@ -61,6 +61,9 @@ Route::get('/', function () {
 // })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::post('/attendance/web-check-in', [\App\Http\Controllers\Hr\WebAttendanceController::class, 'checkIn'])->name('attendance.web.checkIn');
+    Route::post('/attendance/web-check-out', [\App\Http\Controllers\Hr\WebAttendanceController::class, 'checkOut'])->name('attendance.web.checkOut');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

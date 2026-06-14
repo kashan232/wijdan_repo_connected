@@ -370,9 +370,8 @@
                                     value="{{ $emp->casual_leaves_allocated ?? 0 }}">
 
                                 <input type="hidden" class="sick_leaves_allocated"
-
                                     value="{{ $emp->sick_leaves_allocated ?? 0 }}">
-
+                                <input type="hidden" class="user_id" value="{{ $emp->user_id }}">
                             </div>
 
                         @empty
@@ -510,17 +509,23 @@
                             </div>
 
                             <div class="col-md-6">
-
                                 <div class="form-group-modern">
-
                                     <label class="form-label"><i class="fa fa-phone"></i> Phone</label>
-
                                     <input type="text" name="phone" id="phone" class="form-control"
-
                                         placeholder="Enter phone number">
-
                                 </div>
-
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group-modern">
+                                    <label class="form-label"><i class="fa fa-link"></i> Link User Account</label>
+                                    <select name="user_id" id="user_id" class="form-select">
+                                        <option value="">-- Create New User Account --</option>
+                                        @foreach($all_users as $usr)
+                                            <option value="{{ $usr->id }}">{{ $usr->name }} ({{ $usr->email }})</option>
+                                        @endforeach
+                                    </select>
+                                    <small class="text-muted">Select existing user to link</small>
+                                </div>
                             </div>
 
                             <div class="col-md-6">
@@ -1093,10 +1098,8 @@
                 // Clear weekly off selections
 
                 $('#weekly_off_container .weekly-day-option').removeClass('selected');
-
                 $('#weekly_off').val('');
-
-
+                $('#user_id').val('');
 
                 // Clear Leaves
 
@@ -1135,9 +1138,8 @@
                 $('#address').val(card.find('.address').val());
 
                 $('#department_id').val(card.find('.department_id').val());
-
                 $('#designation_id').val(card.find('.designation_id').val());
-
+                $('#user_id').val(card.find('.user_id').val());
                 $('#casual_leaves_allocated').val(card.find('.casual_leaves_allocated').val());
 
                 $('#sick_leaves_allocated').val(card.find('.sick_leaves_allocated').val());

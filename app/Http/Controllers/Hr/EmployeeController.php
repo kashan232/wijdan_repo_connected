@@ -22,8 +22,9 @@ class EmployeeController extends Controller
         $departments = Department::all();
         $designations = Designation::all();
         $shifts = \App\Models\Hr\Shift::all();
+        $all_users = \App\Models\User::select('id', 'name', 'email')->get();
 
-        return view('hr.employees.index', compact('employees', 'departments', 'designations', 'shifts'));
+        return view('hr.employees.index', compact('employees', 'departments', 'designations', 'shifts', 'all_users'));
     }
 
     public function store(Request $request)
@@ -57,7 +58,7 @@ class EmployeeController extends Controller
             ], 422);
         }
 
-        $data = $request->except(['document_degree', 'document_certificate', 'document_hsc_marksheet', 'document_ssc_marksheet', 'document_cv', 'password']);
+        $data = $request->except(['document_degree', 'document_certificate', 'document_hsc_marksheet', 'document_ssc_marksheet', 'document_cv', 'password', 'user_id']);
         $data['is_docs_submitted'] = $request->has('is_docs_submitted') ? 1 : 0;
 
         // Handle Shift Logic - convert empty strings to null
@@ -76,10 +77,18 @@ class EmployeeController extends Controller
             }
             $employee = Employee::findOrFail($request->edit_id);
 
-            // Update User email if changed
+            if ($employee->user_id && $employee->user_id != $request->user_id) {
+                // If the user changed the linked user from dropdown
+                $employee->user_id = $request->filled('user_id') ? $request->user_id : null;
+            } elseif (!$employee->user_id && $request->filled('user_id')) {
+                // If it was not linked, and now a user is selected
+                $employee->user_id = $request->user_id;
+            }
+
+            // Update User email if changed (only if they keep the same user linked or it is auto-managing)
             if ($employee->user_id) {
                 $user = \App\Models\User::find($employee->user_id);
-                if ($user) {
+                if ($user && $user->email == $employee->email) {
                     $user->email = $request->email;
                     $user->name = $request->first_name.' '.$request->last_name;
                     if ($request->filled('password')) {
@@ -94,12 +103,24 @@ class EmployeeController extends Controller
             if (! auth()->user()->can('hr.employees.create')) {
                 return response()->json(['error' => 'Unauthorized action.'], 403);
             }
-            // Create User Account
-            $user = \App\Models\User::create([
-                'name' => $request->first_name.' '.$request->last_name,
-                'email' => $request->email,
-                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
-            ]);
+            
+            // Auto-link if a User with this email already exists
+            $user = \App\Models\User::where('email', $request->email)->first();
+            
+            if (!$user) {
+                // Create User Account if it doesn't exist
+                $user = \App\Models\User::create([
+                    'name' => $request->first_name.' '.$request->last_name,
+                    'email' => $request->email,
+                    'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                ]);
+            } else {
+                // If user exists, optionally update password
+                if ($request->filled('password')) {
+                    $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
+                    $user->save();
+                }
+            }
 
             $data['user_id'] = $user->id;
             $employee = Employee::create($data);
