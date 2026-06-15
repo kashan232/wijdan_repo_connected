@@ -40,7 +40,7 @@
         <div class="main-content-inner">
             <div class="container">
                 <!-- Page Header -->
-                <div class="page-header d-flex justify-content-between align-items-start">
+                <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
                     <div>
                         <h1 class="page-title"><i class="fa fa-users"></i> Assigned Employees</h1>
                         <p class="page-subtitle">View and manage employees assigned to this salary structure</p>

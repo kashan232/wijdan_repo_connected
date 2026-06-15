@@ -228,12 +228,12 @@
     <div class="container-fluid py-4">
 
                 <!-- Page Header -->
-                <div class="page-header d-flex justify-content-between align-items-start">
+                <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
                     <div>
                         <h1 class="page-title"><i class="fa fa-clock"></i> Daily Attendance</h1>
                         <p class="page-subtitle">{{ \Carbon\Carbon::parse($selectedDate)->format('l, F d, Y') }}</p>
                     </div>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex flex-wrap gap-2">
                         <button type="button" class="btn btn-light border" data-toggle="modal"
                             data-target="#attendanceGuideModal">
                             <i class="fa fa-question-circle text-primary me-1"></i> System Guide
@@ -326,7 +326,7 @@
                 @endif
 
                 <!-- Stats Row -->
-                <div class="stats-row" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;">
+                <div class="stats-row hr-attendance-stats">
                     <div class="stat-card success">
                         <div class="stat-icon"><i class="fa fa-check"></i></div>
                         <div class="stat-value">{{ $summary['present'] }}</div>
@@ -355,14 +355,14 @@
                 </div>
 
                 <!-- Filters -->
-                <div class="card border-0 shadow-sm rounded-4 mb-4 p-3 bg-white">
+                <div class="card border-0 shadow-sm rounded-4 mb-4 p-3 bg-white hr-filters-card">
                     <form id="filterForm" method="GET" action="{{ route('hr.attendance.index') }}"
-                        class="d-flex flex-wrap gap-3 align-items-end">
-                        <div style="flex: 1; min-width: 200px;">
+                        class="row g-3 align-items-end">
+                        <div class="col-md-3 col-sm-6 col-12">
                             <label class="form-label text-muted small fw-bold">DATE</label>
                             <input type="date" name="date" class="form-control" value="{{ $selectedDate }}" onchange="this.form.submit()">
                         </div>
-                        <div style="flex: 1; min-width: 200px;">
+                        <div class="col-md-3 col-sm-6 col-12">
                             <label class="form-label text-muted small fw-bold">DEPARTMENT</label>
                             <select name="department_id" class="form-select" onchange="this.form.submit()">
                                 <option value="">All Departments</option>
@@ -374,7 +374,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div style="flex: 1; min-width: 200px;">
+                        <div class="col-md-3 col-sm-6 col-12">
                             <label class="form-label text-muted small fw-bold">DESIGNATION</label>
                             <select name="designation_id" class="form-select" onchange="this.form.submit()">
                                 <option value="">All Designations</option>
@@ -386,7 +386,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div style="flex: 1; min-width: 150px;">
+                        <div class="col-md-2 col-sm-6 col-12">
                             <label class="form-label text-muted small fw-bold">STATUS</label>
                             <select name="status" class="form-select" onchange="this.form.submit()">
                                 <option value="">All Status</option>
@@ -397,12 +397,8 @@
                                 <option value="leave" {{ $selectedStatus == 'leave' ? 'selected' : '' }}>Leave</option>
                             </select>
                         </div>
-                        <div class="d-none">
-                            <button type="submit" class="btn btn-primary"><i class="fa fa-filter me-1"></i>
-                                Apply</button>
-                        </div>
-                        <div>
-                            <a href="{{ route('hr.attendance.index') }}" class="btn btn-light border" title="Clear Filters"><i
+                        <div class="col-md-1 col-sm-6 col-12 d-flex justify-content-md-end">
+                            <a href="{{ route('hr.attendance.index') }}" class="btn btn-light border w-100" title="Clear Filters"><i
                                     class="fa fa-sync"></i></a>
                         </div>
                     </form>

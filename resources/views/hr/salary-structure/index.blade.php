@@ -195,7 +195,7 @@
     <div class="container-fluid py-4">
 
                 <!-- Page Header -->
-                <div class="page-header d-flex justify-content-between align-items-start">
+                <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
                     <div>
                         <h1 class="page-title"><i class="fa fa-money-bill-wave"></i> Salary Structures</h1>
                         <p class="page-subtitle">Create and manage salary structures, then assign them to employees</p>
@@ -237,7 +237,7 @@
                 <!-- Salary Structures Grid -->
                 <div class="hr-card">
                     <div class="hr-header">
-                        <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-3 w-100">
                             <div class="search-box">
                                 <i class="fa fa-search"></i>
                                 <input type="search" id="structureSearch" placeholder="Search structures...">

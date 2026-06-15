@@ -43,12 +43,15 @@
                                 class="menu_icon feather ft-home"></i><span class="menu-title">Dashboard</span></a>
                     </li>
 
+                    @if(auth()->user()->roles->count() > 0 || auth()->user()->email === 'admin@admin.com')
                     <li class="nav-item">
                         <a href="{{ url('/sale/create') }}" class="nav-link">
                             <i class="menu_icon fas fa-cash-register"></i>
                             <span class="menu-title">Sale</span></a>
                     </li>
+                    @endif
 
+                    @if(auth()->user()->roles->count() > 0 || auth()->user()->email === 'admin@admin.com')
                     <li class="nav-item mega-menu">
                         <a href="#" class="nav-link">
                             <i class="menu_icon fas fa-user-shield"></i>
@@ -250,6 +253,7 @@
                             </div>
                         </div>
                     </li>
+                    @endif
 
                     <!-- HR Management Menu -->
                     <li class="nav-item">
@@ -305,6 +309,7 @@
                     </li>
 
                     <!-- Vouchers Menu -->
+                    @if(auth()->user()->roles->count() > 0 || auth()->user()->email === 'admin@admin.com')
                     <li class="nav-item">
                         <a href="#" class="nav-link">
                             <i class="menu_icon fas fa-file-invoice-dollar"></i>
@@ -364,7 +369,9 @@
                             </ul>
                         </div>
                     </li>
+                    @endif
 
+                    @if(auth()->user()->roles->count() > 0 || auth()->user()->email === 'admin@admin.com')
                     <li class="nav-item">
                         <a href="#" class="nav-link">
                             <i class="menu_icon feather ft-clipboard"></i>
@@ -457,6 +464,7 @@
                             </ul>
                         </div>
                     </li>
+                    @endif
 
                     <!-- User Management Menu -->
                     @if (auth()->user()->email === 'admin@admin.com')

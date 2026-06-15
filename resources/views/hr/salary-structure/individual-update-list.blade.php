@@ -8,7 +8,7 @@
         <div class="main-content-inner">
             <div class="container">
                 <!-- Page Header -->
-                <div class="page-header d-flex justify-content-between align-items-start">
+                <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
                     <div>
                         <h1 class="page-title"><i class="fa fa-user-edit"></i> Update Salary Structure – Individual Employees
                         </h1>

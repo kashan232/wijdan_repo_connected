@@ -13,6 +13,17 @@
             margin-bottom: 24px;
             border-bottom: 2px solid var(--hr-border);
             padding-bottom: 0;
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .payroll-tabs::-webkit-scrollbar {
+            height: 4px;
+        }
+        .payroll-tabs::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
         }
 
         .payroll-tab {
@@ -755,7 +766,7 @@
 
                 <!-- Page Header -->
                 <div
-                    class="page-header d-flex justify-content-between align-items-center bg-white p-4 rounded-3 shadow-sm mb-4 border-start border-4 border-primary">
+                    class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center align-items-start gap-3 bg-white p-4 rounded-3 shadow-sm mb-4 border-start border-4 border-primary">
                     <div>
                         <h1 class="page-title text-primary fw-bold mb-1" style="font-size:1.6rem;"><i
                                 class="fa fa-money-bill-wave me-2"></i> Payroll Management</h1>

@@ -682,10 +682,11 @@ class PayrollController extends Controller
                     ->whereDate('date', $request->date)
                     ->first();
 
-                if (! $attendance || ! $attendance->clock_out) {
+                if (! $attendance) {
                     DB::rollBack();
+
                     return response()->json([
-                        'error' => "🕒 <b>Attendance Missing:</b> No completed attendance record (with clock-out) was found for <b>{$employee->full_name}</b> on {$request->date}.",
+                        'error' => "🕒 <b>Attendance Missing:</b> No attendance record was found for <b>{$employee->full_name}</b> on {$request->date}.",
                     ], 422);
                 }
 
@@ -995,8 +996,8 @@ class PayrollController extends Controller
                     ->whereDate('date', $request->date)
                     ->first();
 
-                if (! $attendance || ! $attendance->clock_out) {
-                    $errors[] = $employee->full_name.': No completed attendance found.';
+                if (! $attendance) {
+                    $errors[] = $employee->full_name.': No attendance record found for this date.';
 
                     continue;
                 }

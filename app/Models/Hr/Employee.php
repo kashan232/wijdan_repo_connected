@@ -265,8 +265,10 @@ class Employee extends Model
         return $query->active()
             ->whereHas('activeSalaryStructure', function ($q) {
                 $q->where(function ($sq) {
-                    // Pure monthly employees (no daily wages)
-                    $sq->where(function ($ssq) {
+                    // Employees with base salary
+                    $sq->where('base_salary', '>', 0)
+                    // OR Pure monthly employees (no daily wages)
+                    ->orWhere(function ($ssq) {
                         $ssq->where('use_daily_wages', false)
                            ->orWhereNull('use_daily_wages');
                     })

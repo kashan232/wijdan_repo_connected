@@ -74,7 +74,7 @@
     <div class="container-fluid py-4">
 
                 <!-- Page Header -->
-                <div class="page-header d-flex justify-content-between align-items-start">
+                <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
                     <div>
                         <h1 class="page-title"><i class="fa fa-calendar-alt"></i> Holiday Management</h1>
                         <p class="page-subtitle">Manage public and company holidays</p>
@@ -127,7 +127,7 @@
                 <!-- Holidays Card -->
                 <div class="hr-card">
                     <div class="hr-header">
-                        <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-3 w-100">
                             <div class="search-box">
                                 <i class="fa fa-search"></i>
                                 <input type="search" id="holidaySearch" placeholder="Search holidays...">

@@ -33,7 +33,7 @@
         }
 
         /* ─── Loan Step Dots ─── */
-        .loan-type-selector { display: flex; gap: 12px; margin-bottom: 20px; }
+        .loan-type-selector { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
         .loan-type-option {
             flex: 1; border: 2px solid #e2e8f0; border-radius: 12px; padding: 14px 10px;
             cursor: pointer; transition: all 0.2s; text-align: center;
@@ -73,7 +73,7 @@
 
 
                 {{-- ── Page Header ── --}}
-                <div class="page-header d-flex justify-content-between align-items-center mb-4">
+                <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center align-items-start gap-3 mb-4">
                     <div>
                         <h4 class="page-title"><i class="fa fa-hand-holding-usd"></i> Loans & Advances</h4>
                         <p class="text-muted mb-0">Manage employee loans, advances, and repayment schedules</p>

@@ -178,9 +178,9 @@
     /* Cards Grid */
     .hr-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
         gap: 20px;
-        padding: 24px;
+        padding: 15px 0;
     }
 
     /* Stats Row in Grid */
@@ -227,7 +227,9 @@
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
-        margin-bottom: 14px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 12px;
     }
 
     .hr-avatar {
@@ -246,19 +248,26 @@
     .hr-item-info {
         flex: 1;
         margin-left: 14px;
+        min-width: 0;
     }
 
     .hr-item-name {
-        font-size: 1.1rem;
-        font-weight: 600;
+        font-size: 1.15rem;
+        font-weight: 700;
         color: var(--hr-text);
         margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .hr-item-subtitle {
         font-size: 0.85rem;
         color: var(--hr-muted);
         margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .hr-item-meta {
@@ -269,7 +278,12 @@
 
     .hr-actions {
         display: flex;
-        gap: 6px;
+        gap: 8px;
+        width: 100%;
+        justify-content: flex-end;
+        padding-top: 10px;
+        border-top: 1px solid var(--hr-border);
+        margin-top: 10px;
     }
 
     .hr-actions .btn {
