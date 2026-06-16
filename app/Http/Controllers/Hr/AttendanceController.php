@@ -639,7 +639,7 @@ class AttendanceController extends Controller
             $clientIp = $request->ip();
 
             if (!in_array($clientIp, $allowedIps)) {
-                return response()->json(['error' => 'You can only mark attendance from the office network. (Your IP: ' . $clientIp . ')'], 403);
+                return response()->json(['sweet_error' => 'Aap office ke ilawa aur kahin se bhi attendance place nahi kar sakte.'], 403);
             }
 
             $user = auth()->user();

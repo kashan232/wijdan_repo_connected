@@ -370,6 +370,25 @@
                                 </div>
                             @endif
 
+                            @if(session('sweet_error'))
+                                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                                <script>
+                                    document.addEventListener("DOMContentLoaded", function() {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Action Not Allowed',
+                                            text: '{{ session("sweet_error") }}',
+                                            confirmButtonColor: '#ef4444',
+                                            confirmButtonText: 'Understood',
+                                            background: '#fff',
+                                            customClass: {
+                                                popup: 'rounded-4'
+                                            }
+                                        });
+                                    });
+                                </script>
+                            @endif
+
                             @if(!$attendance)
                                 <form action="{{ route('attendance.web.checkIn') }}" method="POST">
                                     @csrf

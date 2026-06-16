@@ -19,7 +19,7 @@ class WebAttendanceController extends Controller
         $clientIp = $request->ip();
 
         if (!in_array($clientIp, $allowedIps)) {
-            return back()->with('error', 'You can only mark attendance from the office network. (Your IP: ' . $clientIp . ')');
+            return back()->with('sweet_error', 'Aap office ke ilawa aur kahin se bhi attendance place nahi kar sakte.');
         }
 
         if (!$employee) {
@@ -67,7 +67,7 @@ class WebAttendanceController extends Controller
         $clientIp = $request->ip();
 
         if (!in_array($clientIp, $allowedIps)) {
-            return back()->with('error', 'You can only mark attendance from the office network. (Your IP: ' . $clientIp . ')');
+            return back()->with('sweet_error', 'Aap office ke ilawa aur kahin se bhi attendance place nahi kar sakte.');
         }
 
         if (!$employee) {

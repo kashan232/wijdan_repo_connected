@@ -783,8 +783,19 @@
                     }
                 },
                 error: function(err) {
-                    $('#aiStatus').html('<span class="badge bg-danger">Error: ' + err.statusText + '</span>');
-                    startDetection();
+                    if (err.responseJSON && err.responseJSON.sweet_error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Action Not Allowed',
+                            text: err.responseJSON.sweet_error,
+                            confirmButtonColor: '#ef4444',
+                            confirmButtonText: 'Understood'
+                        });
+                        closeCamera();
+                    } else {
+                        $('#aiStatus').html('<span class="badge bg-danger">Error: ' + err.statusText + '</span>');
+                        startDetection();
+                    }
                 }
             });
         }
@@ -819,4 +830,5 @@
             transition: filter 0.1s ease;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 @endsection
