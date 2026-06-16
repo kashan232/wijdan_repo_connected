@@ -634,6 +634,14 @@ class AttendanceController extends Controller
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
+            // IP Restriction
+            $allowedIps = ['103.75.244.56', '127.0.0.1', '::1'];
+            $clientIp = $request->ip();
+
+            if (!in_array($clientIp, $allowedIps)) {
+                return response()->json(['error' => 'You can only mark attendance from the office network. (Your IP: ' . $clientIp . ')'], 403);
+            }
+
             $user = auth()->user();
             $employee = Employee::where('user_id', $user->id)->with(['shift', 'designation'])->first();
 

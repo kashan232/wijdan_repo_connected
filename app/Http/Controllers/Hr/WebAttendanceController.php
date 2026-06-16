@@ -14,6 +14,14 @@ class WebAttendanceController extends Controller
         $user = auth()->user();
         $employee = $user->employee;
 
+        // IP Restriction
+        $allowedIps = ['103.75.244.56', '127.0.0.1', '::1'];
+        $clientIp = $request->ip();
+
+        if (!in_array($clientIp, $allowedIps)) {
+            return back()->with('error', 'You can only mark attendance from the office network. (Your IP: ' . $clientIp . ')');
+        }
+
         if (!$employee) {
             return back()->with('error', 'You do not have an associated employee profile.');
         }
@@ -53,6 +61,14 @@ class WebAttendanceController extends Controller
     {
         $user = auth()->user();
         $employee = $user->employee;
+
+        // IP Restriction
+        $allowedIps = ['103.75.244.56', '127.0.0.1', '::1'];
+        $clientIp = $request->ip();
+
+        if (!in_array($clientIp, $allowedIps)) {
+            return back()->with('error', 'You can only mark attendance from the office network. (Your IP: ' . $clientIp . ')');
+        }
 
         if (!$employee) {
             return back()->with('error', 'You do not have an associated employee profile.');
