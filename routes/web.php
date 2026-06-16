@@ -205,6 +205,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/purchasereturn/{id}/invoice', [PurchaseController::class, 'ReturnInvoice'])->name('purchasereturn.invoice');
 
+    // Inward Returns
+    Route::resource('inward-returns', \App\Http\Controllers\InwardReturnController::class)->except(['edit', 'update']);
+    Route::get('inward-returns/create/{gatepass_id}', [\App\Http\Controllers\InwardReturnController::class, 'create'])->name('inward.return.create');
+    
     // Inward Gatepass Routes
     Route::get('/InwardGatepass', [InwardgatepassController::class, 'index'])->name('InwardGatepass.home')->middleware('permission:List Inwards');
     Route::get('/add/InwardGatepass', [InwardgatepassController::class, 'create'])->name('add_inwardgatepass')->middleware('permission:Create Inward Gatepass');

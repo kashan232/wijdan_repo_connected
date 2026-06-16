@@ -192,6 +192,10 @@
                                                             Edit
                                                         </a>
 
+                                                        <a href="{{ route('inward.return.create', $gp->id) }}" class="btn btn-sm btn-danger mb-1">
+                                                            Return
+                                                        </a>
+
                                                         @if ($gp->status == 'pending' && auth()->user()->email === 'admin@admin.com')
                                                         <form action="{{ route('InwardGatepass.destroy', $gp->id) }}"
                                                             method="POST"

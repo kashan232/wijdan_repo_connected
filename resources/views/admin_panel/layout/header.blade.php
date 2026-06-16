@@ -179,6 +179,11 @@
                                                 <i class="fas fa-shopping-cart"></i> List Inwards
                                             </a>
                                         </li>
+                                        <li>
+                                            <a href="{{ route('inward-returns.index') }}">
+                                                <i class="fas fa-undo"></i> Inward Returns
+                                            </a>
+                                        </li>
                                         @endcan
 
                                         @can('Create Inward Gatepass')
