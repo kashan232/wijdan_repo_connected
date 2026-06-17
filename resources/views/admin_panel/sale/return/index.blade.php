@@ -63,6 +63,9 @@
                                 <a href="{{ route('saleReturn.invoice', $return->id) }}" target="_blank" class="btn btn-sm btn-info text-white">
                                     Receipt
                                 </a>
+                                <a href="{{ route('sale.returns.edit', $return->id) }}" class="btn btn-sm btn-warning text-dark ms-1">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
                             </td>
 
                         </tr>
@@ -76,4 +79,14 @@
     </div>
 </div>
 
+@endsection
+
+@section('scripts')
+@if(session('print_invoice_url'))
+<script>
+    $(document).ready(function() {
+        window.open("{{ session('print_invoice_url') }}", "_blank", "width=800,height=600");
+    });
+</script>
+@endif
 @endsection

@@ -44,6 +44,9 @@
                         <div class="spinner-border" role="status"></div>
                     </div>
                     <div class="text-end mb-3">
+                        <button id="exportExcelBtn" class="btn btn-success btn-sm px-4 me-2">
+                            <i class="fas fa-file-excel me-1"></i> Export Excel
+                        </button>
                         <button id="exportPdfBtn" class="btn btn-danger btn-sm px-4">
                             <i class="fas fa-file-pdf me-1"></i> Export PDF
                         </button>
@@ -221,6 +224,8 @@
 
 
 @section('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
     $(document).ready(function() {
         // Initialize Select2
@@ -256,6 +261,9 @@
                 start_date: start,
                 end_date: end
             }, function(res) {
+                window.lastLedgerRes = res;
+                window.lastLedgerStart = start;
+                window.lastLedgerEnd = end;
 
                 $("#loader").hide();
                 $("#ledgerBox").show();
@@ -353,6 +361,72 @@
         };
 
         html2pdf().set(opt).from(element).save();
+    });
+
+    // Excel Export Function using SheetJS
+    $("#exportExcelBtn").on("click", function() {
+        if ($("#ledgerBox").is(":hidden") || !window.lastLedgerRes) {
+            alert("Please generate ledger first");
+            return;
+        }
+
+        let res = window.lastLedgerRes;
+        let data = [];
+
+        // Header
+        data.push(["Vendor Ledger"]);
+        data.push(["Vendor:", res.vendor.name, "", "Duration:", window.lastLedgerStart + " to " + window.lastLedgerEnd]);
+        data.push([]);
+
+        // Columns
+        data.push(["Date", "Inv / Ref", "Description", "Debit", "Credit", "Balance"]);
+
+        let lastBalance = parseFloat(res.opening_balance) || 0;
+        data.push(["N/A", "-", "Opening Balance", "", "", lastBalance]);
+
+        let totalDebit = 0;
+        let totalCredit = 0;
+
+        if (res.transactions && res.transactions.length > 0) {
+            res.transactions.forEach((t) => {
+                let debit = parseFloat(t.debit) || 0;
+                let credit = parseFloat(t.credit) || 0;
+
+                totalDebit += debit;
+                totalCredit += credit;
+                lastBalance = lastBalance + debit - credit;
+
+                let invStr = (t.invoice ?? '-') + (t.reference ? ' - (' + t.reference + ')' : '');
+
+                data.push([
+                    t.date.split(" ")[0],
+                    invStr,
+                    t.description,
+                    debit > 0 ? debit : "",
+                    credit > 0 ? credit : "",
+                    lastBalance
+                ]);
+            });
+        }
+
+        data.push(["", "", "Totals:", totalDebit > 0 ? totalDebit : "", totalCredit > 0 ? totalCredit : "", lastBalance]);
+
+        let ws = XLSX.utils.aoa_to_sheet(data);
+        
+        // Auto-size columns
+        const colWidths = [
+            { wch: 15 }, // Date
+            { wch: 30 }, // Inv / Ref
+            { wch: 40 }, // Description
+            { wch: 15 }, // Debit
+            { wch: 15 }, // Credit
+            { wch: 15 }  // Balance
+        ];
+        ws['!cols'] = colWidths;
+
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Ledger");
+        XLSX.writeFile(wb, "Vendor_Ledger.xlsx");
     });
 </script>
 

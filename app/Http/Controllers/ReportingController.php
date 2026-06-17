@@ -1129,13 +1129,25 @@ class ReportingController extends Controller
             ->where('return_date', '<', $start)
             ->sum('net_amount');
 
+        // 3b. Prior Inward Returns (Credit: We owe less)
+        $prevInwardReturns = DB::table('inward_returns')
+            ->join('inward_return_items', 'inward_returns.id', '=', 'inward_return_items.inward_return_id')
+            ->join('inward_gatepass_items', function ($join) {
+                $join->on('inward_returns.inward_gatepass_id', '=', 'inward_gatepass_items.inward_gatepass_id')
+                     ->on('inward_return_items.product_id', '=', 'inward_gatepass_items.product_id');
+            })
+            ->leftJoin('products', 'inward_return_items.product_id', '=', 'products.id')
+            ->where('inward_returns.vendor_id', $vendorId)
+            ->where('inward_returns.return_date', '<', $start)
+            ->sum(DB::raw('(COALESCE(inward_gatepass_items.price, products.wholesale_price, 0) - COALESCE(inward_gatepass_items.discount_value, 0)) * inward_return_items.qty'));
+
         // 4. Prior Payments (Credit: We owe less)
         $prevPayments = DB::table('vendor_payments')
             ->where('vendor_id', $vendorId)
             ->where('payment_date', '<', $start)
             ->sum('amount');
 
-        $opening = $initial + $prevPurchases + $prevInwards + $prevBilties - $prevReturns - $prevPayments;
+        $opening = $initial + $prevPurchases + $prevInwards + $prevBilties - $prevReturns - $prevInwardReturns - $prevPayments;
 
         // 🔹 1. Purchases → Debit (we owe vendor)
         $purchases = DB::table('purchases')
@@ -1205,6 +1217,35 @@ class ReportingController extends Controller
                 ];
             });
 
+        // 🔹 2b. Inward Returns → Credit (reduces vendor balance)
+        $inwardReturnsPeriod = DB::table('inward_returns')
+            ->join('inward_return_items', 'inward_returns.id', '=', 'inward_return_items.inward_return_id')
+            ->join('inward_gatepass_items', function ($join) {
+                $join->on('inward_returns.inward_gatepass_id', '=', 'inward_gatepass_items.inward_gatepass_id')
+                     ->on('inward_return_items.product_id', '=', 'inward_gatepass_items.product_id');
+            })
+            ->leftJoin('products', 'inward_return_items.product_id', '=', 'products.id')
+            ->where('inward_returns.vendor_id', $vendorId)
+            ->whereBetween('inward_returns.return_date', [$start, $end])
+            ->select(
+                'inward_returns.return_date as date',
+                'inward_returns.return_invoice as invoice',
+                DB::raw("'Inward Return' as description"),
+                DB::raw('SUM((COALESCE(inward_gatepass_items.price, products.wholesale_price, 0) - COALESCE(inward_gatepass_items.discount_value, 0)) * inward_return_items.qty) as credit_amount')
+            )
+            ->groupBy('inward_returns.id', 'inward_returns.return_date', 'inward_returns.return_invoice')
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'date' => $r->date,
+                    'invoice' => $r->invoice,
+                    'description' => $r->description,
+                    'debit' => 0,
+                    'credit' => $r->credit_amount,
+                    'sort_date' => $r->date
+                ];
+            });
+
         // 🔹 3. Vendor Payments → Credit (we paid vendor)
         $payments = DB::table('vendor_payments')
             ->where('vendor_id', $vendorId)
@@ -1227,6 +1268,7 @@ class ReportingController extends Controller
             ->merge($inwards)
             ->merge($bilties)
             ->merge($returns)
+            ->merge($inwardReturnsPeriod)
             ->merge($payments)
             ->sortBy('sort_date')
             ->values()

@@ -277,6 +277,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/sales/{id}/return', [SaleController::class, 'saleretun'])->name('sales.return.create');
     Route::post('/sales-return/store', [SaleController::class, 'storeSaleReturn'])->name('sales.return.store');
     Route::get('/sale-returns', [App\Http\Controllers\SaleController::class, 'salereturnview'])->name('sale.returns.index')->middleware('permission:Sale Return');
+    Route::get('/sale-returns/{id}/edit', [App\Http\Controllers\SaleController::class, 'editSaleReturn'])->name('sale.returns.edit')->middleware('permission:Sale Return');
+    Route::put('/sale-returns/{id}', [App\Http\Controllers\SaleController::class, 'updateSaleReturn'])->name('sale.returns.update')->middleware('permission:Sale Return');
     Route::get('/sales/{id}/invoice', [SaleController::class, 'saleinvoice'])->name('sales.invoice');
     Route::get('/sales/{id}/edit', [SaleController::class, 'saleedit'])->name('sales.edit');
     Route::put('/sales/{id}', [SaleController::class, 'updatesale'])->name('sales.update');

@@ -101,6 +101,14 @@
 @endsection
 
 @section('scripts')
+@if(session('print_invoice_url'))
+<script>
+    $(document).ready(function() {
+        window.open("{{ session('print_invoice_url') }}", "_blank", "width=800,height=600");
+    });
+</script>
+@endif
+
 <style>
     /* Custom Processing Indicator Style */
     div.dataTables_wrapper div.dataTables_processing {
