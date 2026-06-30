@@ -16,7 +16,7 @@ class VendorController extends Controller
     public function index()
     {
         $vendors = Vendor::with('ledger')->orderBy('id', 'desc')->get();
-        $totalClosingBalance = $vendors->sum(function($vendor) {
+        $totalClosingBalance = $vendors->where('status', '!=', 'inactive')->sum(function($vendor) {
             return (float)($vendor->ledger->closing_balance ?? 0);
         });
         return view('admin_panel.vendors.index', compact('vendors', 'totalClosingBalance'));
@@ -105,6 +105,15 @@ class VendorController extends Controller
         $vendor->delete(); // Soft delete vendor
 
         return back()->with('success', 'Deleted Successfully');
+    }
+
+    public function toggleStatus($id)
+    {
+        $vendor = Vendor::findOrFail($id);
+        $vendor->status = $vendor->status === 'active' ? 'inactive' : 'active';
+        $vendor->save();
+
+        return redirect()->back()->with('success', 'Vendor status updated.');
     }
 
 

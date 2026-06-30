@@ -26,7 +26,7 @@ class CustomerController extends Controller
             $customer->closing_balance = $closingBalances[$customer->id]->closing_balance ?? 0;
         }
 
-        $totalClosingBalance = $customers->sum('closing_balance');
+        $totalClosingBalance = $customers->where('status', '!=', 'inactive')->sum('closing_balance');
 
         return view('admin_panel.customers.index', compact('customers', 'totalClosingBalance'));
     }

@@ -54,8 +54,13 @@
                             </thead>
                             <tbody>
                                 @foreach($vendors as $key => $v)
-                                <tr>
-                                    <td class="ps-4 fw-bold text-muted">{{ $key + 1 }}</td>
+                                <tr class="{{ $v->status === 'inactive' ? 'table-secondary text-muted' : '' }}">
+                                    <td class="ps-4 fw-bold text-muted">
+                                        {{ $key + 1 }}
+                                        @if($v->status === 'inactive')
+                                            <span class="badge bg-secondary ms-1">Inactive</span>
+                                        @endif
+                                    </td>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-sm bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px; height:32px; font-weight:bold;">
@@ -74,6 +79,9 @@
                                     <td class="text-muted small">{{ Str::limit($v->address, 30) }}</td>
                                     <td class="text-center">
                                         <div class="btn-group">
+                                            <a href="{{ route('vendor.toggleStatus', $v->id) }}" class="btn btn-sm {{ $v->status === 'active' ? 'btn-outline-secondary' : 'btn-outline-success' }}" title="Toggle Status">
+                                                <i class="fas {{ $v->status === 'active' ? 'fa-ban' : 'fa-check' }}"></i>
+                                            </a>
                                             <button class="btn btn-sm btn-outline-primary btn-edit-vendor" 
                                                 data-id="{{ $v->id }}" 
                                                 data-name="{{ $v->name }}"
