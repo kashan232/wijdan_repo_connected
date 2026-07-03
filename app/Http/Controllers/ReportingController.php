@@ -936,6 +936,11 @@ class ReportingController extends Controller
             ->where('payment_date', '<', $start)
             ->sum('amount');
 
+        $prevPayments += DB::table('sales')
+            ->where('customer', $customerId)
+            ->where('created_at', '<', $start)
+            ->sum(DB::raw('COALESCE(cash, 0) + COALESCE(card, 0)'));
+
         // 4. Prior Charges
         $prevPlusCharges = DB::table('customer_charges')
             ->where('customer_id', $customerId)
@@ -1048,6 +1053,30 @@ class ReportingController extends Controller
                     'credit' => $p->amount,
                 ];
             });
+
+        $salePayments = DB::table('sales')
+            ->where('customer', $customerId)
+            ->whereBetween('created_at', [$start, $end])
+            ->where(function ($q) {
+                $q->where('cash', '>', 0)->orWhere('card', '>', 0);
+            })
+            ->get()
+            ->map(function ($s) {
+                $isCash = $s->cash > 0;
+                $isCard = $s->card > 0;
+                $ref = ($isCash && $isCard) ? 'Cash & Card' : ($isCash ? 'Cash' : 'Card');
+                return [
+                    'date' => $s->created_at,
+                    'sort_type' => 2,
+                    'invoice' => $s->invoice_no,
+                    'reference' => $ref,
+                    'description' => 'Payment during Sale',
+                    'debit' => 0,
+                    'credit' => ($s->cash ?? 0) + ($s->card ?? 0),
+                ];
+            });
+
+        $payments = $payments->merge($salePayments);
 
         // ---------------- MERGE + SORT ----------------
         $transactions = collect()

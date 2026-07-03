@@ -515,17 +515,20 @@ class SaleController extends Controller
                 $customer_id = $request->customer;
                 if ($customer_id !== 'Walk-in Customer') {
                     $ledger = \App\Models\CustomerLedger::where('customer_id', $customer_id)->latest('id')->first();
+                    $amount_paid = ($request->cash ?? 0) + ($request->card ?? 0);
+                    $net_increase = $request->total_net - $amount_paid;
+                    
                     if ($ledger) {
                         $ledger->previous_balance = $ledger->closing_balance;
-                        $ledger->closing_balance += $request->total_net;
+                        $ledger->closing_balance += $net_increase;
                         $ledger->save();
                     } else {
                         \App\Models\CustomerLedger::create([
                             'customer_id'      => $customer_id,
                             'admin_or_user_id' => auth()->id(),
                             'previous_balance' => 0,
-                            'closing_balance'  => $request->total_net,
-                            'opening_balance'  => $request->total_net,
+                            'closing_balance'  => $net_increase,
+                            'opening_balance'  => $net_increase,
                         ]);
                     }
                 }
@@ -1785,6 +1788,8 @@ class SaleController extends Controller
 
             // --- Save updated Sale ---
             $old_total = $sale->total_net;
+            $old_cash  = $sale->cash ?? 0;
+            $old_card  = $sale->card ?? 0;
 
             $sale->customer            = $request->customer;
             $sale->reference           = $request->reference;
@@ -1812,7 +1817,9 @@ class SaleController extends Controller
 
             if ($customer_id !== 'Walk-in Customer') { // ✅ Only update ledger for registered customers
                 $ledger = CustomerLedger::where('customer_id', $customer_id)->latest('id')->first();
-                $difference = $request->total_net - $old_total;
+                $old_unpaid = $old_total - $old_cash - $old_card;
+                $new_unpaid = $request->total_net - ($request->cash ?? 0) - ($request->card ?? 0);
+                $difference = $new_unpaid - $old_unpaid;
 
                 if ($ledger) {
                     $ledger->previous_balance = $ledger->closing_balance;
@@ -1823,8 +1830,8 @@ class SaleController extends Controller
                         'customer_id'      => $customer_id,
                         'admin_or_user_id' => auth()->id(),
                         'previous_balance' => 0,
-                        'closing_balance'  => $request->total_net,
-                        'opening_balance'  => $request->total_net,
+                        'closing_balance'  => $new_unpaid,
+                        'opening_balance'  => $new_unpaid,
                     ]);
                 }
             }
