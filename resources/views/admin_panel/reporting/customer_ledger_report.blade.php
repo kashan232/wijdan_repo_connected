@@ -51,6 +51,9 @@
                         <button id="exportPdfBtn" class="btn btn-danger btn-sm px-4">
                             <i class="fas fa-file-pdf me-1"></i> Export PDF
                         </button>
+                        <button id="exportExcelBtn" class="btn btn-success btn-sm px-4 ms-2">
+                            <i class="fas fa-file-excel me-1"></i> Export Excel
+                        </button>
                     </div>
                     <div id="ledgerBox" style="display:none;">
                         <div class="ledger-box" id="ledgerPdfArea">
