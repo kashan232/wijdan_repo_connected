@@ -1196,13 +1196,101 @@ class SaleController extends Controller
     }
 
 
-    public function salereturnview()
+    public function salereturnview(Request $request)
     {
-        // Fetch all sale returns with the original sale and customer info
-        $salesReturns = SalesReturn::with('sale.customer_relation')->orderBy('created_at', 'desc')->get();
-        return view('admin_panel.sale.return.index', [
-            'salesReturns' => $salesReturns,
-        ]);
+        if ($request->ajax()) {
+            $query = SalesReturn::with('sale.customer_relation');
+
+            // Apply Search Filter
+            if ($request->has('search') && !empty($request->search['value'])) {
+                $search = $request->search['value'];
+                $query->where(function($q) use ($search) {
+                    $q->whereHas('sale', function($saleQuery) use ($search) {
+                        $saleQuery->where('invoice_no', 'like', "%{$search}%")
+                                  ->orWhereHas('customer_relation', function($custQuery) use ($search) {
+                                      $custQuery->where('customer_name', 'like', "%{$search}%");
+                                  });
+                    })
+                    ->orWhere('return_note', 'like', "%{$search}%");
+                });
+            }
+
+            // Total records before filtering
+            $totalRecords = SalesReturn::count();
+
+            // Total records after filtering
+            $filteredRecords = $query->count();
+
+            // Ordering
+            if ($request->has('order')) {
+                $orderColumnIndex = $request->order[0]['column'];
+                $orderDirection = $request->order[0]['dir'];
+                $columns = [
+                    0 => 'id',
+                    1 => 'sale_id',
+                    2 => 'product',
+                    3 => 'sale_id', // Customer relates to sale
+                    4 => 'total_items',
+                    5 => 'total_net',
+                    6 => 'return_note',
+                    7 => 'created_at'
+                ];
+                if (isset($columns[$orderColumnIndex])) {
+                    $query->orderBy($columns[$orderColumnIndex], $orderDirection);
+                }
+            } else {
+                $query->orderBy('created_at', 'desc');
+            }
+
+            // Pagination
+            if ($request->has('start') && $request->has('length') && $request->length != -1) {
+                $query->skip($request->start)->take($request->length);
+            }
+
+            $returns = $query->get();
+
+            $data = [];
+            $skip = $request->start ?? 0;
+
+            foreach ($returns as $index => $return) {
+                $productsHtml = '';
+                $products = explode(',', $return->product ?? '');
+                if (!empty($products)) {
+                    foreach ($products as $p) {
+                        if (trim($p) !== '') {
+                            $productsHtml .= '<span class="badge bg-light text-dark border mb-1">' . htmlspecialchars(trim($p)) . '</span><br>';
+                        }
+                    }
+                } else {
+                    $productsHtml = 'N/A';
+                }
+
+                $actions = '<a href="' . route('saleReturn.invoice', $return->id) . '" target="_blank" class="btn btn-sm btn-info text-white">Receipt</a>
+                            <a href="' . route('sale.returns.edit', $return->id) . '" class="btn btn-sm btn-warning text-dark ms-1"><i class="fas fa-edit"></i> Edit</a>';
+
+                $data[] = [
+                    $skip + $index + 1,
+                    $return->sale->invoice_no ?? 'N/A',
+                    $productsHtml,
+                    $return->sale->customer_relation->customer_name ?? 'N/A',
+                    '<div class="text-center">' . $return->total_items . '</div>',
+                    '<div class="text-end">' . number_format($return->total_net, 2) . '</div>',
+                    $return->return_note,
+                    '<div class="text-center">' . $return->created_at->format('d-m-Y') . '</div>',
+                    '<div class="text-center"><span class="badge bg-danger">Returned</span></div>',
+                    '<div class="text-center">' . $actions . '</div>'
+                ];
+            }
+
+            return response()->json([
+                "draw" => intval($request->draw),
+                "recordsTotal" => $totalRecords,
+                "recordsFiltered" => $filteredRecords,
+                "data" => $data
+            ]);
+        }
+
+        return view('admin_panel.sale.return.index');
     }
 
     public function editSaleReturn($id)

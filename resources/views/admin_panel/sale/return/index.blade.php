@@ -11,13 +11,8 @@
         </div>
 
         <div class="card-body">
-            @if($salesReturns->isEmpty())
-            <div class="alert alert-info text-center m-0">
-                No sale returns found.
-            </div>
-            @else
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle mb-0">
+                <table id="saleReturnsTable" class="table table-bordered table-hover align-middle mb-0 w-100">
                     <thead class="table-light text-center">
                         <tr>
                             <th>#</th>
@@ -33,47 +28,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($salesReturns as $return)
-                        <tr>
-                            <td class="text-center">{{ $loop->iteration }}</td>
-                            <td>{{ $return->sale->invoice_no ?? 'N/A' }}</td>
-                            <td>
-                                @php
-                                $products = explode(',', $return->product ?? '');
-                                @endphp
-                                @if(!empty($products))
-                                @foreach($products as $p)
-                                <span class="badge bg-light text-dark border mb-1">{{ trim($p) }}</span><br>
-                                @endforeach
-                                @else
-                                N/A
-                                @endif
-
-                            </td>
-                            <td>{{ $return->sale->customer_relation->customer_name ?? 'N/A' }}</td>
-
-                            <td class="text-center">{{ $return->total_items }}</td>
-                            <td class="text-end">{{ number_format($return->total_net, 2) }}</td>
-                            <td>{{ $return->return_note }}</td>
-                            <td class="text-center">{{ $return->created_at->format('d-m-Y') }}</td>
-                            <td class="text-center">
-                                <span class="badge bg-danger">Returned</span>
-                            </td>
-                            <td class="text-center">
-                                <a href="{{ route('saleReturn.invoice', $return->id) }}" target="_blank" class="btn btn-sm btn-info text-white">
-                                    Receipt
-                                </a>
-                                <a href="{{ route('sale.returns.edit', $return->id) }}" class="btn btn-sm btn-warning text-dark ms-1">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
-                            </td>
-
-                        </tr>
-                        @endforeach
+                        <!-- Data will be populated by DataTables -->
                     </tbody>
                 </table>
             </div>
-            @endif
         </div>
 
     </div>
@@ -89,4 +47,42 @@
     });
 </script>
 @endif
+
+<script>
+    $(document).ready(function() {
+        $('#saleReturnsTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: "{{ route('sale.returns.index') }}"
+            },
+            columns: [
+                { data: 0, orderable: false, searchable: false, className: 'text-center' }, // S.No
+                { data: 1 }, // Inv
+                { data: 2, orderable: false, searchable: false }, // Items
+                { data: 3 }, // Customer
+                { data: 4, orderable: false, searchable: false, className: 'text-center' }, // Total Items
+                { data: 5, className: 'text-end' }, // Total Net
+                { data: 6, orderable: false }, // Return Note
+                { data: 7, className: 'text-center' }, // Date
+                { data: 8, orderable: false, searchable: false, className: 'text-center' }, // Status
+                { data: 9, orderable: false, searchable: false, className: 'text-center' }  // Action
+            ],
+            responsive: false,
+            pageLength: 10,
+            lengthMenu: [
+                [10, 25, 50, 100],
+                [10, 25, 50, 100]
+            ],
+            order: [
+                [7, 'desc'] // Order by Date desc by default
+            ],
+            language: {
+                search: "_INPUT_",
+                searchPlaceholder: "Search Inv/Customer/Note...",
+                processing: '<div class="spinner-border text-primary mb-2" role="status" style="width: 3rem; height: 3rem;"></div><div class="fw-bold">Processing...</div>'
+            }
+        });
+    });
+</script>
 @endsection
