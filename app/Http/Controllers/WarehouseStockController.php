@@ -66,10 +66,56 @@ class WarehouseStockController extends Controller
                 'products.item_code',
                 'products.barcode_path',
                 'products.unit_id',
-                'products.price',
+                'products.wholesale_price',
                 'products.created_at',
                 'brands.name as brand_name'
             );
+
+        $query->selectRaw("
+            COALESCE(
+                (
+                    SELECT pi.price
+                    FROM purchase_items pi
+                    INNER JOIN purchases p ON p.id = pi.purchase_id
+                    WHERE pi.product_id = products.id AND pi.price > 0
+                    ORDER BY p.purchase_date DESC, pi.id DESC
+                    LIMIT 1
+                ),
+                (
+                    SELECT igi.price
+                    FROM inward_gatepass_items igi
+                    INNER JOIN inward_gatepasses ig ON ig.id = igi.inward_gatepass_id
+                    WHERE igi.product_id = products.id
+                      AND igi.price > 0
+                      AND ig.status = 'linked'
+                      AND ig.bill_status = 'billed'
+                    ORDER BY ig.gatepass_date DESC, igi.id DESC
+                    LIMIT 1
+                ),
+                NULLIF(CAST(products.wholesale_price AS DECIMAL(12,2)), 0),
+                0
+            ) AS cost_price
+        ");
+
+        $query->selectRaw("
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM purchase_items pi
+                    WHERE pi.product_id = products.id AND pi.price > 0
+                ) OR EXISTS (
+                    SELECT 1
+                    FROM inward_gatepass_items igi
+                    INNER JOIN inward_gatepasses ig ON ig.id = igi.inward_gatepass_id
+                    WHERE igi.product_id = products.id
+                      AND igi.price > 0
+                      AND ig.status = 'linked'
+                      AND ig.bill_status = 'billed'
+                ) THEN 'Purchase'
+                WHEN NULLIF(CAST(products.wholesale_price AS DECIMAL(12,2)), 0) IS NOT NULL THEN 'Wholesale'
+                ELSE 'N/A'
+            END AS price_source
+        ");
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -171,29 +217,47 @@ class WarehouseStockController extends Controller
         $unitResults = $unitQuery->get();
 
         $totals = [
-            'piece'           => 0,
-            'meter'           => 0,
-            'yard'            => 0,
-            'total_shop'      => 0,
-            'total_warehouse' => 0,
-            'total_stock'     => 0,
+            'piece'                 => 0,
+            'meter'                 => 0,
+            'yard'                  => 0,
+            'piece_value'           => 0,
+            'meter_value'           => 0,
+            'yard_value'            => 0,
+            'total_shop'            => 0,
+            'total_warehouse'       => 0,
+            'total_stock'           => 0,
+            'total_shop_value'      => 0,
+            'total_warehouse_value' => 0,
+            'total_stock_value'     => 0,
         ];
 
         foreach ($unitResults as $row) {
-            $stock = $row->shop_stock + $row->warehouse_stock;
+            $costPrice = (float) ($row->cost_price ?? 0);
+            $totalQty = (float) $row->shop_stock + (float) $row->warehouse_stock;
             $normalized = $this->normalizeUnit($row->unit_id);
 
             if ($normalized) {
-                $totals[$normalized] += $stock;
+                $totals[$normalized] += $totalQty;
+                $totals[$normalized . '_value'] += $totalQty * $costPrice;
             }
         }
 
         $summaryQuery = $this->buildStockQuery($request, true);
         $summaryResults = $summaryQuery->get();
 
-        $totals['total_shop'] = $summaryResults->sum('shop_stock');
-        $totals['total_warehouse'] = $summaryResults->sum('warehouse_stock');
-        $totals['total_stock'] = $totals['total_shop'] + $totals['total_warehouse'];
+        foreach ($summaryResults as $row) {
+            $costPrice = (float) ($row->cost_price ?? 0);
+            $shop = (float) $row->shop_stock;
+            $wh = (float) $row->warehouse_stock;
+            $totalQty = $shop + $wh;
+
+            $totals['total_shop'] += $shop;
+            $totals['total_warehouse'] += $wh;
+            $totals['total_stock'] += $totalQty;
+            $totals['total_shop_value'] += $shop * $costPrice;
+            $totals['total_warehouse_value'] += $wh * $costPrice;
+            $totals['total_stock_value'] += $totalQty * $costPrice;
+        }
 
         return $totals;
     }
@@ -213,6 +277,11 @@ class WarehouseStockController extends Controller
             }
 
             $dateStr = \Carbon\Carbon::parse($stock->created_at)->format('d M Y');
+            $costPrice = (float) ($stock->cost_price ?? 0);
+            $shopStock = (float) $stock->shop_stock;
+            $warehouseStock = (float) $stock->warehouse_stock;
+            $totalStock = $shopStock + $warehouseStock;
+            $stockValue = $totalStock * $costPrice;
 
             $data[] = [
                 $dateStr,
@@ -221,10 +290,12 @@ class WarehouseStockController extends Controller
                 $stock->barcode_path ?? '',
                 $stock->unit_id ?? '-',
                 $stock->brand_name ?? 'N/A',
-                (float) $stock->price,
-                (float) $stock->shop_stock,
-                (float) $stock->warehouse_stock,
-                (float) ($stock->shop_stock + $stock->warehouse_stock),
+                $costPrice,
+                $stock->price_source ?? 'N/A',
+                $shopStock,
+                $warehouseStock,
+                $totalStock,
+                $stockValue,
                 $remarks,
             ];
         }

@@ -71,6 +71,38 @@
         word-break: break-word;
     }
 
+    .stock-summary-card .summary-amount {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 0;
+        opacity: 0.95;
+    }
+
+    .price-source-badge {
+        display: inline-block;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 999px;
+        margin-top: 4px;
+        text-transform: uppercase;
+    }
+
+    .price-source-badge.purchase {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .price-source-badge.wholesale {
+        background: #fef3c7;
+        color: #b45309;
+    }
+
+    .price-source-badge.na {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
     .bg-shop-stock {
         background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         color: #fff;
@@ -160,12 +192,12 @@
 
         #stockTable th:nth-child(6),
         #stockTable td:nth-child(6),
-        #stockTable th:nth-child(5),
-        #stockTable td:nth-child(5),
         #stockTable th:nth-child(7),
         #stockTable td:nth-child(7),
-        #stockTable th:nth-child(11),
-        #stockTable td:nth-child(11) {
+        #stockTable th:nth-child(8),
+        #stockTable td:nth-child(8),
+        #stockTable th:nth-child(13),
+        #stockTable td:nth-child(13) {
             display: none;
         }
 
@@ -286,6 +318,7 @@
                             <div class="summary-content">
                                 <div class="summary-label">Total Shop Stock</div>
                                 <p class="summary-value" id="totalShopStock">{{ number_format($stockTotals['total_shop'], 2) }}</p>
+                                <p class="summary-amount">PKR {{ number_format($stockTotals['total_shop_value'], 2) }}</p>
                             </div>
                         </div>
                     </div>
@@ -297,6 +330,7 @@
                             <div class="summary-content">
                                 <div class="summary-label">Total Warehouse Stock</div>
                                 <p class="summary-value" id="totalWarehouseStock">{{ number_format($stockTotals['total_warehouse'], 2) }}</p>
+                                <p class="summary-amount">PKR {{ number_format($stockTotals['total_warehouse_value'], 2) }}</p>
                             </div>
                         </div>
                     </div>
@@ -308,6 +342,7 @@
                             <div class="summary-content">
                                 <div class="summary-label">Total Stock</div>
                                 <p class="summary-value" id="totalStock">{{ number_format($stockTotals['total_stock'], 2) }}</p>
+                                <p class="summary-amount">PKR {{ number_format($stockTotals['total_stock_value'], 2) }}</p>
                             </div>
                         </div>
                     </div>
@@ -323,6 +358,7 @@
                             <div class="summary-content">
                                 <div class="summary-label">Total Piece Stock</div>
                                 <p class="summary-value" id="totalPieceStock">{{ number_format($stockTotals['piece'], 2) }}</p>
+                                <p class="summary-amount">PKR {{ number_format($stockTotals['piece_value'], 2) }}</p>
                             </div>
                         </div>
                     </div>
@@ -334,6 +370,7 @@
                             <div class="summary-content">
                                 <div class="summary-label">Total Meter Stock</div>
                                 <p class="summary-value" id="totalMeterStock">{{ number_format($stockTotals['meter'], 2) }}</p>
+                                <p class="summary-amount">PKR {{ number_format($stockTotals['meter_value'], 2) }}</p>
                             </div>
                         </div>
                     </div>
@@ -345,6 +382,7 @@
                             <div class="summary-content">
                                 <div class="summary-label">Total Yard Stock</div>
                                 <p class="summary-value" id="totalYardStock">{{ number_format($stockTotals['yard'], 2) }}</p>
+                                <p class="summary-amount">PKR {{ number_format($stockTotals['yard_value'], 2) }}</p>
                             </div>
                         </div>
                     </div>
@@ -358,6 +396,10 @@
         </div>
         @endif
 
+        <div class="alert alert-light border py-2 mb-3 small">
+            <strong>Stock Value:</strong> Latest purchase invoice price use hoti hai. Agar purchase price na ho to product ki <strong>Wholesale Price</strong> use hoti hai.
+        </div>
+
         <div class="stock-table-card">
         <div class="table-responsive stock-table-wrapper">
             <table class="table table-bordered table-striped table-sm" id="stockTable">
@@ -370,15 +412,22 @@
                         <th>Barcode</th>
                         <th>Unit</th>
                         <th>Brand</th>
-                        <th>Price</th>
-                        <th>Shop Stock</th> <!-- new -->
-                        <th>Warehouse Stock</th> <!-- new -->
-                        <th>Total Stock</th> <!-- new -->
+                        <th>Cost Price</th>
+                        <th>Shop Stock</th>
+                        <th>Warehouse Stock</th>
+                        <th>Total Stock</th>
+                        <th>Stock Value</th>
                         <th>Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($stocks as $stock)
+                    @php
+                        $costPrice = (float) ($stock->cost_price ?? 0);
+                        $totalQty = (float) $stock->shop_stock + (float) $stock->warehouse_stock;
+                        $stockValue = $totalQty * $costPrice;
+                        $sourceClass = strtolower($stock->price_source ?? 'na');
+                    @endphp
                     <tr>
                         <td>{{ ($stocks->currentPage() - 1) * $stocks->perPage() + $loop->iteration }}</td>
                         <td>{{ \Carbon\Carbon::parse($stock->created_at)->format('d M Y') }}</td>
@@ -390,11 +439,15 @@
                         <td>{{ $stock->barcode_path }}</td>
                         <td>{{ $stock->unit_id }}</td>
                         <td>{{ $stock->brand_name ?? 'N/A' }}</td>
-                        <td>{{ number_format($stock->price, 2) }}</td>
+                        <td class="text-end">
+                            {{ number_format($costPrice, 2) }}<br>
+                            <span class="price-source-badge {{ $sourceClass }}">{{ $stock->price_source ?? 'N/A' }}</span>
+                        </td>
 
                         <td class="text-center">{{ number_format($stock->shop_stock, 2) }}</td>
                         <td class="text-center">{{ number_format($stock->warehouse_stock, 2) }}</td>
-                        <td class="text-center fw-bold">{{ number_format($stock->shop_stock + $stock->warehouse_stock, 2) }}</td>
+                        <td class="text-center fw-bold">{{ number_format($totalQty, 2) }}</td>
+                        <td class="text-end fw-bold text-success">{{ number_format($stockValue, 2) }}</td>
 
                         <td>
                             @if($stock->warehouse_stock == 0 && $stock->shop_stock > 0)
@@ -552,7 +605,6 @@
 
         // parse a table row (returns array in export column order)
         function parseStockRow(tr) {
-            // columns: # | Date | Location | Product | Barcode | Unit | Brand | Price | Shop Stock | Warehouse Stock | Total Stock | Remarks
             var $tds = $(tr).find('td');
             var date = $tds.eq(1).text().trim();
             var location = $tds.eq(2).text().trim();
@@ -560,32 +612,34 @@
             var barcode = $tds.eq(4).text().trim();
             var unit = $tds.eq(5).text().trim();
             var brand = $tds.eq(6).text().trim();
-            var price = toNumber($tds.eq(7).text());
+            var costPrice = toNumber($tds.eq(7).text());
+            var priceSource = $tds.eq(7).find('.price-source-badge').text().trim() || 'N/A';
             var shopStock = toNumber($tds.eq(8).text());
             var warehouseStock = toNumber($tds.eq(9).text());
             var totalStock = toNumber($tds.eq(10).text());
-            var remarks = $tds.eq(11).text().trim();
-            return [date, location, product, barcode, unit, brand, price, shopStock, warehouseStock, totalStock, remarks];
+            var stockValue = toNumber($tds.eq(11).text());
+            var remarks = $tds.eq(12).text().trim();
+            return [date, location, product, barcode, unit, brand, costPrice, priceSource, shopStock, warehouseStock, totalStock, stockValue, remarks];
         }
 
-        // build workbook and download
         function buildAndDownload(rowsArray, filename) {
-            var header = ['Date', 'Location', 'Product', 'Barcode', 'Unit', 'Brand', 'Price', 'Shop Stock', 'Warehouse Stock', 'Total Stock', 'Remarks'];
+            var header = ['Date', 'Location', 'Product', 'Barcode', 'Unit', 'Brand', 'Cost Price', 'Price Source', 'Shop Stock', 'Warehouse Stock', 'Total Stock', 'Stock Value', 'Remarks'];
             var aoa = [header].concat(rowsArray);
             var ws = XLSX.utils.aoa_to_sheet(aoa);
-            // set column widths
             ws['!cols'] = [
-                { wpx: 80 },  // Date
-                { wpx: 140 }, // Location
-                { wpx: 200 }, // Product
-                { wpx: 80 },  // Barcode
-                { wpx: 60 },  // Unit
-                { wpx: 100 }, // Brand
-                { wpx: 80 },  // Price
-                { wpx: 80 },  // Shop Stock
-                { wpx: 100 }, // Warehouse Stock
-                { wpx: 80 },  // Total Stock
-                { wpx: 120 }  // Remarks
+                { wpx: 80 },
+                { wpx: 140 },
+                { wpx: 200 },
+                { wpx: 80 },
+                { wpx: 60 },
+                { wpx: 100 },
+                { wpx: 80 },
+                { wpx: 90 },
+                { wpx: 80 },
+                { wpx: 100 },
+                { wpx: 80 },
+                { wpx: 100 },
+                { wpx: 120 }
             ];
             var wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'WarehouseStock');
