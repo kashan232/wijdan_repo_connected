@@ -88,7 +88,8 @@
         text-transform: uppercase;
     }
 
-    .price-source-badge.purchase {
+    .price-source-badge.purchase,
+    .price-source-badge.avg-purchase {
         background: #dbeafe;
         color: #1d4ed8;
     }
@@ -397,7 +398,7 @@
         @endif
 
         <div class="alert alert-light border py-2 mb-3 small">
-            <strong>Stock Value:</strong> Latest purchase invoice price use hoti hai. Agar purchase price na ho to product ki <strong>Wholesale Price</strong> use hoti hai.
+            <strong>Stock Value:</strong> Purchase ki <strong>weighted average price</strong> use hoti hai (saari purchases ke price × qty ka average). Agar purchase na ho to product ki <strong>Wholesale Price</strong> use hoti hai.
         </div>
 
         <div class="stock-table-card">
@@ -426,7 +427,7 @@
                         $costPrice = (float) ($stock->cost_price ?? 0);
                         $totalQty = (float) $stock->shop_stock + (float) $stock->warehouse_stock;
                         $stockValue = $totalQty * $costPrice;
-                        $sourceClass = strtolower($stock->price_source ?? 'na');
+                        $sourceClass = str_replace(' ', '-', strtolower($stock->price_source ?? 'na'));
                     @endphp
                     <tr>
                         <td>{{ ($stocks->currentPage() - 1) * $stocks->perPage() + $loop->iteration }}</td>

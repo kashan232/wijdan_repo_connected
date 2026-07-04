@@ -73,24 +73,52 @@ class WarehouseStockController extends Controller
 
         $query->selectRaw("
             COALESCE(
-                (
-                    SELECT pi.price
-                    FROM purchase_items pi
-                    INNER JOIN purchases p ON p.id = pi.purchase_id
-                    WHERE pi.product_id = products.id AND pi.price > 0
-                    ORDER BY p.purchase_date DESC, pi.id DESC
-                    LIMIT 1
-                ),
-                (
-                    SELECT igi.price
-                    FROM inward_gatepass_items igi
-                    INNER JOIN inward_gatepasses ig ON ig.id = igi.inward_gatepass_id
-                    WHERE igi.product_id = products.id
-                      AND igi.price > 0
-                      AND ig.status = 'linked'
-                      AND ig.bill_status = 'billed'
-                    ORDER BY ig.gatepass_date DESC, igi.id DESC
-                    LIMIT 1
+                NULLIF(
+                    (
+                        COALESCE((
+                            SELECT SUM(pi.price * pi.qty)
+                            FROM purchase_items pi
+                            WHERE pi.product_id = products.id
+                              AND pi.price > 0
+                              AND pi.qty > 0
+                        ), 0)
+                        +
+                        COALESCE((
+                            SELECT SUM(igi.price * igi.qty)
+                            FROM inward_gatepass_items igi
+                            INNER JOIN inward_gatepasses ig ON ig.id = igi.inward_gatepass_id
+                            WHERE igi.product_id = products.id
+                              AND igi.price > 0
+                              AND igi.qty > 0
+                              AND ig.status = 'linked'
+                              AND ig.bill_status = 'billed'
+                        ), 0)
+                    )
+                    /
+                    NULLIF(
+                        (
+                            COALESCE((
+                                SELECT SUM(pi.qty)
+                                FROM purchase_items pi
+                                WHERE pi.product_id = products.id
+                                  AND pi.price > 0
+                                  AND pi.qty > 0
+                            ), 0)
+                            +
+                            COALESCE((
+                                SELECT SUM(igi.qty)
+                                FROM inward_gatepass_items igi
+                                INNER JOIN inward_gatepasses ig ON ig.id = igi.inward_gatepass_id
+                                WHERE igi.product_id = products.id
+                                  AND igi.price > 0
+                                  AND igi.qty > 0
+                                  AND ig.status = 'linked'
+                                  AND ig.bill_status = 'billed'
+                            ), 0)
+                        ),
+                        0
+                    ),
+                    0
                 ),
                 NULLIF(CAST(products.wholesale_price AS DECIMAL(12,2)), 0),
                 0
@@ -102,16 +130,17 @@ class WarehouseStockController extends Controller
                 WHEN EXISTS (
                     SELECT 1
                     FROM purchase_items pi
-                    WHERE pi.product_id = products.id AND pi.price > 0
+                    WHERE pi.product_id = products.id AND pi.price > 0 AND pi.qty > 0
                 ) OR EXISTS (
                     SELECT 1
                     FROM inward_gatepass_items igi
                     INNER JOIN inward_gatepasses ig ON ig.id = igi.inward_gatepass_id
                     WHERE igi.product_id = products.id
                       AND igi.price > 0
+                      AND igi.qty > 0
                       AND ig.status = 'linked'
                       AND ig.bill_status = 'billed'
-                ) THEN 'Purchase'
+                ) THEN 'Avg Purchase'
                 WHEN NULLIF(CAST(products.wholesale_price AS DECIMAL(12,2)), 0) IS NOT NULL THEN 'Wholesale'
                 ELSE 'N/A'
             END AS price_source
