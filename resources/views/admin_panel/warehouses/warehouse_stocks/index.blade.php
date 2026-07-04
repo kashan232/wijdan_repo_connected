@@ -1,9 +1,149 @@
 @extends('admin_panel.layout.app')
 @section('content')
 <style>
-    /* Mobile optimization */
-    @media (max-width: 768px) {
+    .stock-page-header {
+        background: #fff;
+        border-bottom: 1px solid #eef1f4;
+    }
 
+    .stock-filter-box {
+        background: #f8fafc;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+    }
+
+    .stock-filter-box .form-label {
+        font-size: 0.78rem;
+        margin-bottom: 0.35rem;
+        color: #495057;
+    }
+
+    .stock-summary-row {
+        margin-bottom: 1.25rem;
+    }
+
+    .stock-summary-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .stock-summary-card .card-body {
+        padding: 1.1rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .stock-summary-card .summary-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+        background: rgba(255, 255, 255, 0.22);
+    }
+
+    .stock-summary-card .summary-content {
+        min-width: 0;
+    }
+
+    .stock-summary-card .summary-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        opacity: 0.92;
+        margin-bottom: 0.2rem;
+    }
+
+    .stock-summary-card .summary-value {
+        font-size: 1.55rem;
+        font-weight: 700;
+        margin-bottom: 0;
+        line-height: 1.2;
+        word-break: break-word;
+    }
+
+    .bg-shop-stock {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: #fff;
+    }
+
+    .bg-warehouse-stock {
+        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+        color: #fff;
+    }
+
+    .bg-total-stock {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        color: #fff;
+    }
+
+    .bg-piece-stock {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: #fff;
+    }
+
+    .bg-meter-stock {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        color: #fff;
+    }
+
+    .bg-yard-stock {
+        background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+        color: #fff;
+    }
+
+    .stock-summary-section-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        margin-bottom: 0.75rem;
+    }
+
+    .stock-table-card {
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .stock-table-card .table {
+        margin-bottom: 0;
+    }
+
+    .stock-table-card thead th {
+        background: #f1f5f9;
+        color: #334155;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+        vertical-align: middle;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .stock-table-card tbody td {
+        vertical-align: middle;
+        font-size: 0.875rem;
+    }
+
+    #brandFilter + .select2-container .select2-selection--multiple {
+        min-height: 31px;
+        border-color: #ced4da;
+    }
+
+    @media (max-width: 768px) {
         .card-header {
             flex-direction: column;
             align-items: flex-start !important;
@@ -14,28 +154,21 @@
             width: 100%;
         }
 
-        /* Hide less important columns on mobile */
+        .stock-summary-card .summary-value {
+            font-size: 1.25rem;
+        }
+
         #stockTable th:nth-child(6),
         #stockTable td:nth-child(6),
-        /* Brand */
-
         #stockTable th:nth-child(5),
         #stockTable td:nth-child(5),
-        /* Unit */
-
         #stockTable th:nth-child(7),
         #stockTable td:nth-child(7),
-        /* Price */
-
         #stockTable th:nth-child(11),
-        #stockTable td:nth-child(11)
-
-        /* Remarks */
-            {
+        #stockTable td:nth-child(11) {
             display: none;
         }
 
-        /* Smaller text for table */
         #stockTable {
             font-size: 12px;
         }
@@ -43,23 +176,21 @@
 </style>
 
 <div class="card shadow-sm border-0">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            ➕ Stock Status
-        </h5>
-        <div class="d-flex gap-2">
-            <a href="{{ route('warehouse_stocks.create') }}" class="btn btn-primary btn-sm">Add Stock</a>
-            <a href="{{ url()->previous() }}" class="btn btn-danger btn-sm">Back</a>
-
-            <!-- EXPORT buttons (add these) -->
-            <a id="exportStockAllBtn" class="btn btn-outline-secondary btn-sm" href="javascript:void(0)">⬇ Export All</a>
-            <button id="exportStockSelectedBtn" class="btn btn-outline-primary btn-sm" type="button">⬇ Export Selected</button>
+    <div class="card-header stock-page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="mb-0 fw-bold">Stock Status</h5>
+            <small class="text-muted">Shop & warehouse stock overview with filters</small>
         </div>
-
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ route('warehouse_stocks.create') }}" class="btn btn-primary btn-sm">Add Stock</a>
+            <a href="{{ url()->previous() }}" class="btn btn-outline-danger btn-sm">Back</a>
+            <a id="exportStockAllBtn" class="btn btn-outline-secondary btn-sm" href="javascript:void(0)">Export All</a>
+            <button id="exportStockSelectedBtn" class="btn btn-outline-primary btn-sm" type="button">Export Selected</button>
+        </div>
     </div>
 
     <div class="card-body">
-        <form method="GET" action="{{ route('warehouse_stocks.index') }}" class="row g-2 mb-3">
+        <form method="GET" action="{{ route('warehouse_stocks.index') }}" class="stock-filter-box row g-2 mb-4">
             <div class="col-12 col-md-2">
                 <label class="form-label fw-bold">Stock Location:</label>
                 <select name="stock_type" class="form-control form-control-sm">
@@ -98,12 +229,136 @@
                 <label class="form-label d-none d-md-block">&nbsp;</label>
                 <a href="{{ route('warehouse_stocks.index') }}" class="btn btn-secondary btn-sm w-100">Reset</a>
             </div>
+
+            <div class="col-12 col-md-2">
+                <label class="form-label fw-bold">Unit:</label>
+                <select name="unit" id="unitFilter" class="form-control form-control-sm">
+                    <option value="">All Units</option>
+                    <option value="Piece" {{ request('unit') == 'Piece' ? 'selected' : '' }}>Piece</option>
+                    <option value="Meter" {{ request('unit') == 'Meter' ? 'selected' : '' }}>Meter</option>
+                    <option value="Yard" {{ request('unit') == 'Yard' ? 'selected' : '' }}>Yard</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-2">
+                <label class="form-label fw-bold">Category:</label>
+                <select name="category_id" id="categoryFilter" class="form-control form-control-sm">
+                    <option value="">All Categories</option>
+                    @foreach($categories as $category)
+                        <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
+                            {{ $category->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-12 col-md-2">
+                <label class="form-label fw-bold">Sub Category:</label>
+                <select name="subcategory_id" id="subcategoryFilter" class="form-control form-control-sm">
+                    <option value="">All Sub Categories</option>
+                    @foreach($subcategories as $subcategory)
+                        <option value="{{ $subcategory->id }}" {{ request('subcategory_id') == $subcategory->id ? 'selected' : '' }}>
+                            {{ $subcategory->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-12 col-md-3">
+                <label class="form-label fw-bold">Brand:</label>
+                <select name="brand_id[]" id="brandFilter" class="form-control form-control-sm" multiple>
+                    @foreach($brands as $brand)
+                        <option value="{{ $brand->id }}" {{ in_array($brand->id, (array) request('brand_id', [])) ? 'selected' : '' }}>
+                            {{ $brand->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
         </form>
+
+        <div id="stockSummaryCards">
+            <div class="stock-summary-section-title">Location Totals</div>
+            <div class="row g-3 stock-summary-row">
+                <div class="col-md-4">
+                    <div class="card stock-summary-card bg-shop-stock">
+                        <div class="card-body">
+                            <div class="summary-icon"><i class="fas fa-store"></i></div>
+                            <div class="summary-content">
+                                <div class="summary-label">Total Shop Stock</div>
+                                <p class="summary-value" id="totalShopStock">{{ number_format($stockTotals['total_shop'], 2) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stock-summary-card bg-warehouse-stock">
+                        <div class="card-body">
+                            <div class="summary-icon"><i class="fas fa-warehouse"></i></div>
+                            <div class="summary-content">
+                                <div class="summary-label">Total Warehouse Stock</div>
+                                <p class="summary-value" id="totalWarehouseStock">{{ number_format($stockTotals['total_warehouse'], 2) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stock-summary-card bg-total-stock">
+                        <div class="card-body">
+                            <div class="summary-icon"><i class="fas fa-boxes"></i></div>
+                            <div class="summary-content">
+                                <div class="summary-label">Total Stock</div>
+                                <p class="summary-value" id="totalStock">{{ number_format($stockTotals['total_stock'], 2) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stock-summary-section-title mt-2">Unit Wise Totals</div>
+            <div class="row g-3 stock-summary-row">
+                <div class="col-md-4">
+                    <div class="card stock-summary-card bg-piece-stock">
+                        <div class="card-body">
+                            <div class="summary-icon"><i class="fas fa-cubes"></i></div>
+                            <div class="summary-content">
+                                <div class="summary-label">Total Piece Stock</div>
+                                <p class="summary-value" id="totalPieceStock">{{ number_format($stockTotals['piece'], 2) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stock-summary-card bg-meter-stock">
+                        <div class="card-body">
+                            <div class="summary-icon"><i class="fas fa-ruler-horizontal"></i></div>
+                            <div class="summary-content">
+                                <div class="summary-label">Total Meter Stock</div>
+                                <p class="summary-value" id="totalMeterStock">{{ number_format($stockTotals['meter'], 2) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stock-summary-card bg-yard-stock">
+                        <div class="card-body">
+                            <div class="summary-icon"><i class="fas fa-ruler-combined"></i></div>
+                            <div class="summary-content">
+                                <div class="summary-label">Total Yard Stock</div>
+                                <p class="summary-value" id="totalYardStock">{{ number_format($stockTotals['yard'], 2) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         @if(request('start_date') && request('end_date'))
-        <div class="alert alert-info py-2">
+        <div class="alert alert-info py-2 mb-3">
             Showing results from <strong>{{ request('start_date') }}</strong> to <strong>{{ request('end_date') }}</strong>
         </div>
         @endif
+
+        <div class="stock-table-card">
         <div class="table-responsive stock-table-wrapper">
             <table class="table table-bordered table-striped table-sm" id="stockTable">
                 <thead>
@@ -153,6 +408,7 @@
                 </tbody>
             </table>
         </div>
+        </div>
 
         <div class="mt-3" id="paginationLinks">
             {{ $stocks->links('pagination::bootstrap-5') }}
@@ -169,64 +425,105 @@
 <script>
     $(document).ready(function() {
         $('#stockTable').DataTable({
-            paging: false, // Disabling DT paging because we use Laravel Pagination
-            searching: false, // Disabling DT searching because we use server-side search
+            paging: false,
+            searching: false,
             ordering: true,
             info: false,
             responsive: true,
             scrollX: false
         });
 
-        // 🔍 AJAX SEARCH (Similar to Product List)
+        $('#brandFilter').select2({
+            placeholder: 'Search & select brand(s)',
+            allowClear: true,
+            width: '100%'
+        });
+
         let searchTimer = null;
 
+        function populateSubcategories(catId, selectedSubId) {
+            let $sub = $('#subcategoryFilter');
+            $sub.empty();
+            $sub.append('<option value="">All Sub Categories</option>');
+
+            if (!catId) {
+                return;
+            }
+
+            $.ajax({
+                url: "{{ route('fetch-subcategories', '') }}/" + catId,
+                type: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    if (Array.isArray(data)) {
+                        data.forEach(function(s) {
+                            const selected = String(selectedSubId) === String(s.id) ? 'selected' : '';
+                            $sub.append(`<option value="${s.id}" ${selected}>${s.name}</option>`);
+                        });
+                    }
+                }
+            });
+        }
+
+        $('#categoryFilter').on('change', function() {
+            populateSubcategories($(this).val(), '');
+            triggerAjaxFetch();
+        });
+
+        $('#subcategoryFilter').on('change', triggerAjaxFetch);
+
+        $('#unitFilter').on('change', triggerAjaxFetch);
+
+        $('#brandFilter').on('change', triggerAjaxFetch);
+
+        function getFilterData() {
+            return {
+                search: $('#warehouseStockSearch').val(),
+                stock_type: $('select[name="stock_type"]').val(),
+                start_date: $('input[name="start_date"]').val(),
+                end_date: $('input[name="end_date"]').val(),
+                category_id: $('#categoryFilter').val(),
+                subcategory_id: $('#subcategoryFilter').val(),
+                unit: $('#unitFilter').val(),
+                brand_id: $('#brandFilter').val()
+            };
+        }
+
         function triggerAjaxFetch() {
-            let query = $('#warehouseStockSearch').val();
-            let type = $('select[name="stock_type"]').val();
-            let start = $('input[name="start_date"]').val();
-            let end = $('input[name="end_date"]').val();
-            fetchStocks(query, type, start, end);
+            fetchStocks(getFilterData());
         }
 
         $('#warehouseStockSearch').on('keyup', function() {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(triggerAjaxFetch, 400); // debounce
+            searchTimer = setTimeout(triggerAjaxFetch, 400);
         });
 
         $('select[name="stock_type"], input[name="start_date"], input[name="end_date"]').on('change', function() {
             triggerAjaxFetch();
         });
 
-        // Prevent form submission to keep it AJAX
         $('form').on('submit', function(e) {
             e.preventDefault();
             triggerAjaxFetch();
         });
 
-        // 📄 PAGINATION
         $(document).on('click', '#paginationLinks a', function(e) {
             e.preventDefault();
-            let url = $(this).attr('href');
-            fetchStocks($('#warehouseStockSearch').val(), $('select[name="stock_type"]').val(), $('input[name="start_date"]').val(), $('input[name="end_date"]').val(), url);
+            fetchStocks(getFilterData(), $(this).attr('href'));
         });
 
-        function fetchStocks(search = '', type = 'all', start = '', end = '', url = null) {
+        function fetchStocks(filters, url = null) {
             if (!url) {
                 url = "{{ route('warehouse_stocks.index') }}";
             }
 
             $.ajax({
                 url: url,
-                data: {
-                    search: search,
-                    stock_type: type,
-                    start_date: start,
-                    end_date: end
-                },
+                data: filters,
                 success: function(res) {
-                    // Replace table body and pagination
                     $('#stockTable tbody').html($(res).find('#stockTable tbody').html());
                     $('#paginationLinks').html($(res).find('#paginationLinks').html());
+                    $('#stockSummaryCards').html($(res).find('#stockSummaryCards').html());
                 }
             });
         }
@@ -302,13 +599,26 @@
             btn.html('⏳ Exporting All...');
             btn.css('pointer-events', 'none');
 
-            // Collect current filters
             var type = $('select[name="stock_type"]').val() || 'all';
             var start = $('input[name="start_date"]').val() || '';
             var end = $('input[name="end_date"]').val() || '';
             var search = $('#warehouseStockSearch').val() || '';
+            var category = $('#categoryFilter').val() || '';
+            var subcategory = $('#subcategoryFilter').val() || '';
+            var unit = $('#unitFilter').val() || '';
+            var brands = $('#brandFilter').val() || [];
 
-            var queryStr = "?stock_type=" + type + "&start_date=" + start + "&end_date=" + end + "&search=" + search;
+            var queryStr = "?stock_type=" + encodeURIComponent(type)
+                + "&start_date=" + encodeURIComponent(start)
+                + "&end_date=" + encodeURIComponent(end)
+                + "&search=" + encodeURIComponent(search)
+                + "&category_id=" + encodeURIComponent(category)
+                + "&subcategory_id=" + encodeURIComponent(subcategory)
+                + "&unit=" + encodeURIComponent(unit);
+
+            brands.forEach(function(brandId) {
+                queryStr += "&brand_id[]=" + encodeURIComponent(brandId);
+            });
 
             fetch("{{ route('warehouse_stocks.export_all') }}" + queryStr)
                 .then(res => res.json())
