@@ -310,6 +310,7 @@
         </form>
 
         <div id="stockSummaryCards">
+        @if($isAdmin)
             <div class="stock-summary-section-title">Location Totals</div>
             <div class="row g-3 stock-summary-row">
                 <div class="col-md-4">
@@ -389,6 +390,7 @@
                     </div>
                 </div>
             </div>
+        @endif
         </div>
 
         @if(request('start_date') && request('end_date'))
@@ -397,9 +399,11 @@
         </div>
         @endif
 
+        @if($isAdmin)
         <div class="alert alert-light border py-2 mb-3 small">
             <strong>Stock Value:</strong> Purchase ki <strong>weighted average price</strong> use hoti hai (saari purchases ke price × qty ka average). Agar purchase na ho to product ki <strong>Wholesale Price</strong> use hoti hai.
         </div>
+        @endif
 
         <div class="stock-table-card">
         <div class="table-responsive stock-table-wrapper">
@@ -413,19 +417,23 @@
                         <th>Barcode</th>
                         <th>Unit</th>
                         <th>Brand</th>
+                        @if($isAdmin)
                         <th>Cost Price</th>
+                        @endif
                         <th>Shop Stock</th>
                         <th>Warehouse Stock</th>
                         <th>Total Stock</th>
+                        @if($isAdmin)
                         <th>Stock Value</th>
+                        @endif
                         <th>Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($stocks as $stock)
                     @php
-                        $costPrice = (float) ($stock->cost_price ?? 0);
                         $totalQty = (float) $stock->shop_stock + (float) $stock->warehouse_stock;
+                        $costPrice = $isAdmin ? (float) ($stock->cost_price ?? 0) : 0;
                         $stockValue = $totalQty * $costPrice;
                         $sourceClass = str_replace(' ', '-', strtolower($stock->price_source ?? 'na'));
                     @endphp
@@ -440,15 +448,19 @@
                         <td>{{ $stock->barcode_path }}</td>
                         <td>{{ $stock->unit_id }}</td>
                         <td>{{ $stock->brand_name ?? 'N/A' }}</td>
+                        @if($isAdmin)
                         <td class="text-end">
                             {{ number_format($costPrice, 2) }}<br>
                             <span class="price-source-badge {{ $sourceClass }}">{{ $stock->price_source ?? 'N/A' }}</span>
                         </td>
+                        @endif
 
                         <td class="text-center">{{ number_format($stock->shop_stock, 2) }}</td>
                         <td class="text-center">{{ number_format($stock->warehouse_stock, 2) }}</td>
                         <td class="text-center fw-bold">{{ number_format($totalQty, 2) }}</td>
+                        @if($isAdmin)
                         <td class="text-end fw-bold text-success">{{ number_format($stockValue, 2) }}</td>
+                        @endif
 
                         <td>
                             @if($stock->warehouse_stock == 0 && $stock->shop_stock > 0)
@@ -577,7 +589,9 @@
                 success: function(res) {
                     $('#stockTable tbody').html($(res).find('#stockTable tbody').html());
                     $('#paginationLinks').html($(res).find('#paginationLinks').html());
-                    $('#stockSummaryCards').html($(res).find('#stockSummaryCards').html());
+                    if ($('#stockSummaryCards').length) {
+                        $('#stockSummaryCards').html($(res).find('#stockSummaryCards').html());
+                    }
                 }
             });
         }
@@ -586,7 +600,8 @@
 
 <script>
     $(function() {
-        // Make rows clickable to toggle selection for "Export Selected"
+        var isStockAdmin = @json($isAdmin);
+
         $('#stockTable tbody').on('click', 'tr', function(e) {
             // ignore clicks on interactive elements if any
             if ($(e.target).is('a,button,input,select,textarea')) return;
@@ -613,35 +628,40 @@
             var barcode = $tds.eq(4).text().trim();
             var unit = $tds.eq(5).text().trim();
             var brand = $tds.eq(6).text().trim();
-            var costPrice = toNumber($tds.eq(7).text());
-            var priceSource = $tds.eq(7).find('.price-source-badge').text().trim() || 'N/A';
-            var shopStock = toNumber($tds.eq(8).text());
-            var warehouseStock = toNumber($tds.eq(9).text());
-            var totalStock = toNumber($tds.eq(10).text());
-            var stockValue = toNumber($tds.eq(11).text());
-            var remarks = $tds.eq(12).text().trim();
-            return [date, location, product, barcode, unit, brand, costPrice, priceSource, shopStock, warehouseStock, totalStock, stockValue, remarks];
+
+            if (isStockAdmin) {
+                var costPrice = toNumber($tds.eq(7).text());
+                var priceSource = $tds.eq(7).find('.price-source-badge').text().trim() || 'N/A';
+                var shopStock = toNumber($tds.eq(8).text());
+                var warehouseStock = toNumber($tds.eq(9).text());
+                var totalStock = toNumber($tds.eq(10).text());
+                var stockValue = toNumber($tds.eq(11).text());
+                var remarks = $tds.eq(12).text().trim();
+                return [date, location, product, barcode, unit, brand, costPrice, priceSource, shopStock, warehouseStock, totalStock, stockValue, remarks];
+            }
+
+            var shopStock = toNumber($tds.eq(7).text());
+            var warehouseStock = toNumber($tds.eq(8).text());
+            var totalStock = toNumber($tds.eq(9).text());
+            var remarks = $tds.eq(10).text().trim();
+            return [date, location, product, barcode, unit, brand, shopStock, warehouseStock, totalStock, remarks];
         }
 
-        function buildAndDownload(rowsArray, filename) {
-            var header = ['Date', 'Location', 'Product', 'Barcode', 'Unit', 'Brand', 'Cost Price', 'Price Source', 'Shop Stock', 'Warehouse Stock', 'Total Stock', 'Stock Value', 'Remarks'];
+        function buildAndDownload(rowsArray, filename, adminExport) {
+            var header = adminExport
+                ? ['Date', 'Location', 'Product', 'Barcode', 'Unit', 'Brand', 'Cost Price', 'Price Source', 'Shop Stock', 'Warehouse Stock', 'Total Stock', 'Stock Value', 'Remarks']
+                : ['Date', 'Location', 'Product', 'Barcode', 'Unit', 'Brand', 'Shop Stock', 'Warehouse Stock', 'Total Stock', 'Remarks'];
             var aoa = [header].concat(rowsArray);
             var ws = XLSX.utils.aoa_to_sheet(aoa);
-            ws['!cols'] = [
-                { wpx: 80 },
-                { wpx: 140 },
-                { wpx: 200 },
-                { wpx: 80 },
-                { wpx: 60 },
-                { wpx: 100 },
-                { wpx: 80 },
-                { wpx: 90 },
-                { wpx: 80 },
-                { wpx: 100 },
-                { wpx: 80 },
-                { wpx: 100 },
-                { wpx: 120 }
-            ];
+            ws['!cols'] = adminExport
+                ? [
+                    { wpx: 80 }, { wpx: 140 }, { wpx: 200 }, { wpx: 80 }, { wpx: 60 }, { wpx: 100 },
+                    { wpx: 80 }, { wpx: 90 }, { wpx: 80 }, { wpx: 100 }, { wpx: 80 }, { wpx: 100 }, { wpx: 120 }
+                ]
+                : [
+                    { wpx: 80 }, { wpx: 140 }, { wpx: 200 }, { wpx: 80 }, { wpx: 60 }, { wpx: 100 },
+                    { wpx: 80 }, { wpx: 100 }, { wpx: 80 }, { wpx: 120 }
+                ];
             var wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'WarehouseStock');
             XLSX.writeFile(wb, filename);
@@ -677,7 +697,10 @@
 
             fetch("{{ route('warehouse_stocks.export_all') }}" + queryStr)
                 .then(res => res.json())
-                .then(data => {
+                .then(payload => {
+                    var data = payload.rows || payload;
+                    var adminExport = payload.is_admin !== undefined ? payload.is_admin : isStockAdmin;
+
                     if(data.length === 0) {
                         alert('No rows to export.');
                         btn.html(originalText);
@@ -685,7 +708,7 @@
                         return;
                     }
                     var ts = new Date().toISOString().replace(/[:\-T]/g, '').slice(0, 14);
-                    buildAndDownload(data, 'warehouse_stock_all_' + ts + '.xlsx');
+                    buildAndDownload(data, 'warehouse_stock_all_' + ts + '.xlsx', adminExport);
                     
                     btn.html(originalText);
                     btn.css('pointer-events', 'auto');
@@ -718,7 +741,7 @@
                 return;
             }
             var ts = new Date().toISOString().replace(/[:\-T]/g, '').slice(0, 14);
-            buildAndDownload(sel, 'warehouse_stock_selected_' + ts + '.xlsx');
+            buildAndDownload(sel, 'warehouse_stock_selected_' + ts + '.xlsx', isStockAdmin);
         });
     });
 </script>

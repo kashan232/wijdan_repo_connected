@@ -38,6 +38,17 @@ class WarehouseStockController extends Controller
         return null;
     }
 
+    private function isStockAdmin(): bool
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            return false;
+        }
+
+        return $user->id === 1 || $user->hasRole('Admin');
+    }
+
     private function applyUnitFilter($query, ?string $unit): void
     {
         if (!$unit || !isset(self::UNIT_GROUPS[$unit])) {
@@ -71,6 +82,7 @@ class WarehouseStockController extends Controller
                 'brands.name as brand_name'
             );
 
+        if ($this->isStockAdmin()) {
         $query->selectRaw("
             COALESCE(
                 NULLIF(
@@ -145,6 +157,7 @@ class WarehouseStockController extends Controller
                 ELSE 'N/A'
             END AS price_source
         ");
+        }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -293,6 +306,7 @@ class WarehouseStockController extends Controller
 
     public function exportAll(Request $request)
     {
+        $isAdmin = $this->isStockAdmin();
         $query = $this->buildStockQuery($request);
         $stocks = $query->orderBy('products.id', 'desc')->get();
 
@@ -306,30 +320,49 @@ class WarehouseStockController extends Controller
             }
 
             $dateStr = \Carbon\Carbon::parse($stock->created_at)->format('d M Y');
-            $costPrice = (float) ($stock->cost_price ?? 0);
             $shopStock = (float) $stock->shop_stock;
             $warehouseStock = (float) $stock->warehouse_stock;
             $totalStock = $shopStock + $warehouseStock;
-            $stockValue = $totalStock * $costPrice;
 
-            $data[] = [
-                $dateStr,
-                $stock->warehouse_name ?? '— Shop —',
-                $stock->item_name . ' (' . $stock->item_code . ')',
-                $stock->barcode_path ?? '',
-                $stock->unit_id ?? '-',
-                $stock->brand_name ?? 'N/A',
-                $costPrice,
-                $stock->price_source ?? 'N/A',
-                $shopStock,
-                $warehouseStock,
-                $totalStock,
-                $stockValue,
-                $remarks,
-            ];
+            if ($isAdmin) {
+                $costPrice = (float) ($stock->cost_price ?? 0);
+                $stockValue = $totalStock * $costPrice;
+
+                $data[] = [
+                    $dateStr,
+                    $stock->warehouse_name ?? '— Shop —',
+                    $stock->item_name . ' (' . $stock->item_code . ')',
+                    $stock->barcode_path ?? '',
+                    $stock->unit_id ?? '-',
+                    $stock->brand_name ?? 'N/A',
+                    $costPrice,
+                    $stock->price_source ?? 'N/A',
+                    $shopStock,
+                    $warehouseStock,
+                    $totalStock,
+                    $stockValue,
+                    $remarks,
+                ];
+            } else {
+                $data[] = [
+                    $dateStr,
+                    $stock->warehouse_name ?? '— Shop —',
+                    $stock->item_name . ' (' . $stock->item_code . ')',
+                    $stock->barcode_path ?? '',
+                    $stock->unit_id ?? '-',
+                    $stock->brand_name ?? 'N/A',
+                    $shopStock,
+                    $warehouseStock,
+                    $totalStock,
+                    $remarks,
+                ];
+            }
         }
 
-        return response()->json($data);
+        return response()->json([
+            'rows'     => $data,
+            'is_admin' => $isAdmin,
+        ]);
     }
 
     public function index(Request $request)
@@ -345,11 +378,12 @@ class WarehouseStockController extends Controller
                 ->get();
         }
 
+        $isAdmin = $this->isStockAdmin();
         $query = $this->buildStockQuery($request);
-        $stockTotals = $this->calculateStockTotals($request);
+        $stockTotals = $isAdmin ? $this->calculateStockTotals($request) : [];
         $stocks = $query->orderBy('products.id', 'desc')->paginate(100)->withQueryString();
 
-        $viewData = compact('stocks', 'warehouses', 'categories', 'brands', 'subcategories', 'stockTotals');
+        $viewData = compact('stocks', 'warehouses', 'categories', 'brands', 'subcategories', 'stockTotals', 'isAdmin');
 
         if ($request->ajax()) {
             return view('admin_panel.warehouses.warehouse_stocks.index', $viewData)->render();
