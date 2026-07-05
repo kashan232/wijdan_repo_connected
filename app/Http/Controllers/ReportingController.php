@@ -987,7 +987,6 @@ class ReportingController extends Controller
             ->whereBetween('created_at', [$start, $end])
             ->get()
             ->map(function ($s) {
-                // Sale record already stores net amount after any returns processed on it.
                 $debitAmount = (float) ($s->total_net ?? $s->total_bill_amount);
 
                 return [
@@ -1039,8 +1038,9 @@ class ReportingController extends Controller
                         ? $referenceText . 'By Sale Return'
                         : $referenceText . 'Sale Return (adjusted in sale) - Rs. ' . number_format($returnAmount, 2),
                     'debit' => 0,
-                    // Only prior-period sales need a credit here; in-period returns are already in sale total_net.
-                    'credit' => $isPriorSale ? $returnAmount : 0,
+                    'credit' => $returnAmount,
+                    // Same-period returns already in sale total_net; show credit but don't double-deduct balance.
+                    'balance_credit' => $isPriorSale ? $returnAmount : 0,
                     'original_sale_id' => $r->sale_id
                 ]);
             }
@@ -1109,7 +1109,8 @@ class ReportingController extends Controller
         $balance = $opening;
         foreach ($transactions as $key => $t) {
             $balance += $t['debit'];
-            $balance -= $t['credit'];
+            $creditEffect = array_key_exists('balance_credit', $t) ? $t['balance_credit'] : $t['credit'];
+            $balance -= $creditEffect;
             $transactions[$key]['balance'] = $balance;
         }
 
