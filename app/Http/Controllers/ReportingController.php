@@ -971,24 +971,24 @@ class ReportingController extends Controller
             ->where('customer', $customerId)
             ->whereBetween('created_at', [$start, $end])
             ->get()
-            ->groupBy('sale_id'); // group by sale_id for easy lookup
+            ->groupBy('sale_id');
+
+        $saleCreatedMap = collect();
+        if ($allSaleReturns->isNotEmpty()) {
+            $saleCreatedMap = DB::table('sales')
+                ->where('customer', $customerId)
+                ->whereIn('id', $allSaleReturns->keys()->all())
+                ->pluck('created_at', 'id');
+        }
 
         // ---------------- SALES (Debit) ----------------
         $sales = DB::table('sales')
             ->where('customer', $customerId)
             ->whereBetween('created_at', [$start, $end])
             ->get()
-            ->map(function ($s) use ($allSaleReturns) {
-                $fullSaleAmount = $s->total_net ?? $s->total_bill_amount;
-
-                // Check if this sale has any returns
-                $returnTotal = 0;
-                if (isset($allSaleReturns[$s->id])) {
-                    $returnTotal = $allSaleReturns[$s->id]->sum('total_net');
-                }
-
-                // Sale debit = original sale + total of related returns
-                $debitAmount = $fullSaleAmount + $returnTotal;
+            ->map(function ($s) {
+                // Sale record already stores net amount after any returns processed on it.
+                $debitAmount = (float) ($s->total_net ?? $s->total_bill_amount);
 
                 return [
                     'date' => $s->created_at,
@@ -1023,15 +1023,24 @@ class ReportingController extends Controller
         // ---------------- SALE RETURNS (Credit) ----------------
         $saleReturns = collect();
         foreach ($allSaleReturns as $saleId => $returns) {
+            $saleCreatedAt = $saleCreatedMap[$saleId] ?? null;
+            $isPriorSale = $saleCreatedAt && $saleCreatedAt < $start;
+
             foreach ($returns as $r) {
+                $returnAmount = (float) $r->total_net;
+                $referenceText = $r->reference ? '(' . $r->reference . ') ' : '';
+
                 $saleReturns->push([
                     'date' => $r->created_at,
                     'sort_type' => 3,
                     'invoice' => 'SR-' . $r->sale_id,
                     'reference' => $r->reference,
-                    'description' => ($r->reference ? "(" . $r->reference . ") " : "") . 'By Sale Return',
+                    'description' => $isPriorSale
+                        ? $referenceText . 'By Sale Return'
+                        : $referenceText . 'Sale Return (adjusted in sale) - Rs. ' . number_format($returnAmount, 2),
                     'debit' => 0,
-                    'credit' => $r->total_net,
+                    // Only prior-period sales need a credit here; in-period returns are already in sale total_net.
+                    'credit' => $isPriorSale ? $returnAmount : 0,
                     'original_sale_id' => $r->sale_id
                 ]);
             }

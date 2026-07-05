@@ -80,7 +80,8 @@
                             <th>Price</th>
                             <th>Discount</th>
                             <th>Total Price</th>
-                            <th>Total Amount</th>
+                            <th>Extra Discount</th>
+                            <th>Net Amount</th>
                             <th>Date | Time</th>
                             <th>Status</th>
                             <th>Action</th>
@@ -180,16 +181,17 @@
                 { data: 8, orderable: false, searchable: false }, // Price
                 { data: 9, orderable: false, searchable: false }, // Discount
                 { data: 10, orderable: false, searchable: false }, // Total Row
+                { data: 11, orderable: false, searchable: false }, // Extra Discount
                 { 
-                    data: 11, 
+                    data: 12, 
                     className: "align-middle",
                     render: function(data, type, row) {
                         return '<span style="font-weight: 900; font-size: 26px; color: #000;">' + data + '</span>';
                     }
-                }, // Bill Amount
-                { data: 12 }, // Date
-                { data: 13 }, // Status
-                { data: 14, orderable: false, searchable: false } // Action
+                }, // Net Amount
+                { data: 13 }, // Date
+                { data: 14 }, // Status
+                { data: 15, orderable: false, searchable: false } // Action
             ],
             responsive: false,
             pageLength: 10,

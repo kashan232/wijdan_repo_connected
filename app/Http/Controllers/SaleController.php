@@ -79,7 +79,7 @@ class SaleController extends Controller
             
             // 🔹 Filtered Records
             $filteredRecords = $query->count();
-            $totalFilteredSale = $query->sum('total_bill_amount');
+            $totalFilteredSale = $query->sum('total_net');
 
             // 🔹 Sorting
             if ($request->has('order')) {
@@ -92,8 +92,9 @@ class SaleController extends Controller
                     2 => 'customer',
                     3 => 'reference',
                     10 => 'total_bill_amount',
-                    11 => 'created_at',
-                    12 => 'sale_status'
+                    12 => 'total_net',
+                    13 => 'created_at',
+                    14 => 'sale_status'
                 ]; 
                 
                 $colName = $columns[$orderColumnIndex] ?? 'id';
@@ -194,6 +195,8 @@ class SaleController extends Controller
                 // Date formatting
                 $date = \Carbon\Carbon::parse($sale->created_at)->format('d-m-Y h:i A');
 
+                $extraDiscount = (float) ($sale->total_extradiscount ?? 0);
+
                 $data[] = [
                     $skip + $index + 1, // S.No
                     $sale->user ? $sale->user->name : 'N/A', // User Name
@@ -206,7 +209,8 @@ class SaleController extends Controller
                     $priceHtml,
                     $discHtml,
                     $totalHtml,
-                    '<span class="fw-bold fs-5">' . $fmt($sale->total_bill_amount) . '</span>', // Bold Total Amount
+                    $extraDiscount > 0 ? $fmt($extraDiscount) : '—',
+                    '<span class="fw-bold fs-5">' . $fmt($sale->total_net) . '</span>',
                     $date,
                     $statusBadge,
                     $actions
@@ -229,7 +233,7 @@ class SaleController extends Controller
         // Calculate today's sales for the logged-in user
         $todaySales = Sale::where('user_id', auth()->id())
             ->whereDate('created_at', date('Y-m-d'))
-            ->sum('total_bill_amount');
+            ->sum('total_net');
 
         $netCash = $openingBalance + $todaySales;
 
@@ -469,8 +473,9 @@ class SaleController extends Controller
             $model->color                = json_encode($combined_colors);
             $model->total_amount_Words   = $request->total_amount_Words;
             $model->total_bill_amount    = $request->total_subtotal;
-            $model->total_extradiscount  = $request->total_extra_cost;
-            $model->total_net            = $request->total_net;
+            $extraDiscount               = (float) $request->input('total_extra_cost', 0);
+            $model->total_extradiscount  = $extraDiscount;
+            $model->total_net            = (float) $request->input('total_net', ((float) $request->total_subtotal) - $extraDiscount);
             $model->cash                 = $request->cash;
             $model->card                 = $request->card;
             $model->change               = $request->change;
@@ -1153,8 +1158,10 @@ class SaleController extends Controller
             // update sale fields back
             $sale->qty = implode(',', $sale_qtys);
             $sale->per_total = implode(',', $sale_totals);
-            $sale->total_net = array_sum($sale_totals);
-            $sale->total_bill_amount = $sale->total_net;
+            $lineSum = array_sum($sale_totals);
+            $extraDiscount = (float) ($sale->total_extradiscount ?? 0);
+            $sale->total_bill_amount = $lineSum;
+            $sale->total_net = max(0, $lineSum - $extraDiscount);
             $sale->total_items = array_sum($sale_qtys);
             // optionally update sale_status: mark as partially returned (1) or fully returned
             $sale->sale_status = 1;
@@ -1892,8 +1899,9 @@ class SaleController extends Controller
             $sale->color               = json_encode($combined_colors);
             $sale->total_amount_Words  = $request->total_amount_Words;
             $sale->total_bill_amount   = $request->total_subtotal;
-            $sale->total_extradiscount = $request->total_extra_cost;
-            $sale->total_net           = $request->total_net;
+            $extraDiscount             = (float) $request->input('total_extra_cost', 0);
+            $sale->total_extradiscount = $extraDiscount;
+            $sale->total_net           = (float) $request->input('total_net', ((float) $request->total_subtotal) - $extraDiscount);
             $sale->cash                = $request->cash;
             $sale->card                = $request->card;
             $sale->change              = $request->change;

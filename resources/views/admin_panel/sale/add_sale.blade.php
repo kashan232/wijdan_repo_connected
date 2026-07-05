@@ -1660,6 +1660,10 @@
             return;
         }
 
+        if (typeof recalcSummary === 'function') {
+            recalcSummary();
+        }
+
         const $btn = $(document.activeElement);
         // If the focused element is a submit button, give it a visual state
         if ($btn.hasClass('submit-btn')) {

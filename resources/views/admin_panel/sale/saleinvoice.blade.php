@@ -492,17 +492,17 @@
           @endif
           @endforeach
           <tr>
-            <th>Grand Total</th>
+            <th>Bill Amount</th>
             <td class="bold">
               {{ rtrim(rtrim(number_format($bill->total_bill_amount ?? 0, 2), '0'), '.') }}
             </td>
           </tr>
 
-          @if(!empty($bill->total_extradiscount) && $bill->total_extradiscount > 0)
+          @if((float)($bill->total_extradiscount ?? 0) > 0)
           <tr>
             <th>Extra Discount</th>
             <td>
-              {{ rtrim(rtrim(number_format($bill->total_extradiscount, 2), '0'), '.') }}
+              -{{ rtrim(rtrim(number_format($bill->total_extradiscount, 2), '0'), '.') }}
             </td>
           </tr>
           @endif
