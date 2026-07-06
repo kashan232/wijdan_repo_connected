@@ -463,6 +463,7 @@ class ProductController extends Controller
     {
         $headers = [
             'Barcode',
+            'Item Name',
             'Retail Price',
             'Shop Qty',
             'W/H Qty',
@@ -470,6 +471,7 @@ class ProductController extends Controller
 
         $sample = [
             '313250',
+            'Hz NakshKari V3',
             '5300',
             '1',
             '0',
@@ -511,9 +513,9 @@ class ProductController extends Controller
         }
 
         $columnMap = $this->buildImportColumnMap($headerRow);
-        if (!isset($columnMap['barcode'])) {
+        if (!isset($columnMap['barcode']) && !isset($columnMap['item_name'])) {
             fclose($handle);
-            return redirect()->back()->with('error', 'CSV must contain a Barcode column.');
+            return redirect()->back()->with('error', 'CSV must contain a Barcode or Item Name column.');
         }
 
         $hasRetail = isset($columnMap['retail_price']);
@@ -542,17 +544,22 @@ class ProductController extends Controller
 
                 $data = $this->parseImportRow($row, $columnMap);
                 $barcode = trim((string) ($data['barcode'] ?? ''));
+                $itemName = trim((string) ($data['item_name'] ?? ''));
 
-                if ($barcode === '') {
+                if ($barcode === '' && $itemName === '') {
                     $skipped++;
-                    $errors[] = "Row {$rowNumber}: barcode is required.";
+                    $errors[] = "Row {$rowNumber}: barcode or item name is required.";
                     continue;
                 }
 
-                $product = Product::where('barcode_path', $barcode)->first();
+                $product = $this->findProductForBulkUpdate($barcode, $itemName);
                 if (!$product) {
                     $skipped++;
-                    $errors[] = "Row {$rowNumber}: barcode not found ({$barcode}).";
+                    $label = $barcode !== '' ? "barcode {$barcode}" : "name \"{$itemName}\"";
+                    if ($barcode !== '' && $itemName !== '') {
+                        $label = "barcode {$barcode} / name \"{$itemName}\"";
+                    }
+                    $errors[] = "Row {$rowNumber}: product not found ({$label}).";
                     continue;
                 }
 
@@ -586,7 +593,8 @@ class ProductController extends Controller
 
                 if (!$didUpdate) {
                     $skipped++;
-                    $errors[] = "Row {$rowNumber}: no update values for barcode {$barcode}.";
+                    $ref = $product->barcode_path ?: $product->item_name;
+                    $errors[] = "Row {$rowNumber}: no update values for product ({$ref}).";
                     continue;
                 }
 
@@ -750,6 +758,22 @@ class ProductController extends Controller
         return redirect()->route('product')
             ->with('success', $message)
             ->with('import_errors', array_slice($errors, 0, 30));
+    }
+
+    private function findProductForBulkUpdate(string $barcode, string $itemName): ?Product
+    {
+        if ($barcode !== '') {
+            $product = Product::where('barcode_path', $barcode)->first();
+            if ($product) {
+                return $product;
+            }
+        }
+
+        if ($itemName !== '') {
+            return Product::whereRaw('LOWER(TRIM(item_name)) = ?', [strtolower($itemName)])->first();
+        }
+
+        return null;
     }
 
     private function buildImportColumnMap(array $headerRow): array

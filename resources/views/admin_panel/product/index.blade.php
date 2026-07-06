@@ -337,9 +337,9 @@
                 @csrf
                 <div class="modal-body">
                     <p class="text-muted small mb-3">
-                        CSV upload karein — <strong>Barcode</strong> se product match hoga aur sirf ye 3 fields update hongi:
-                        <strong>Retail Price</strong>, <strong>Shop Qty</strong>, <strong>W/H Qty</strong>.
-                        Baqi columns (Category, Item Name, etc.) ignore ho jayengi.
+                        CSV upload karein — pehle <strong>Barcode</strong> se product dhundha jayega.
+                        Agar barcode galat hai ya nahi mila to <strong>Item Name</strong> se match hoga.
+                        Sirf ye 3 fields update hongi: <strong>Retail Price</strong>, <strong>Shop Qty</strong>, <strong>W/H Qty</strong>.
                     </p>
                     <div class="mb-3">
                         <a href="{{ route('products.update.template') }}" class="btn btn-outline-success btn-sm">
@@ -351,9 +351,9 @@
                         <input type="file" name="update_file" class="form-control" accept=".csv,.txt" required>
                     </div>
                     <ul class="small text-muted mb-0">
-                        <li>Required: <strong>Barcode</strong> (system mein maujood)</li>
+                        <li>Match: <strong>Barcode</strong> (pehle), phir <strong>Item Name</strong> (agar barcode na mile)</li>
                         <li>Update: <strong>Retail Price</strong>, <strong>Shop Qty</strong>, <strong>W/H Qty</strong></li>
-                        <li>Barcode nahi mile to row skip ho jayegi</li>
+                        <li>Dono galat hon to row skip ho jayegi</li>
                     </ul>
                 </div>
                 <div class="modal-footer">
