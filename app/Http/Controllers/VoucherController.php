@@ -661,7 +661,10 @@ class VoucherController extends Controller
     public function all_expense_vochers()
     {
         $vouchers = ExpenseVoucher::with(['accountHeadType', 'partyAccount', 'vendor', 'customer'])->orderBy('id', 'desc')->get();
-        return view('admin_panel.vochers.expense_vochers.all_expense_vochers', compact('vouchers'));
+        $isAdmin = auth()->check() && (auth()->id() === 1 || auth()->user()->hasRole('Admin'));
+        $totalExpense = $isAdmin ? $vouchers->sum('total_amount') : 0;
+
+        return view('admin_panel.vochers.expense_vochers.all_expense_vochers', compact('vouchers', 'totalExpense', 'isAdmin'));
     }
 
     public function edit_expense_voucher($id)

@@ -10,7 +10,23 @@
             <h4 class="mb-0">Expense Vouchers</h4>
             <a class="btn btn-primary" href="{{ route('expense-vochers') }}">Add Expense Voucher</a>
         </div>
-        <div class="card shadow mt-5 mb-5">
+
+        @if($isAdmin)
+        <div class="card shadow-sm mt-3 mb-3 border-0" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+            <div class="card-body py-3 d-flex justify-content-between align-items-center text-white">
+                <div>
+                    <div class="small text-white-50">Total Expense</div>
+                    <div class="fs-4 fw-bold">Rs. {{ number_format($totalExpense, 2) }}</div>
+                </div>
+                <div class="text-end">
+                    <div class="small text-white-50">Total Vouchers</div>
+                    <div class="fs-5 fw-semibold">{{ $vouchers->count() }}</div>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <div class="card shadow mt-2 mb-5">
             <div class="card-body">
                 <div class="table-responsive">
                     <table id="productTable" class="table table-striped table-bordered align-middle nowrap" style="width:100%">
