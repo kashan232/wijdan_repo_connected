@@ -60,6 +60,40 @@
                             Showing purchases from <strong>{{ request('start_date') }}</strong> to <strong>{{ request('end_date') }}</strong>.
                         </div>
                         @endif
+
+                        @if($isAdmin)
+                        <div class="row g-3 mt-3 px-3">
+                            <div class="col-md-6">
+                                <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+                                    <div class="card-body py-3 d-flex justify-content-between align-items-center text-white">
+                                        <div>
+                                            <div class="small text-white-50">Total Purchase</div>
+                                            <div class="fs-4 fw-bold">Rs. {{ number_format($totalPurchase, 2) }}</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="small text-white-50">Purchase Records</div>
+                                            <div class="fs-5 fw-semibold">{{ $purchaseCount }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #198754 0%, #146c43 100%);">
+                                    <div class="card-body py-3 d-flex justify-content-between align-items-center text-white">
+                                        <div>
+                                            <div class="small text-white-50">Total Inward (IPG)</div>
+                                            <div class="fs-4 fw-bold">Rs. {{ number_format($totalInward, 2) }}</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="small text-white-50">Billed Inward Records</div>
+                                            <div class="fs-5 fw-semibold">{{ $inwardCount }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+
                         <div class="card-body">
                             <div class="col-lg-12">
                                 @if (session('success'))

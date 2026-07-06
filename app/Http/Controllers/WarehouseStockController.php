@@ -381,7 +381,7 @@ class WarehouseStockController extends Controller
         $isAdmin = $this->isStockAdmin();
         $query = $this->buildStockQuery($request);
         $stockTotals = $isAdmin ? $this->calculateStockTotals($request) : [];
-        $stocks = $query->orderBy('products.id', 'desc')->paginate(100)->withQueryString();
+        $stocks = $query->orderBy('products.id', 'desc')->get();
 
         $viewData = compact('stocks', 'warehouses', 'categories', 'brands', 'subcategories', 'stockTotals', 'isAdmin');
 

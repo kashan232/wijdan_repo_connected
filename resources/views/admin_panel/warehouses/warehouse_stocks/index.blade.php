@@ -150,6 +150,24 @@
         background: #fff;
     }
 
+    .stock-table-card .dataTables_filter input {
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        padding: 0.35rem 0.65rem;
+        margin-left: 0.5rem;
+    }
+
+    .stock-table-card .dataTables_length select {
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        padding: 0.25rem 0.5rem;
+        margin: 0 0.35rem;
+    }
+
+    .stock-table-card .dataTables_wrapper .row:first-child {
+        margin-bottom: 0.75rem;
+    }
+
     .stock-table-card .table {
         margin-bottom: 0;
     }
@@ -438,7 +456,7 @@
                         $sourceClass = str_replace(' ', '-', strtolower($stock->price_source ?? 'na'));
                     @endphp
                     <tr>
-                        <td>{{ ($stocks->currentPage() - 1) * $stocks->perPage() + $loop->iteration }}</td>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ \Carbon\Carbon::parse($stock->created_at)->format('d M Y') }}</td>
                         <td>{{ $stock->warehouse_name ?? '— Shop —' }}</td>
                         <td>
@@ -475,10 +493,6 @@
             </table>
         </div>
         </div>
-
-        <div class="mt-3" id="paginationLinks">
-            {{ $stocks->links('pagination::bootstrap-5') }}
-        </div>
     </div>
 </div>
 
@@ -490,14 +504,35 @@
 
 <script>
     $(document).ready(function() {
-        $('#stockTable').DataTable({
-            paging: false,
-            searching: false,
-            ordering: true,
-            info: false,
-            responsive: true,
-            scrollX: false
-        });
+        var stockDataTable = null;
+
+        function initStockDataTable() {
+            if ($.fn.DataTable.isDataTable('#stockTable')) {
+                $('#stockTable').DataTable().destroy();
+            }
+
+            stockDataTable = $('#stockTable').DataTable({
+                pageLength: 25,
+                lengthMenu: [
+                    [10, 25, 50, 100, -1],
+                    [10, 25, 50, 100, "All"]
+                ],
+                ordering: true,
+                order: [],
+                responsive: true,
+                scrollX: false,
+                language: {
+                    search: "Search:",
+                    searchPlaceholder: "Search in table...",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    infoEmpty: "No entries found",
+                    zeroRecords: "No matching records found"
+                }
+            });
+        }
+
+        initStockDataTable();
 
         $('#brandFilter').select2({
             placeholder: 'Search & select brand(s)',
@@ -573,11 +608,6 @@
             triggerAjaxFetch();
         });
 
-        $(document).on('click', '#paginationLinks a', function(e) {
-            e.preventDefault();
-            fetchStocks(getFilterData(), $(this).attr('href'));
-        });
-
         function fetchStocks(filters, url = null) {
             if (!url) {
                 url = "{{ route('warehouse_stocks.index') }}";
@@ -587,11 +617,16 @@
                 url: url,
                 data: filters,
                 success: function(res) {
+                    if ($.fn.DataTable.isDataTable('#stockTable')) {
+                        $('#stockTable').DataTable().destroy();
+                    }
+
                     $('#stockTable tbody').html($(res).find('#stockTable tbody').html());
-                    $('#paginationLinks').html($(res).find('#paginationLinks').html());
                     if ($('#stockSummaryCards').length) {
                         $('#stockSummaryCards').html($(res).find('#stockSummaryCards').html());
                     }
+
+                    initStockDataTable();
                 }
             });
         }

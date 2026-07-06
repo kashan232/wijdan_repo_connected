@@ -65,7 +65,20 @@ class PurchaseController extends Controller
             )->timestamp . ($row->created_at->timestamp ?? 0);
         })->values(); // 👈 reset keys
 
-        return view('admin_panel.purchase.index', compact('Purchase'))
+        $isAdmin = auth()->check() && (auth()->id() === 1 || auth()->user()->hasRole('Admin'));
+        $totalPurchase = $isAdmin ? $purchases->sum('net_amount') : 0;
+        $totalInward = $isAdmin ? $inwards->sum('net_amount') : 0;
+        $purchaseCount = $purchases->count();
+        $inwardCount = $inwards->count();
+
+        return view('admin_panel.purchase.index', compact(
+            'Purchase',
+            'isAdmin',
+            'totalPurchase',
+            'totalInward',
+            'purchaseCount',
+            'inwardCount'
+        ))
             ->with([
                 'start_date' => $request->start_date,
                 'end_date'   => $request->end_date,
