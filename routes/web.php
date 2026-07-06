@@ -95,6 +95,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('products.edit');
     Route::get('/barcode/{id}', [ProductController::class, 'barcode'])->name('product.barcode');
     Route::get('/get-all-products-export', [ProductController::class, 'getAllProductsExport'])->name('products.export_all');
+    Route::get('/products/import/template', [ProductController::class, 'downloadImportTemplate'])->name('products.import.template');
+    Route::get('/products/import/categories', [ProductController::class, 'downloadCategoryReference'])->name('products.import.categories');
+    Route::post('/products/import', [ProductController::class, 'bulkImport'])->name('products.import');
+    Route::get('/products/update/template', [ProductController::class, 'downloadUpdateTemplate'])->name('products.update.template');
+    Route::post('/products/update', [ProductController::class, 'bulkUpdate'])->name('products.update.import');
 
     Route::prefix('discount')->group(function () {
         Route::get('/', [DiscountController::class, 'index'])->name('discount.index')->middleware('permission:Discount Products');

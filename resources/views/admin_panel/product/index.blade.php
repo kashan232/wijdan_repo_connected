@@ -48,6 +48,8 @@
              <a href="{{ route('discount.index') }}" class="btn btn-success btn-sm">View Discount</a>
              @endif
              <a href="create_prodcut" class="btn btn-primary btn-sm">Add Product</a>
+             <button type="button" class="btn btn-info btn-sm text-white" data-toggle="modal" data-target="#bulkImportModal">📥 Bulk Import</button>
+             <button type="button" class="btn btn-warning btn-sm text-white" data-toggle="modal" data-target="#bulkUpdateModal">🔄 Bulk Update</button>
              <button id="createDiscountBtn" class="btn btn-primary btn-sm">Create Discount</button>
              <a id="exportAllBtn" class="btn btn-outline-secondary btn-sm" href="javascript:void(0)">⬇ Export All</a>
              <button id="exportSelectedBtn" class="btn btn-outline-primary btn-sm" type="button">⬇ Export Selected</button>
@@ -61,6 +63,25 @@
         @if (session()->has('success'))
         <div class="alert alert-success alert-dismissible fade show">
             ✅ {{ session('success') }}
+            <button type="button" class="btn-close" data-dismiss="alert"></button>
+        </div>
+        @endif
+
+        @if (session()->has('error'))
+        <div class="alert alert-danger alert-dismissible fade show">
+            ❌ {{ session('error') }}
+            <button type="button" class="btn-close" data-dismiss="alert"></button>
+        </div>
+        @endif
+
+        @if (session()->has('import_errors'))
+        <div class="alert alert-warning alert-dismissible fade show">
+            <strong>Import warnings:</strong>
+            <ul class="mb-0 mt-2">
+                @foreach (session('import_errors') as $importError)
+                <li>{{ $importError }}</li>
+                @endforeach
+            </ul>
             <button type="button" class="btn-close" data-dismiss="alert"></button>
         </div>
         @endif
@@ -250,6 +271,94 @@
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-primary">Save</button>
                     </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Bulk Import Modal --}}
+<div class="modal fade" id="bulkImportModal" tabindex="-1" aria-labelledby="bulkImportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkImportModalLabel">📥 Bulk Product Import (CSV)</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ route('products.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        Upload a CSV file to import products in bulk. Client sirf <strong>category</strong> aur <strong>sub-category</strong> ke names likhein (ID ki zaroorat nahi).
+                        Agar barcode pehle se hai to product update ho jayega.
+                    </p>
+                    <div class="mb-3 d-flex flex-wrap gap-2">
+                        <a href="{{ route('products.import.template') }}" class="btn btn-outline-success btn-sm">
+                            ⬇ Download CSV Template
+                        </a>
+                        <a href="{{ route('products.import.categories') }}" class="btn btn-outline-info btn-sm">
+                            ⬇ Category List (Names)
+                        </a>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select CSV File</label>
+                        <input type="file" name="import_file" class="form-control" accept=".csv,.txt" required>
+                    </div>
+                    <ul class="small text-muted mb-0">
+                        <li>Required: <strong>Item Name</strong></li>
+                        <li>Category: <strong>Category</strong> (e.g. Women, Men, Kids)</li>
+                        <li>Sub-Category: <strong>Sub-Category</strong> (e.g. Unstitch Casual)</li>
+                        <li>Unit: Piece, Meter, or Yards</li>
+                        <li>Stock: <strong>Shop Qty</strong> aur <strong>W/H Qty</strong></li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Import Products</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Bulk Update Modal --}}
+<div class="modal fade" id="bulkUpdateModal" tabindex="-1" aria-labelledby="bulkUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkUpdateModalLabel">🔄 Bulk Product Update (CSV)</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ route('products.update.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        CSV upload karein — <strong>Barcode</strong> se product match hoga aur sirf ye 3 fields update hongi:
+                        <strong>Retail Price</strong>, <strong>Shop Qty</strong>, <strong>W/H Qty</strong>.
+                        Baqi columns (Category, Item Name, etc.) ignore ho jayengi.
+                    </p>
+                    <div class="mb-3">
+                        <a href="{{ route('products.update.template') }}" class="btn btn-outline-success btn-sm">
+                            ⬇ Download Update Template
+                        </a>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select CSV File</label>
+                        <input type="file" name="update_file" class="form-control" accept=".csv,.txt" required>
+                    </div>
+                    <ul class="small text-muted mb-0">
+                        <li>Required: <strong>Barcode</strong> (system mein maujood)</li>
+                        <li>Update: <strong>Retail Price</strong>, <strong>Shop Qty</strong>, <strong>W/H Qty</strong></li>
+                        <li>Barcode nahi mile to row skip ho jayegi</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning btn-sm text-white">Update Products</button>
                 </div>
             </form>
         </div>

@@ -383,6 +383,579 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
+    public function downloadImportTemplate()
+    {
+        $headers = [
+            'Barcode',
+            'Category',
+            'Sub-Category',
+            'Item Name',
+            'Brand',
+            'Unit',
+            'Wholesale Price',
+            'Retail Price',
+            'Shop Qty',
+            'W/H Qty',
+            'Alert Qty',
+            'Note',
+        ];
+
+        $sample = [
+            '313250',
+            'Women',
+            'Unstitch Casual',
+            'Sample Product Name',
+            'HZ textile',
+            'Piece',
+            '5000',
+            '5300',
+            '1',
+            '0',
+            '5',
+            'Sample remarks',
+        ];
+
+        $callback = function () use ($headers, $sample) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, $headers);
+            fputcsv($handle, $sample);
+            fclose($handle);
+        };
+
+        return response()->streamDownload($callback, 'product_import_template.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function downloadCategoryReference()
+    {
+        $headers = ['Category', 'Sub-Category'];
+
+        $rows = Subcategory::with('category')
+            ->orderBy('category_id')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($sub) {
+                return [
+                    $sub->category->name ?? '',
+                    $sub->name,
+                ];
+            })
+            ->all();
+
+        $callback = function () use ($headers, $rows) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, $headers);
+            foreach ($rows as $row) {
+                fputcsv($handle, $row);
+            }
+            fclose($handle);
+        };
+
+        return response()->streamDownload($callback, 'category_subcategory_list.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function downloadUpdateTemplate()
+    {
+        $headers = [
+            'Barcode',
+            'Retail Price',
+            'Shop Qty',
+            'W/H Qty',
+        ];
+
+        $sample = [
+            '313250',
+            '5300',
+            '1',
+            '0',
+        ];
+
+        $callback = function () use ($headers, $sample) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, $headers);
+            fputcsv($handle, $sample);
+            fclose($handle);
+        };
+
+        return response()->streamDownload($callback, 'product_update_template.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function bulkUpdate(Request $request)
+    {
+        $request->validate([
+            'update_file' => 'required|file|mimes:csv,txt|max:20480',
+        ]);
+
+        if (!Auth::id()) {
+            return redirect()->back()->with('error', 'Unauthorized.');
+        }
+
+        $path = $request->file('update_file')->getRealPath();
+        $handle = fopen($path, 'r');
+        if (!$handle) {
+            return redirect()->back()->with('error', 'Could not read the uploaded file.');
+        }
+
+        $headerRow = fgetcsv($handle);
+        if (!$headerRow) {
+            fclose($handle);
+            return redirect()->back()->with('error', 'CSV file is empty.');
+        }
+
+        $columnMap = $this->buildImportColumnMap($headerRow);
+        if (!isset($columnMap['barcode'])) {
+            fclose($handle);
+            return redirect()->back()->with('error', 'CSV must contain a Barcode column.');
+        }
+
+        $hasRetail = isset($columnMap['retail_price']);
+        $hasShop = isset($columnMap['shop_qty']);
+        $hasWarehouse = isset($columnMap['warehouse_qty']);
+
+        if (!$hasRetail && !$hasShop && !$hasWarehouse) {
+            fclose($handle);
+            return redirect()->back()->with('error', 'CSV must contain at least one of: Retail Price, Shop Qty, W/H Qty.');
+        }
+
+        $warehouseId = (int) (DB::table('warehouses')->orderBy('id')->value('id') ?? 1);
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+        $rowNumber = 1;
+
+        DB::beginTransaction();
+        try {
+            while (($row = fgetcsv($handle)) !== false) {
+                $rowNumber++;
+
+                if ($this->isImportRowEmpty($row)) {
+                    continue;
+                }
+
+                $data = $this->parseImportRow($row, $columnMap);
+                $barcode = trim((string) ($data['barcode'] ?? ''));
+
+                if ($barcode === '') {
+                    $skipped++;
+                    $errors[] = "Row {$rowNumber}: barcode is required.";
+                    continue;
+                }
+
+                $product = Product::where('barcode_path', $barcode)->first();
+                if (!$product) {
+                    $skipped++;
+                    $errors[] = "Row {$rowNumber}: barcode not found ({$barcode}).";
+                    continue;
+                }
+
+                $productUpdates = [];
+                $didUpdate = false;
+
+                if ($hasRetail && $data['retail_price'] !== null && $data['retail_price'] !== '') {
+                    $productUpdates['price'] = (float) $data['retail_price'];
+                    $didUpdate = true;
+                }
+
+                if ($hasShop || $hasWarehouse) {
+                    $currentShop = (int) (DB::table('stocks')
+                        ->where('product_id', $product->id)
+                        ->where('branch_id', 1)
+                        ->where('warehouse_id', 1)
+                        ->value('qty') ?? 0);
+
+                    $currentWh = (int) (DB::table('warehouse_stocks')
+                        ->where('product_id', $product->id)
+                        ->where('warehouse_id', $warehouseId)
+                        ->value('quantity') ?? 0);
+
+                    $newShop = $hasShop ? max(0, (float) ($data['shop_qty'] ?? 0)) : $currentShop;
+                    $newWh = $hasWarehouse ? max(0, (float) ($data['warehouse_qty'] ?? 0)) : $currentWh;
+
+                    $this->syncImportedStocks($product->id, $newShop, $newWh, $warehouseId);
+                    $productUpdates['initial_stock'] = $newShop + $newWh;
+                    $didUpdate = true;
+                }
+
+                if (!$didUpdate) {
+                    $skipped++;
+                    $errors[] = "Row {$rowNumber}: no update values for barcode {$barcode}.";
+                    continue;
+                }
+
+                $productUpdates['updated_at'] = now();
+                $product->update($productUpdates);
+                $updated++;
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            fclose($handle);
+            return redirect()->route('product')->with('error', 'Update failed: ' . $e->getMessage());
+        }
+
+        fclose($handle);
+
+        $message = "Bulk update complete: {$updated} products updated";
+        if ($skipped > 0) {
+            $message .= ", {$skipped} skipped";
+        }
+
+        return redirect()->route('product')
+            ->with('success', $message)
+            ->with('import_errors', array_slice($errors, 0, 30));
+    }
+
+    public function bulkImport(Request $request)
+    {
+        $request->validate([
+            'import_file' => 'required|file|mimes:csv,txt|max:10240',
+        ]);
+
+        if (!Auth::id()) {
+            return redirect()->back()->with('error', 'Unauthorized.');
+        }
+
+        $path = $request->file('import_file')->getRealPath();
+        $handle = fopen($path, 'r');
+        if (!$handle) {
+            return redirect()->back()->with('error', 'Could not read the uploaded file.');
+        }
+
+        $headerRow = fgetcsv($handle);
+        if (!$headerRow) {
+            fclose($handle);
+            return redirect()->back()->with('error', 'CSV file is empty.');
+        }
+
+        $columnMap = $this->buildImportColumnMap($headerRow);
+        if (!isset($columnMap['item_name'])) {
+            fclose($handle);
+            return redirect()->back()->with('error', 'CSV must contain an item_name column.');
+        }
+
+        $lookups = $this->buildImportLookups();
+        $userId = Auth::id();
+        $nextItemNumber = ((int) Product::withTrashed()->max('id')) + 1;
+
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+        $rowNumber = 1;
+
+        DB::beginTransaction();
+        try {
+            while (($row = fgetcsv($handle)) !== false) {
+                $rowNumber++;
+
+                if ($this->isImportRowEmpty($row)) {
+                    continue;
+                }
+
+                $data = $this->parseImportRow($row, $columnMap);
+
+                if (empty($data['item_name'])) {
+                    $skipped++;
+                    $errors[] = "Row {$rowNumber}: item_name is required.";
+                    continue;
+                }
+
+                $categoryId = $this->resolveImportCategoryId($data, $lookups);
+                if (!$categoryId && (!empty($data['category']) || !empty($data['category_id']))) {
+                    $skipped++;
+                    $errors[] = "Row {$rowNumber}: category not found ({$data['category']}).";
+                    continue;
+                }
+
+                $subCategoryId = $this->resolveImportSubCategoryId($data, $lookups, $categoryId);
+                if (!$subCategoryId && (!empty($data['sub_category']) || !empty($data['sub_category_id']))) {
+                    $skipped++;
+                    $errors[] = "Row {$rowNumber}: sub-category not found ({$data['sub_category']}).";
+                    continue;
+                }
+
+                $brandId = null;
+                if (!empty($data['brand'])) {
+                    $brand = Brand::firstOrCreate(['name' => trim($data['brand'])]);
+                    $brandId = $brand->id;
+                }
+
+                $unit = $this->normalizeImportUnit($data['unit'] ?? 'Piece');
+                $barcode = trim((string) ($data['barcode'] ?? ''));
+                if ($barcode === '') {
+                    $barcode = (string) random_int(100000000000, 999999999999);
+                }
+
+                $shopQty = max(0, (float) ($data['shop_qty'] ?? 0));
+                $warehouseQty = max(0, (float) ($data['warehouse_qty'] ?? 0));
+                $initialStock = $shopQty + $warehouseQty;
+
+                $productData = [
+                    'creater_id'      => $userId,
+                    'category_id'     => $categoryId,
+                    'sub_category_id' => $subCategoryId,
+                    'item_name'       => $data['item_name'],
+                    'barcode_path'    => $barcode,
+                    'unit_id'         => $unit,
+                    'brand_id'        => $brandId,
+                    'wholesale_price' => (float) ($data['wholesale_price'] ?? 0),
+                    'price'           => (float) ($data['retail_price'] ?? $data['wholesale_price'] ?? 0),
+                    'initial_stock'   => $initialStock,
+                    'alert_quantity'  => (int) ($data['alert_quantity'] ?? 0),
+                    'note'            => $data['note'] ?? null,
+                    'updated_at'      => now(),
+                ];
+
+                $existing = Product::where('barcode_path', $barcode)->first();
+
+                if ($existing) {
+                    $existing->update($productData);
+                    $product = $existing;
+                    $updated++;
+                } else {
+                    $product = Product::create(array_merge($productData, [
+                        'item_code'  => 'ITEM-' . str_pad((string) $nextItemNumber, 4, '0', STR_PAD_LEFT),
+                        'created_at' => now(),
+                    ]));
+                    $nextItemNumber++;
+                    $created++;
+                }
+
+                $this->syncImportedStocks($product->id, $shopQty, $warehouseQty, $lookups['default_warehouse_id']);
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            fclose($handle);
+            return redirect()->route('product')->with('error', 'Import failed: ' . $e->getMessage());
+        }
+
+        fclose($handle);
+
+        $message = "Import complete: {$created} created, {$updated} updated";
+        if ($skipped > 0) {
+            $message .= ", {$skipped} skipped";
+        }
+
+        return redirect()->route('product')
+            ->with('success', $message)
+            ->with('import_errors', array_slice($errors, 0, 30));
+    }
+
+    private function buildImportColumnMap(array $headerRow): array
+    {
+        $aliases = [
+            'barcode' => ['barcode', 'bar code'],
+            'category_id' => ['category_id', 'category id', 'categoryid'],
+            'category' => ['category'],
+            'sub_category_id' => ['sub_category_id', 'sub category id', 'subcategory_id', 'subcategory id'],
+            'sub_category' => ['sub_category', 'sub-category', 'sub category', 'subcategory'],
+            'item_name' => ['item_name', 'item name', 'product_name', 'product name', 'name'],
+            'brand' => ['brand', 'brand name'],
+            'unit' => ['unit', 'uom'],
+            'wholesale_price' => ['wholesale_price', 'wholesale price', 'cost price', 'cost'],
+            'retail_price' => ['retail_price', 'retail price', 'price', 'sale price'],
+            'shop_qty' => ['shop_qty', 'shop qty', 'shop quantity', 'shop stock', 'stock'],
+            'warehouse_qty' => ['warehouse_qty', 'warehouse qty', 'w/h qty', 'wh qty', 'warehouse quantity', 'warehouse stock'],
+            'alert_quantity' => ['alert_quantity', 'alert quantity', 'alert qty'],
+            'note' => ['note', 'remarks', 'remark'],
+        ];
+
+        $map = [];
+        foreach ($headerRow as $index => $heading) {
+            $normalized = strtolower(trim(preg_replace('/\s+/', ' ', (string) $heading)));
+            foreach ($aliases as $field => $names) {
+                if (in_array($normalized, $names, true)) {
+                    $map[$field] = $index;
+                }
+            }
+        }
+
+        return $map;
+    }
+
+    private function buildImportLookups(): array
+    {
+        $categoryMap = [];
+        foreach (Category::all() as $category) {
+            $categoryMap[$this->normalizeImportKey($category->name)] = (int) $category->id;
+        }
+
+        $subCategoryMap = [];
+        foreach (Subcategory::all() as $subCategory) {
+            $subCategoryMap[$this->normalizeImportKey($subCategory->name)] = [
+                'id' => (int) $subCategory->id,
+                'category_id' => (int) $subCategory->category_id,
+            ];
+        }
+
+        return [
+            'categories' => $categoryMap,
+            'subcategories' => $subCategoryMap,
+            'default_warehouse_id' => (int) (DB::table('warehouses')->orderBy('id')->value('id') ?? 1),
+        ];
+    }
+
+    private function parseImportRow(array $row, array $columnMap): array
+    {
+        $get = function (string $field) use ($row, $columnMap) {
+            if (!isset($columnMap[$field])) {
+                return null;
+            }
+            $value = $row[$columnMap[$field]] ?? null;
+            return is_string($value) ? trim($value) : $value;
+        };
+
+        return [
+            'barcode' => $get('barcode'),
+            'category_id' => $get('category_id'),
+            'category' => $get('category'),
+            'sub_category_id' => $get('sub_category_id'),
+            'sub_category' => $get('sub_category'),
+            'item_name' => $get('item_name'),
+            'brand' => $get('brand'),
+            'unit' => $get('unit'),
+            'wholesale_price' => $get('wholesale_price'),
+            'retail_price' => $get('retail_price'),
+            'shop_qty' => $get('shop_qty'),
+            'warehouse_qty' => $get('warehouse_qty'),
+            'alert_quantity' => $get('alert_quantity'),
+            'note' => $get('note'),
+        ];
+    }
+
+    private function isImportRowEmpty(array $row): bool
+    {
+        foreach ($row as $value) {
+            if (trim((string) $value) !== '') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private function normalizeImportKey(string $value): string
+    {
+        return strtolower(trim(preg_replace('/\s+/', ' ', $value)));
+    }
+
+    private function normalizeImportUnit(?string $unit): string
+    {
+        $unit = $this->normalizeImportKey((string) $unit);
+        if (in_array($unit, ['yard', 'yards'], true)) {
+            return 'Yards';
+        }
+        if ($unit === 'meter') {
+            return 'Meter';
+        }
+        return 'Piece';
+    }
+
+    private function resolveImportCategoryId(array $data, array $lookups): ?int
+    {
+        if (!empty($data['category_id']) && is_numeric($data['category_id'])) {
+            return (int) $data['category_id'];
+        }
+        if (!empty($data['category'])) {
+            return $lookups['categories'][$this->normalizeImportKey($data['category'])] ?? null;
+        }
+        return null;
+    }
+
+    private function resolveImportSubCategoryId(array $data, array $lookups, ?int $categoryId): ?int
+    {
+        if (!empty($data['sub_category_id']) && is_numeric($data['sub_category_id'])) {
+            return (int) $data['sub_category_id'];
+        }
+        if (empty($data['sub_category'])) {
+            return null;
+        }
+
+        $key = $this->normalizeImportKey($data['sub_category']);
+        $sub = $lookups['subcategories'][$key] ?? null;
+
+        if (!$sub) {
+            foreach ($lookups['subcategories'] as $name => $info) {
+                if (str_contains($name, $key) || str_contains($key, $name)) {
+                    $sub = $info;
+                    break;
+                }
+            }
+        }
+
+        if (!$sub) {
+            return null;
+        }
+
+        if ($categoryId && (int) $sub['category_id'] !== (int) $categoryId) {
+            return null;
+        }
+
+        return (int) $sub['id'];
+    }
+
+    private function syncImportedStocks(int $productId, float $shopQty, float $warehouseQty, int $warehouseId): void
+    {
+        $branchId = 1;
+
+        $shopRow = DB::table('stocks')
+            ->where('product_id', $productId)
+            ->where('branch_id', $branchId)
+            ->where('warehouse_id', 1)
+            ->first();
+
+        if ($shopRow) {
+            DB::table('stocks')
+                ->where('id', $shopRow->id)
+                ->update([
+                    'qty' => (int) $shopQty,
+                    'updated_at' => now(),
+                ]);
+        } elseif ($shopQty > 0) {
+            DB::table('stocks')->insert([
+                'branch_id' => $branchId,
+                'warehouse_id' => 1,
+                'product_id' => $productId,
+                'qty' => (int) $shopQty,
+                'reserved_qty' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $whRow = DB::table('warehouse_stocks')
+            ->where('product_id', $productId)
+            ->where('warehouse_id', $warehouseId)
+            ->first();
+
+        if ($whRow) {
+            DB::table('warehouse_stocks')
+                ->where('id', $whRow->id)
+                ->update([
+                    'quantity' => (int) $warehouseQty,
+                    'updated_at' => now(),
+                ]);
+        } elseif ($warehouseQty > 0) {
+            DB::table('warehouse_stocks')->insert([
+                'warehouse_id' => $warehouseId,
+                'product_id' => $productId,
+                'quantity' => (int) $warehouseQty,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+
     // public function searchProducts(Request $request)
     // {
     //     $query = $request->get('q');
