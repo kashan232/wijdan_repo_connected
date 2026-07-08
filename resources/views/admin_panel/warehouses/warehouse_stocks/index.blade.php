@@ -260,6 +260,12 @@
             </div>
 
             <div class="col-md-2">
+                <label class="form-label fw-bold">Closing End Date:</label>
+                <input type="date" name="closing_end_date" id="closingEndDate" class="form-control form-control-sm"
+                    value="{{ $closingEndDate ?? request('closing_end_date', config('stock.yearly_closing_date')) }}">
+            </div>
+
+            <div class="col-md-2">
                 <label class="form-label fw-bold">Start Date:</label>
                 <input type="date" name="start_date" class="form-control form-control-sm"
                     value="{{ request('start_date') }}">
@@ -408,6 +414,15 @@
                     </div>
                 </div>
             </div>
+        @endif
+        </div>
+
+        <div id="closingAlertBox">
+        @if(!empty($closingEndDate))
+        <div class="alert alert-warning py-2 mb-3">
+            <strong>Yearly Closing Stock:</strong> Showing stock and value as of <strong>{{ \Carbon\Carbon::parse($closingEndDate)->format('d-m-Y') }}</strong>.
+            Purchases, sales, and other movements after this date are excluded.
+        </div>
         @endif
         </div>
 
@@ -581,6 +596,7 @@
             return {
                 search: $('#warehouseStockSearch').val(),
                 stock_type: $('select[name="stock_type"]').val(),
+                closing_end_date: $('#closingEndDate').val(),
                 start_date: $('input[name="start_date"]').val(),
                 end_date: $('input[name="end_date"]').val(),
                 category_id: $('#categoryFilter').val(),
@@ -599,7 +615,7 @@
             searchTimer = setTimeout(triggerAjaxFetch, 400);
         });
 
-        $('select[name="stock_type"], input[name="start_date"], input[name="end_date"]').on('change', function() {
+        $('select[name="stock_type"], input[name="start_date"], input[name="end_date"], #closingEndDate').on('change', function() {
             triggerAjaxFetch();
         });
 
@@ -624,6 +640,9 @@
                     $('#stockTable tbody').html($(res).find('#stockTable tbody').html());
                     if ($('#stockSummaryCards').length) {
                         $('#stockSummaryCards').html($(res).find('#stockSummaryCards').html());
+                    }
+                    if ($('#closingAlertBox').length) {
+                        $('#closingAlertBox').html($(res).find('#closingAlertBox').html());
                     }
 
                     initStockDataTable();
@@ -713,12 +732,14 @@
             var start = $('input[name="start_date"]').val() || '';
             var end = $('input[name="end_date"]').val() || '';
             var search = $('#warehouseStockSearch').val() || '';
+            var closingEnd = $('#closingEndDate').val() || '';
             var category = $('#categoryFilter').val() || '';
             var subcategory = $('#subcategoryFilter').val() || '';
             var unit = $('#unitFilter').val() || '';
             var brands = $('#brandFilter').val() || [];
 
             var queryStr = "?stock_type=" + encodeURIComponent(type)
+                + "&closing_end_date=" + encodeURIComponent(closingEnd)
                 + "&start_date=" + encodeURIComponent(start)
                 + "&end_date=" + encodeURIComponent(end)
                 + "&search=" + encodeURIComponent(search)

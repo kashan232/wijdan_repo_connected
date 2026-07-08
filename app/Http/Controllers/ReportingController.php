@@ -48,9 +48,13 @@ class ReportingController extends Controller
         }
 
         $perPage = 50;
-        $products = $productsQuery
-            ->orderBy('item_name')
-            ->paginate($perPage);
+        $productsQuery = $productsQuery->orderBy('item_name');
+        
+        if ($request->has('export') && $request->export == 1) {
+            $products = $productsQuery->get();
+        } else {
+            $products = $productsQuery->paginate($perPage);
+        }
 
         $productIds = $products->pluck('id')->toArray();
         $productCodes = $products->pluck('item_code')->toArray();
@@ -247,6 +251,19 @@ class ReportingController extends Controller
                 'sale_return' => $totalSReturn,
                 'balance' => $balance,
             ];
+        }
+
+        if ($request->has('export') && $request->export == 1) {
+            return response()->json([
+                'data' => $rows,
+                'grand_total' => $grandTotalValue,
+                'pagination' => [
+                    'current_page' => 1,
+                    'last_page'    => 1,
+                    'per_page'     => count($rows),
+                    'total'        => count($rows),
+                ]
+            ]);
         }
 
         return response()->json([

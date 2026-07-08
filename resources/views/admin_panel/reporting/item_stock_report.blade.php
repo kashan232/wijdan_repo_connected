@@ -190,6 +190,7 @@
 </div>
 @endsection
 @section('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
     $(document).ready(function() {
         // 🔹 Enable Select2 for product search
@@ -330,7 +331,8 @@
             $('#pageInfo').text(`Page ${p.current_page} of ${p.last_page}`);
         }
 
-        // 🔹 Export CSV button
+        // 🔹 Export Excel button
+        $('#btnExportCsv').removeClass('btn-outline-secondary').addClass('btn-success').html('📤 Export Excel');
         $('#btnExportCsv').on('click', function() {
             let startDate = $('#start_date').val();
             let endDate = $('#end_date').val();
@@ -346,7 +348,8 @@
                     _token: "{{ csrf_token() }}",
                     product_id: productId,
                     start_date: startDate,
-                    end_date: endDate
+                    end_date: endDate,
+                    export: 1
                 },
                 success: function(response) {
                     $('#loader').hide();
@@ -356,23 +359,47 @@
                         return;
                     }
 
-                    var csv = 'Date,Item Code,Item Name,Initial Stock,Purchased Qty,Purchase Return,Sold Qty,Sale Return,Balance\n';
-                    csv += `"${r.date}","${r.item_code}","${r.item_name}",${r.initial_stock},${r.purchased},${r.purchase_return},${r.sold},${r.sale_return},${r.balance}\n`;
+                    let data = [];
+                    data.push(["Item Stock Report"]);
+                    data.push(["Start Date:", startDate || "All Time", "", "End Date:", endDate || "All Time"]);
+                    data.push([]);
+                    data.push(["Date", "Item Code", "Item Name", "UOM", "Opening Stock", "Inward Qty", "Purchased Qty", "Purchase Return", "Sold Qty", "Sale Return", "Balance"]);
 
                     response.data.forEach(function(r) {
-                        csv += `"${r.date}","${r.item_code}","${r.item_name}",${r.initial_stock},${r.purchased},${r.sold},${r.balance}\n`;
+                        data.push([
+                            r.date,
+                            r.item_code,
+                            r.item_name,
+                            r.unit_id,
+                            parseFloat(r.initial_stock),
+                            parseFloat(r.inward_qty),
+                            parseFloat(r.purchased),
+                            parseFloat(r.purchase_return),
+                            parseFloat(r.sold),
+                            parseFloat(r.sale_return),
+                            parseFloat(r.balance)
+                        ]);
                     });
 
-                    var blob = new Blob([csv], {
-                        type: 'text/csv;charset=utf-8;'
-                    });
-                    var url = URL.createObjectURL(blob);
-                    var a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'item_stock_report.csv';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                    let ws = XLSX.utils.aoa_to_sheet(data);
+                    const colWidths = [
+                        { wch: 12 }, // Date
+                        { wch: 15 }, // Item Code
+                        { wch: 30 }, // Item Name
+                        { wch: 10 }, // UOM
+                        { wch: 15 }, // Opening
+                        { wch: 12 }, // Inward
+                        { wch: 15 }, // Purchased
+                        { wch: 15 }, // Purchase Ret
+                        { wch: 12 }, // Sold
+                        { wch: 12 }, // Sale Ret
+                        { wch: 12 }  // Balance
+                    ];
+                    ws['!cols'] = colWidths;
+
+                    let wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Stock");
+                    XLSX.writeFile(wb, "Item_Stock_Report.xlsx");
                 },
                 error: function() {
                     $('#loader').hide();
