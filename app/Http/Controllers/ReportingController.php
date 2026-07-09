@@ -77,17 +77,18 @@ class ReportingController extends Controller
                 ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
 
             $purchasesBefore = DB::table('purchase_items')
-                ->whereIn('product_id', $productIds)
-                ->where('created_at', '<', $startDateTime)
-                ->select('product_id', DB::raw('SUM(qty) as total'))
-                ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereIn('purchase_items.product_id', $productIds)
+                ->where('purchases.purchase_date', '<', $startDate)
+                ->select('purchase_items.product_id', DB::raw('SUM(purchase_items.qty) as total'))
+                ->groupBy('purchase_items.product_id')->pluck('total', 'product_id')->toArray();
 
             $pReturnsBefore = DB::table('purchase_return_items')
                 ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
                 ->whereIn('purchase_return_items.product_id', $productIds)
-                ->where('purchase_returns.created_at', '<', $startDateTime)
-                ->select('product_id', DB::raw('SUM(qty) as total'))
-                ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+                ->where('purchase_returns.return_date', '<', $startDate)
+                ->select('purchase_return_items.product_id', DB::raw('SUM(purchase_return_items.qty) as total'))
+                ->groupBy('purchase_return_items.product_id')->pluck('total', 'product_id')->toArray();
 
             $salesBefore = DB::table('sales')
                 ->where('created_at', '<', $startDateTime)
@@ -143,23 +144,24 @@ class ReportingController extends Controller
             ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
 
         $purchasesPeriodQuery = DB::table('purchase_items')
-            ->whereIn('product_id', $productIds)
-            ->where('created_at', '<=', $endDateTime);
-        if ($startDateTime) {
-            $purchasesPeriodQuery->where('created_at', '>=', $startDateTime);
+            ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+            ->whereIn('purchase_items.product_id', $productIds)
+            ->where('purchases.purchase_date', '<=', $endDate);
+        if ($startDate) {
+            $purchasesPeriodQuery->where('purchases.purchase_date', '>=', $startDate);
         }
-        $purchasesPeriod = $purchasesPeriodQuery->select('product_id', DB::raw('SUM(qty) as total'))
-            ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+        $purchasesPeriod = $purchasesPeriodQuery->select('purchase_items.product_id', DB::raw('SUM(purchase_items.qty) as total'))
+            ->groupBy('purchase_items.product_id')->pluck('total', 'product_id')->toArray();
 
         $pReturnsPeriodQuery = DB::table('purchase_return_items')
             ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
             ->whereIn('purchase_return_items.product_id', $productIds)
-            ->where('purchase_returns.created_at', '<=', $endDateTime);
-        if ($startDateTime) {
-            $pReturnsPeriodQuery->where('purchase_returns.created_at', '>=', $startDateTime);
+            ->where('purchase_returns.return_date', '<=', $endDate);
+        if ($startDate) {
+            $pReturnsPeriodQuery->where('purchase_returns.return_date', '>=', $startDate);
         }
-        $pReturnsPeriod = $pReturnsPeriodQuery->select('product_id', DB::raw('SUM(qty) as total'))
-            ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+        $pReturnsPeriod = $pReturnsPeriodQuery->select('purchase_return_items.product_id', DB::raw('SUM(purchase_return_items.qty) as total'))
+            ->groupBy('purchase_return_items.product_id')->pluck('total', 'product_id')->toArray();
 
         $salesPeriodQuery = DB::table('sales')
             ->where('created_at', '<=', $endDateTime)
