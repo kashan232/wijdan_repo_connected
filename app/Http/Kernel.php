@@ -70,5 +70,7 @@ class Kernel extends HttpKernel
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         'lock.report' => \App\Http\Middleware\LockReport::class,
         'period.viewer' => \App\Http\Middleware\RedirectPeriodViewer::class,
+        'period.access' => \App\Http\Middleware\RequirePeriodAccessPassword::class,
+        'super.admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
     ];
 }

@@ -29,6 +29,50 @@ class PeriodClosingController extends Controller
         return view('admin_panel.period_closing.index', compact('settings', 'summary', 'hasPassword'));
     }
 
+    public function unlockForm()
+    {
+        $settings = PeriodClosingSetting::instance();
+
+        if (!$settings->hasClosingPassword()) {
+            return redirect()->route('period.closing.index')
+                ->with('error', 'Pehle Period Closing page se access password set karein.');
+        }
+
+        return view('admin_panel.period_closing.unlock');
+    }
+
+    public function verifyAccess(Request $request)
+    {
+        $request->validate([
+            'access_password' => 'required|string',
+        ]);
+
+        $settings = PeriodClosingSetting::instance();
+
+        if (!$settings->hasClosingPassword()) {
+            return redirect()->route('period.closing.index');
+        }
+
+        if (!$settings->verifyClosingPassword($request->access_password)) {
+            return back()->withErrors(['access_password' => 'Access password galat hai.']);
+        }
+
+        $request->session()->put('period_sensitive_unlocked', true);
+
+        $intended = $request->session()->pull('period_access_intended', route('period.closing.index'));
+
+        return redirect()->to($intended)
+            ->with('success', 'Access verified. Aap ab Period Closing / Archive pages use kar sakte hain.');
+    }
+
+    public function lockAccess(Request $request)
+    {
+        $request->session()->forget(['period_sensitive_unlocked', 'period_access_intended']);
+
+        return redirect()->route('period.access.unlock')
+            ->with('success', 'Period pages lock ho gayi hain. Dobara password chahiye hoga.');
+    }
+
     public function saveSettings(Request $request)
     {
         $request->validate([
@@ -72,6 +116,8 @@ class PeriodClosingController extends Controller
         }
 
         $settings->save();
+
+        $request->session()->put('period_sensitive_unlocked', true);
 
         return back()->with('success', 'Closing password aur archive user account save ho gaya.');
     }

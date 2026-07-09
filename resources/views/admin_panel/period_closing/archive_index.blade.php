@@ -10,14 +10,17 @@
             <div class="pc-hero-content d-flex justify-content-between align-items-start flex-wrap gap-3">
                 <div>
                     <div class="pc-hero-badge">
-                        <i class="fas fa-archive"></i> Secure Data Vault
+                        <i class="fas fa-archive"></i> Admin Only — Password Protected
                     </div>
                     <h2><i class="fas fa-database me-2"></i>Closed Period Archive</h2>
                     <p>Band kiye gaye periods ka sara data yahan mojood hai — bilkul safe, koi delete nahi.</p>
                 </div>
-                @if(auth()->user()->hasRole('period_viewer'))
-                    <span class="pc-badge-viewer"><i class="fas fa-eye me-1"></i> Read-Only Viewer</span>
-                @endif
+                <form action="{{ route('period.access.lock') }}" method="POST" class="m-0">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-lock me-1"></i> Lock Pages
+                    </button>
+                </form>
             </div>
         </div>
 
@@ -32,11 +35,9 @@
                 <i class="fas fa-folder-open d-block"></i>
                 <h5>Abhi tak koi period close nahi hui</h5>
                 <p class="text-muted mb-0">Jab aap period closing karenge, woh yahan archive mein dikhegi.</p>
-                @can('Period Closing')
                 <a href="{{ route('period.closing.index') }}" class="btn btn-primary pc-btn-primary mt-3">
                     <i class="fas fa-calendar-times me-2"></i>Go to Period Closing
                 </a>
-                @endcan
             </div>
         @else
             <div class="row g-4">

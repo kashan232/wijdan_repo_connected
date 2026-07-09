@@ -384,16 +384,21 @@ Route::middleware('auth')->group(function () {
 
     Route::get('cashbook', [ReportingController::class, 'cashbook'])->name('cashbook');
 
-    // Period Closing (admin only)
-    Route::prefix('period-closing')->middleware('permission:Period Closing')->group(function () {
+    // Period Closing & Archive — super admin only + access password
+    Route::middleware('super.admin')->group(function () {
+        Route::get('/period-sensitive/unlock', [PeriodClosingController::class, 'unlockForm'])->name('period.access.unlock');
+        Route::post('/period-sensitive/unlock', [PeriodClosingController::class, 'verifyAccess'])->name('period.access.verify');
+        Route::post('/period-sensitive/lock', [PeriodClosingController::class, 'lockAccess'])->name('period.access.lock');
+    });
+
+    Route::prefix('period-closing')->middleware(['super.admin', 'period.access'])->group(function () {
         Route::get('/', [PeriodClosingController::class, 'index'])->name('period.closing.index');
         Route::post('/settings', [PeriodClosingController::class, 'saveSettings'])->name('period.closing.settings');
         Route::get('/preview', [PeriodClosingController::class, 'preview'])->name('period.closing.preview');
         Route::post('/close', [PeriodClosingController::class, 'close'])->name('period.closing.close');
     });
 
-    // Closed Period Archive (admin + period viewer)
-    Route::prefix('period-archive')->middleware('role_or_permission:admin|Period Closing|Closed Period Archive')->group(function () {
+    Route::prefix('period-archive')->middleware(['super.admin', 'period.access'])->group(function () {
         Route::get('/', [ClosedPeriodArchiveController::class, 'index'])->name('period.archive.index');
         Route::get('/{period}', [ClosedPeriodArchiveController::class, 'show'])->name('period.archive.show');
         Route::get('/{period}/sales', [ClosedPeriodArchiveController::class, 'sales'])->name('period.archive.sales');

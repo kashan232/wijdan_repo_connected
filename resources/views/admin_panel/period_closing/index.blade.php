@@ -7,12 +7,22 @@
     <div class="container-fluid px-3">
 
         <div class="pc-hero">
-            <div class="pc-hero-content">
-                <div class="pc-hero-badge">
-                    <i class="fas fa-shield-alt"></i> Accounting Period Management
+            <div class="pc-hero-content d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <div class="pc-hero-badge">
+                        <i class="fas fa-shield-alt"></i> Admin Only — Password Protected
+                    </div>
+                    <h2><i class="fas fa-calendar-times me-2"></i>Period Closing</h2>
+                    <p>Apna accounting period band karein — sara data safe rahega archive mein. Koi record delete nahi hota.</p>
                 </div>
-                <h2><i class="fas fa-calendar-times me-2"></i>Period Closing</h2>
-                <p>Apna accounting period band karein — sara data safe rahega archive mein. Koi record delete nahi hota.</p>
+                @if($hasPassword)
+                <form action="{{ route('period.access.lock') }}" method="POST" class="m-0">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-lock me-1"></i> Lock Pages
+                    </button>
+                </form>
+                @endif
             </div>
         </div>
 
@@ -40,13 +50,13 @@
                     <div class="pc-card-body">
                         <p class="text-muted small mb-0">
                             <i class="fas fa-info-circle me-1 text-primary"></i>
-                            Pehle password aur archive viewer account set karein. Closing ke waqt password zaroori hoga.
+                            Yeh password page access aur period closing dono ke liye use hoga. Sirf admin in pages ko khol sakta hai.
                         </p>
 
                         <form action="{{ route('period.closing.settings') }}" method="POST" class="mt-3">
                             @csrf
 
-                            <div class="pc-section-title"><i class="fas fa-key me-1"></i> Closing Password</div>
+                            <div class="pc-section-title"><i class="fas fa-key me-1"></i> Access & Closing Password</div>
                             <div class="mb-3">
                                 <label class="pc-form-label">Password</label>
                                 <input type="password" name="closing_password" class="form-control pc-form-control" required minlength="4"

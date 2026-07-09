@@ -20,7 +20,8 @@ class HomeController extends Controller
         $userId = Auth::id();
 
         if (Auth::user()->hasRole('period_viewer')) {
-            return redirect()->route('period.archive.index');
+            return redirect()->route('home')
+                ->with('error', 'Aap ke account ko sirf limited access hai.');
         }
 
         if ($usertype == 'user') {

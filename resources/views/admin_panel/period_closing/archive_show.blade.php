@@ -23,9 +23,15 @@
                             @endif
                         </p>
                     </div>
-                    <a href="{{ route('period.archive.index') }}" class="btn btn-outline-secondary btn-sm">
+                    <a href="{{ route('period.archive.index') }}" class="btn btn-outline-secondary btn-sm me-1">
                         <i class="fas fa-arrow-left me-1"></i> All Archives
                     </a>
+                    <form action="{{ route('period.access.lock') }}" method="POST" class="d-inline m-0">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-lock me-1"></i> Lock
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>

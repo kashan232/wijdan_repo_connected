@@ -14,12 +14,13 @@ class RedirectPeriodViewer
 
         if ($user && $user->hasRole('period_viewer')) {
             if (
-                !$request->routeIs('period.archive.*')
+                !$request->routeIs('home')
+                && !$request->is('home')
                 && !$request->routeIs('logout')
                 && !$request->is('logout')
             ) {
-                return redirect()->route('period.archive.index')
-                    ->with('error', 'Aap sirf closed period archive dekh sakte hain.');
+                return redirect()->route('home')
+                    ->with('error', 'Aap ke account ko sirf limited access hai. Period archive ab sirf admin ke liye hai.');
             }
         }
 
