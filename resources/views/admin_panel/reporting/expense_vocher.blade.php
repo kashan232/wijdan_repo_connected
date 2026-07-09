@@ -42,9 +42,13 @@
         color: #6c757d;
     }
     .account-group-total {
-        font-weight: 700;
-        color: #0d6efd;
-        font-size: 1.05rem;
+        font-weight: 800;
+        color: #212529;
+        font-size: 1.1rem;
+        background: #e7f1ff;
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        border: 1px solid #b6d4fe;
     }
     .line-item {
         display: flex;
@@ -52,15 +56,57 @@
         gap: 0.5rem;
         padding: 0.25rem 0;
         font-size: 0.85rem;
-        border-bottom: 1px dashed #eee;
+        color: #212529;
+        border-bottom: 1px dashed #dee2e6;
     }
+    .line-item span:last-child { color: #212529; font-weight: 600; }
     .line-item:last-child { border-bottom: none; }
     .summary-bar {
-        background: linear-gradient(135deg, #0d6efd, #0a58ca);
-        color: #fff;
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-left: 5px solid #0d6efd;
         border-radius: 8px;
-        padding: 1rem 1.25rem;
-        margin-bottom: 1rem;
+        padding: 1.15rem 1.35rem;
+        margin-bottom: 1.25rem;
+        color: #212529;
+    }
+    .summary-bar .summary-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #495057;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-bottom: 0.25rem;
+    }
+    .summary-bar .grand-total-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #212529;
+        line-height: 1.2;
+    }
+    .summary-bar .summary-stats {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #212529;
+    }
+    .summary-bar .summary-stats span {
+        color: #0d6efd;
+    }
+    .exp-report-table thead th {
+        background: #e9ecef !important;
+        color: #212529 !important;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+    .exp-report-table tbody td {
+        color: #212529;
+        vertical-align: middle;
+    }
+    .exp-report-table tfoot th {
+        background: #e7f1ff !important;
+        color: #212529 !important;
+        font-weight: 800;
+        font-size: 0.9rem;
     }
 </style>
 
@@ -115,14 +161,17 @@
             </div>
 
             <div class="d-none" id="resultCard">
-                <div class="summary-bar d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="summary-bar d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
-                        <div class="small opacity-75">Grand Total Expense</div>
-                        <div class="fs-4 fw-bold" id="grandTotal">0.00</div>
+                        <div class="summary-label">Grand Total Expense</div>
+                        <div class="grand-total-value" id="grandTotal">Rs. 0.00</div>
                     </div>
                     <div class="text-end">
-                        <div class="small opacity-75">Accounts / Vouchers</div>
-                        <div class="fw-semibold"><span id="accountCount">0</span> accounts · <span id="voucherCount">0</span> vouchers</div>
+                        <div class="summary-label">Summary</div>
+                        <div class="summary-stats">
+                            <span id="accountCount">0</span> Accounts &nbsp;|&nbsp;
+                            <span id="voucherCount">0</span> Vouchers
+                        </div>
                     </div>
                 </div>
 
@@ -219,8 +268,8 @@ $(document).ready(function() {
                                 <div class="account-group-total">Total: Rs ${group.total}</div>
                             </div>
                             <div class="table-responsive">
-                                <table class="table table-sm table-bordered mb-0">
-                                    <thead class="table-light">
+                                <table class="table table-sm table-bordered mb-0 exp-report-table">
+                                    <thead>
                                         <tr>
                                             <th>#</th>
                                             <th>Voucher</th>
@@ -232,7 +281,7 @@ $(document).ready(function() {
                                     </thead>
                                     <tbody>${detailRows}</tbody>
                                     <tfoot>
-                                        <tr class="table-primary">
+                                        <tr>
                                             <th colspan="5" class="text-end">Account Subtotal — ${group.account}</th>
                                             <th class="text-end">Rs ${group.total}</th>
                                         </tr>
@@ -241,6 +290,12 @@ $(document).ready(function() {
                             </div>
                         </div>`;
                 });
+
+                html += `
+                    <div class="summary-bar mt-2 d-flex justify-content-between align-items-center">
+                        <div class="summary-label mb-0">Report Grand Total</div>
+                        <div class="grand-total-value mb-0">Rs. ${res.grand_total}</div>
+                    </div>`;
 
                 $('#accountGroups').html(html);
             },
