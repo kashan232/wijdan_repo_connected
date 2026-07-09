@@ -3,10 +3,13 @@
 // app/Models/Sale.php
 namespace App\Models;
 
+use App\Traits\BelongsToAccountingPeriod;
 use Illuminate\Database\Eloquent\Model;
 
 class Sale extends Model
 {
+    use BelongsToAccountingPeriod;
+
     protected $guarded = [];
     protected $casts = [
         'total_items' => 'float',

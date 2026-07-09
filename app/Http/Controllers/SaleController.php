@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\GuardsClosedPeriod;
+use App\Services\PeriodClosing\PeriodLock;
 use App\Models\Sale;
 use App\Models\Stock;
 use App\Models\Product;
@@ -15,6 +17,8 @@ use Illuminate\Support\Facades\DB;
 
 class SaleController extends Controller
 {
+    use GuardsClosedPeriod;
+
     /**
      * Display a listing of the resource.
      */
@@ -22,8 +26,10 @@ class SaleController extends Controller
     {
         if ($request->ajax()) {
             
-            // 🔹 Base Query
-            $query = Sale::with(['customer_relation', 'user']);
+            // 🔹 Base Query — only current open period (closed data in archive)
+            $query = PeriodLock::applyOpenPeriodFilter(
+                Sale::with(['customer_relation', 'user'])
+            );
 
             // 🔹 Restrict non-admin users to their own sales
             // Exempt User ID 1 (Super Admin) to ensure they can see/filter everything
@@ -73,9 +79,10 @@ class SaleController extends Controller
             }
 
             // 🔹 Total Records (before filtering)
+            $totalBase = PeriodLock::applyOpenPeriodFilter(Sale::query());
             $totalRecords = auth()->user()->hasRole('Admin')
-                ? Sale::count()
-                : Sale::where('user_id', auth()->id())->count();
+                ? $totalBase->count()
+                : (clone $totalBase)->where('user_id', auth()->id())->count();
             
             // 🔹 Filtered Records
             $filteredRecords = $query->count();
@@ -335,7 +342,15 @@ class SaleController extends Controller
     public function store(Request $request)
     {
         $action = $request->input('action'); // 'booking' or 'sale'
-        $booking_id = $request->booking_id; // <-- existing booking ID if editing
+        $booking_id = $request->booking_id;
+
+        if ($action === 'booking' && !empty($booking_id)) {
+            try {
+                $this->guardClosedPeriodRecord(ProductBooking::findOrFail($booking_id));
+            } catch (\RuntimeException $e) {
+                return back()->with('error', $e->getMessage());
+            }
+        }
 
         // --- Basic validation: require customer, reference, and at least one valid product row ---
         $validator = \Validator::make($request->all(), [
@@ -609,7 +624,13 @@ class SaleController extends Controller
 
     public function convertFromBooking($id)
     {
-        $booking = ProductBooking::findOrFail($id);
+        try {
+            $booking = ProductBooking::findOrFail($id);
+            $this->guardClosedPeriodRecord($booking);
+        } catch (\RuntimeException $e) {
+            return redirect()->route('bookings.index')->with('error', $e->getMessage());
+        }
+
         $customers = Customer::all();
 
         // Decode fields
@@ -1206,7 +1227,9 @@ class SaleController extends Controller
     public function salereturnview(Request $request)
     {
         if ($request->ajax()) {
-            $query = SalesReturn::with('sale.customer_relation');
+            $query = PeriodLock::applyOpenPeriodFilter(
+                SalesReturn::with('sale.customer_relation')
+            );
 
             // Apply Search Filter
             if ($request->has('search') && !empty($request->search['value'])) {
@@ -1222,8 +1245,7 @@ class SaleController extends Controller
                 });
             }
 
-            // Total records before filtering
-            $totalRecords = SalesReturn::count();
+            $totalRecords = PeriodLock::applyOpenPeriodFilter(SalesReturn::query())->count();
 
             // Total records after filtering
             $filteredRecords = $query->count();
@@ -1500,6 +1522,13 @@ class SaleController extends Controller
 
     public function updateSaleReturn(Request $request, $id)
     {
+        try {
+            $return = SalesReturn::findOrFail($id);
+            $this->guardClosedPeriodRecord($return);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         $request->validate([
             'sale_id' => 'required|exists:sales,id',
             'product'    => 'required|array',
@@ -1814,6 +1843,13 @@ class SaleController extends Controller
 
     public function updatesale(Request $request, $id)
     {
+        try {
+            $sale = Sale::findOrFail($id);
+            $this->guardClosedPeriodRecord($sale);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         DB::beginTransaction();
         try {
             // --- Arrays from request ---

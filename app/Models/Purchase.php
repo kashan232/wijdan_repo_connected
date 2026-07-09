@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToAccountingPeriod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Purchase extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, BelongsToAccountingPeriod;
 
     protected $guarded = [];
 

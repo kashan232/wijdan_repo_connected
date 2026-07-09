@@ -19,6 +19,10 @@ class HomeController extends Controller
         $usertype = Auth::user()->usertype;
         $userId = Auth::id();
 
+        if (Auth::user()->hasRole('period_viewer')) {
+            return redirect()->route('period.archive.index');
+        }
+
         if ($usertype == 'user') {
             return view('user_panel.dashboard', compact('userId'));
         } elseif ($usertype == 'admin') {

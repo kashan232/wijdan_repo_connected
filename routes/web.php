@@ -31,6 +31,8 @@ use App\Http\Controllers\InwardgatepassController;
 use App\Http\Controllers\ProductBookingController;
 use App\Http\Controllers\WarehouseStockController;
 use App\Http\Controllers\ReportLockController;
+use App\Http\Controllers\PeriodClosingController;
+use App\Http\Controllers\ClosedPeriodArchiveController;
 
 // shift to new repo
 // onilne deployed hogaya hai                                   
@@ -381,6 +383,30 @@ Route::middleware('auth')->group(function () {
 
 
     Route::get('cashbook', [ReportingController::class, 'cashbook'])->name('cashbook');
+
+    // Period Closing (admin only)
+    Route::prefix('period-closing')->middleware('permission:Period Closing')->group(function () {
+        Route::get('/', [PeriodClosingController::class, 'index'])->name('period.closing.index');
+        Route::post('/settings', [PeriodClosingController::class, 'saveSettings'])->name('period.closing.settings');
+        Route::get('/preview', [PeriodClosingController::class, 'preview'])->name('period.closing.preview');
+        Route::post('/close', [PeriodClosingController::class, 'close'])->name('period.closing.close');
+    });
+
+    // Closed Period Archive (admin + period viewer)
+    Route::prefix('period-archive')->middleware('role_or_permission:admin|Period Closing|Closed Period Archive')->group(function () {
+        Route::get('/', [ClosedPeriodArchiveController::class, 'index'])->name('period.archive.index');
+        Route::get('/{period}', [ClosedPeriodArchiveController::class, 'show'])->name('period.archive.show');
+        Route::get('/{period}/sales', [ClosedPeriodArchiveController::class, 'sales'])->name('period.archive.sales');
+        Route::get('/{period}/sales/fetch', [ClosedPeriodArchiveController::class, 'salesFetch'])->name('period.archive.sales.fetch');
+        Route::get('/{period}/purchases', [ClosedPeriodArchiveController::class, 'purchases'])->name('period.archive.purchases');
+        Route::get('/{period}/sales-returns', [ClosedPeriodArchiveController::class, 'salesReturns'])->name('period.archive.sales-returns');
+        Route::get('/{period}/sales-returns/fetch', [ClosedPeriodArchiveController::class, 'salesReturnsFetch'])->name('period.archive.sales-returns.fetch');
+        Route::get('/{period}/purchase-returns', [ClosedPeriodArchiveController::class, 'purchaseReturns'])->name('period.archive.purchase-returns');
+        Route::get('/{period}/inwards', [ClosedPeriodArchiveController::class, 'inwards'])->name('period.archive.inwards');
+        Route::get('/{period}/inward-returns', [ClosedPeriodArchiveController::class, 'inwardReturns'])->name('period.archive.inward-returns');
+        Route::get('/{period}/expenses', [ClosedPeriodArchiveController::class, 'expenses'])->name('period.archive.expenses');
+        Route::get('/{period}/bookings', [ClosedPeriodArchiveController::class, 'bookings'])->name('period.archive.bookings');
+    });
 
 
     Route::prefix('coa')->group(function () {

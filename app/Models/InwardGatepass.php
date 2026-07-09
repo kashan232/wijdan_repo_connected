@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToAccountingPeriod;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class InwardGatepass extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToAccountingPeriod;
     protected $guarded = [];
 
     public static function generateInvoiceNo()

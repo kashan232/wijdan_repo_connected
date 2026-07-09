@@ -38,6 +38,14 @@
         <div class="nav-bottom">
             <div class="container">
                 <ul class="nav page-navigation">
+                    @if(auth()->user()->hasRole('period_viewer'))
+                    <li class="nav-item">
+                        <a href="{{ route('period.archive.index') }}" class="nav-link">
+                            <i class="menu_icon fas fa-archive"></i>
+                            <span class="menu-title">Closed Period Archive</span>
+                        </a>
+                    </li>
+                    @else
                     <li class="nav-item">
                         <a href="{{ url('/home') }}" class="nav-link"><i
                                 class="menu_icon feather ft-home"></i><span class="menu-title">Dashboard</span></a>
@@ -502,6 +510,28 @@
                             <span class="menu-title">CashBook</span>
                         </a>
                     </li>
+                    @endif
+
+                    @can('Period Closing')
+                    <li class="nav-item">
+                        <a href="{{ route('period.closing.index') }}" class="nav-link">
+                            <i class="menu_icon fas fa-calendar-times"></i>
+                            <span class="menu-title">Period Closing</span>
+                        </a>
+                    </li>
+                    @endcan
+
+                    @can('Closed Period Archive')
+                    @unless(auth()->user()->hasRole('period_viewer'))
+                    <li class="nav-item">
+                        <a href="{{ route('period.archive.index') }}" class="nav-link">
+                            <i class="menu_icon fas fa-archive"></i>
+                            <span class="menu-title">Closed Archive</span>
+                        </a>
+                    </li>
+                    @endunless
+                    @endcan
+
                     @endif
 
                 </ul>

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\GuardsClosedPeriod;
+use App\Services\PeriodClosing\PeriodLock;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\InwardGatepass;
 use App\Models\InwardGatepassItem;
@@ -16,6 +18,8 @@ use Illuminate\Support\Facades\DB;
 
 class InwardgatepassController extends Controller
 {
+    use GuardsClosedPeriod;
+
     public function pdf($id)
     {
         $gatepass = InwardGatepass::with(['branch', 'warehouse', 'vendor', 'items.product'])->findOrFail($id);
@@ -28,6 +32,7 @@ class InwardgatepassController extends Controller
     public function index(Request $request)
     {
         $query = InwardGatepass::with('items.product', 'branch', 'warehouse', 'vendor');
+        PeriodLock::applyOpenPeriodFilter($query);
 
         // Filters
         if ($request->filled('start_date')) {
@@ -200,6 +205,14 @@ class InwardgatepassController extends Controller
     // 6. Update gatepass + adjust stock
     public function update(Request $request, $id)
     {
+        try {
+            $gatepass = InwardGatepass::findOrFail($id);
+            $this->guardClosedPeriodRecord($gatepass);
+            $this->guardClosedPeriodByDate($request->gatepass_date ?? $gatepass->gatepass_date);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         $request->validate([
             'branch_id'     => 'required|exists:branches,id',
             'vendor_id'     => 'required|exists:vendors,id',
@@ -231,6 +244,13 @@ class InwardgatepassController extends Controller
 
     public function destroy($id)
     {
+        try {
+            $gatepass = InwardGatepass::findOrFail($id);
+            $this->guardClosedPeriodRecord($gatepass);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         DB::transaction(function () use ($id) {
 
             $gatepass = InwardGatepass::with('items')->findOrFail($id);

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\GuardsClosedPeriod;
+use App\Services\PeriodClosing\PeriodLock;
 use App\Models\InwardGatepass;
 use App\Models\InwardGatepassItem;
 use App\Models\InwardReturn;
@@ -14,11 +16,13 @@ use Illuminate\Support\Facades\DB;
 
 class InwardReturnController extends Controller
 {
+    use GuardsClosedPeriod;
+
     public function index()
     {
-        $inwardReturns = InwardReturn::with(['vendor', 'warehouse', 'inwardGatepass'])
-            ->orderBy('id', 'desc')
-            ->get();
+        $inwardReturns = PeriodLock::applyOpenPeriodFilter(
+            InwardReturn::with(['vendor', 'warehouse', 'inwardGatepass'])
+        )->orderBy('id', 'desc')->get();
 
         return view('admin_panel.inward_return.index', compact('inwardReturns'));
     }
@@ -158,6 +162,13 @@ class InwardReturnController extends Controller
 
     public function destroy($id)
     {
+        try {
+            $inwardReturn = InwardReturn::findOrFail($id);
+            $this->guardClosedPeriodRecord($inwardReturn);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         DB::beginTransaction();
         try {
             $inwardReturn = InwardReturn::with(['items', 'inwardGatepass'])->findOrFail($id);

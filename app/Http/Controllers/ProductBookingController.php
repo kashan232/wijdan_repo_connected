@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\GuardsClosedPeriod;
+use App\Services\PeriodClosing\PeriodLock;
 use App\Models\ProductBooking;
 use App\Models\Product;
 use App\Models\Customer;
@@ -10,9 +12,13 @@ use Illuminate\Support\Facades\DB;
 
 class ProductBookingController extends Controller
 {
+    use GuardsClosedPeriod;
+
     public function index()
     {
-        $bookings = ProductBooking::with('customer_relation', 'productt')->latest()->get();
+        $bookings = PeriodLock::applyOpenPeriodFilter(
+            ProductBooking::with('customer_relation', 'productt')
+        )->latest()->get();
         // dd($bookings);
         return view('admin_panel.booking.index', compact('bookings'));
     }
@@ -115,8 +121,13 @@ class ProductBookingController extends Controller
 
     public function destroy($id)
     {
-        $booking = ProductBooking::findOrFail($id);
-        $booking->delete();
+        try {
+            $booking = ProductBooking::findOrFail($id);
+            $this->guardClosedPeriodRecord($booking);
+            $booking->delete();
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()->back()->with('success', 'Booking deleted successfully.');
     }

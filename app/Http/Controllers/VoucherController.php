@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\GuardsClosedPeriod;
+use App\Services\PeriodClosing\PeriodLock;
 use App\Models\Account;
 use App\Models\AccountHead;
 use App\Models\CustomerLedger;
@@ -17,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 
 class VoucherController extends Controller
 {
+    use GuardsClosedPeriod;
 
     public function all_recepit_vochers()
     {
@@ -660,7 +663,9 @@ class VoucherController extends Controller
 
     public function all_expense_vochers()
     {
-        $vouchers = ExpenseVoucher::with(['accountHeadType', 'partyAccount', 'vendor', 'customer'])->orderBy('id', 'desc')->get();
+        $vouchers = PeriodLock::applyOpenPeriodFilter(
+            ExpenseVoucher::with(['accountHeadType', 'partyAccount', 'vendor', 'customer'])
+        )->orderBy('id', 'desc')->get();
         $isAdmin = auth()->check() && (auth()->id() === 1 || auth()->user()->hasRole('Admin'));
         $totalExpense = $isAdmin ? $vouchers->sum('total_amount') : 0;
 
@@ -679,6 +684,14 @@ class VoucherController extends Controller
 
     public function update_expense_voucher(Request $request, $id)
     {
+        try {
+            $voucher = ExpenseVoucher::findOrFail($id);
+            $this->guardClosedPeriodRecord($voucher);
+            $this->guardClosedPeriodByDate($request->date ?? $voucher->entry_date);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         DB::beginTransaction();
         try {
             $request->validate([

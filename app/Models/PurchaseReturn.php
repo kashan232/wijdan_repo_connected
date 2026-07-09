@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToAccountingPeriod;
 use Illuminate\Database\Eloquent\Model;
 
 class PurchaseReturn extends Model
 {
+    use BelongsToAccountingPeriod;
+
     protected $guarded = [];
 
     // ✅ Each return belongs to a vendor

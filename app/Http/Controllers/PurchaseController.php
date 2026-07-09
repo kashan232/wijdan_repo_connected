@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\GuardsClosedPeriod;
+use App\Services\PeriodClosing\PeriodLock;
 use App\Models\Purchase;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -18,6 +20,7 @@ use Illuminate\Support\Facades\Auth;
 
 class PurchaseController extends Controller
 {
+    use GuardsClosedPeriod;
     public function index(Request $request)
     {
         $purchaseQuery = Purchase::with([
@@ -27,6 +30,7 @@ class PurchaseController extends Controller
             'items.product',
             'return'
         ]);
+        PeriodLock::applyOpenPeriodFilter($purchaseQuery);
 
         if ($request->start_date && $request->end_date) {
             $purchaseQuery->whereBetween('purchase_date', [
@@ -44,6 +48,7 @@ class PurchaseController extends Controller
         ])
             ->where('status', 'linked')
             ->where('bill_status', 'billed');
+        PeriodLock::applyOpenPeriodFilter($inwardQuery);
 
         if ($request->start_date && $request->end_date) {
             $inwardQuery->whereBetween('gatepass_date', [
@@ -656,6 +661,14 @@ class PurchaseController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            $purchase = Purchase::findOrFail($id);
+            $this->guardClosedPeriodRecord($purchase);
+            $this->guardClosedPeriodByDate($request->purchase_date ?? $purchase->purchase_date);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        try {
             $validated = $request->validate([
                 'invoice_no'      => 'nullable|string',
                 'vendor_id'       => 'nullable|exists:vendors,id',
@@ -781,8 +794,13 @@ class PurchaseController extends Controller
 
     public function destroy($id)
     {
-        $purchase = Purchase::findOrFail($id);
-        $purchase->delete();
+        try {
+            $purchase = Purchase::findOrFail($id);
+            $this->guardClosedPeriodRecord($purchase);
+            $purchase->delete();
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()->back()->with('success', 'Purchase deleted successfully.');
     }
@@ -947,9 +965,9 @@ class PurchaseController extends Controller
 
     public function purchaseReturnIndex()
     {
-        $returns = \App\Models\PurchaseReturn::with(['vendor', 'warehouse', 'purchase', 'items.product'])
-            ->latest()
-            ->get();
+        $returns = PeriodLock::applyOpenPeriodFilter(
+            \App\Models\PurchaseReturn::with(['vendor', 'warehouse', 'purchase', 'items.product'])
+        )->latest()->get();
 
         return view('admin_panel.purchase.purchase_return.index', compact('returns'));
     }
