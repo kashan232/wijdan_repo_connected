@@ -1479,85 +1479,74 @@ class ReportingController extends Controller
         $accountHeads = \App\Models\AccountHead::where('status', 1)->get();
         $accounts     = \App\Models\Account::where('status', 1)->get();
 
-        $vouchers = collect();
-        $grandTotal = 0;
-
-        if ($request->hasAny(['account_heads', 'accounts', 'start_date', 'end_date'])) {
-
-            $query = \App\Models\ExpenseVoucher::query();
-
-            // Account Head filter (type = account_head_id)
-            if ($request->filled('account_heads') && !in_array('all', $request->account_heads)) {
-                $query->whereIn('type', $request->account_heads);
-            }
-
-            // Account filter (party_id = account_id)
-            if ($request->filled('accounts')) {
-                $query->whereIn('party_id', $request->accounts);
-            }
-
-            // Date filter
-            if ($request->filled('start_date') && $request->filled('end_date')) {
-                $query->whereBetween('date', [
-                    $request->start_date,
-                    $request->end_date
-                ]);
-            }
-
-            $vouchers = $query->latest()->get();
-
-            // Grand Total
-            $grandTotal = $vouchers->sum('total_amount');
-        }
-
         return view(
             'admin_panel.reporting.expense_vocher',
-            compact('accountHeads', 'accounts', 'vouchers', 'grandTotal')
+            compact('accountHeads', 'accounts')
         );
     }
 
     public function expenseVoucherAjax(Request $request)
     {
-        $query = \App\Models\ExpenseVoucher::query();
+        $query = ExpenseVoucher::with(['accountHeadType', 'partyAccount']);
 
-        // Account Head (type)
-        if ($request->filled('account_heads') && !in_array('all', $request->account_heads)) {
-            $query->whereIn('type', $request->account_heads);
+        if ($request->filled('account_heads') && !in_array('all', (array) $request->account_heads)) {
+            $query->whereIn('type', (array) $request->account_heads);
         }
 
-        // Accounts (party_id)
         if ($request->filled('accounts')) {
-            $query->whereIn('party_id', $request->accounts);
+            $query->whereIn('party_id', (array) $request->accounts);
         }
 
-        // Date range
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $query->whereBetween('date', [
                 $request->start_date,
-                $request->end_date
+                $request->end_date,
             ]);
         }
 
-        $vouchers = $query->latest()->get();
+        $vouchers = $query->orderByDesc('date')->orderByDesc('id')->get();
 
-        $data = $vouchers->map(function ($v) {
+        $groups = $vouchers->groupBy('party_id')->map(function ($items, $partyId) {
+            $first = $items->first();
+            $accountTotal = $items->sum('total_amount');
 
-            // remarks decode (JSON safe)
-            $remarks = json_decode($v->remarks, true);
+            $voucherRows = $items->map(function ($v) {
+                $remarks = is_array($v->remarks) ? $v->remarks : (json_decode($v->remarks, true) ?? []);
+                $amounts = is_array($v->amount) ? $v->amount : (json_decode($v->amount, true) ?? []);
+
+                $lines = [];
+                foreach ($remarks as $i => $remark) {
+                    $lines[] = [
+                        'remark' => $remark,
+                        'amount' => number_format((float) ($amounts[$i] ?? 0), 2),
+                    ];
+                }
+
+                return [
+                    'evid'    => $v->evid,
+                    'date'    => Carbon::parse($v->date ?? $v->entry_date ?? $v->created_at)->format('d-m-Y'),
+                    'head'    => $v->type_name,
+                    'lines'   => $lines,
+                    'amount'  => number_format((float) $v->total_amount, 2),
+                ];
+            })->values();
 
             return [
-                'evid'    => $v->evid,
-                'date'    => \Carbon\Carbon::parse($v->date)->format('d-m-Y'),
-                'head'    => optional(\App\Models\AccountHead::find($v->type))->name,
-                'account' => optional(\App\Models\Account::find($v->party_id))->title,
-                'remarks' => is_array($remarks) ? implode(', ', $remarks) : ($v->remarks ?? '-'),
-                'amount'  => number_format($v->total_amount, 2),
+                'account_id'    => $partyId,
+                'account'       => $first->party_name ?? 'N/A',
+                'head'          => $first->type_name ?? 'N/A',
+                'voucher_count' => $items->count(),
+                'total'         => number_format($accountTotal, 2),
+                'total_raw'     => $accountTotal,
+                'vouchers'      => $voucherRows,
             ];
-        });
+        })->sortByDesc('total_raw')->values();
 
         return response()->json([
-            'rows' => $data,
-            'total' => number_format($vouchers->sum('total_amount'), 2)
+            'groups'         => $groups,
+            'grand_total'    => number_format($vouchers->sum('total_amount'), 2),
+            'account_count'  => $groups->count(),
+            'voucher_count'  => $vouchers->count(),
         ]);
     }
 }
