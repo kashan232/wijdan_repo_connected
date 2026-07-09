@@ -144,6 +144,10 @@
                                     <th>Date</th>
                                     <th>Item Code</th>
                                     <th>Item Name</th>
+                                    <th>Category</th>
+                                    <th>Subcategory</th>
+                                    <th>Brand</th>
+                                    <th>Barcode</th>
                                     <th>UOM</th>
                                     <th>Opening Stock</th>
                                     <th>Inward Qty</th>
@@ -160,7 +164,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <th colspan="9" class="text-end">Grand Stock Value:</th>
+                                    <th colspan="13" class="text-end">Grand Stock Value:</th>
                                     <th id="grandStockValue" colspan="2">0.00</th>
                                 </tr>
                             </tfoot>
@@ -219,6 +223,18 @@
                     data: 'item_name'
                 },
                 {
+                    data: 'category_name'
+                },
+                {
+                    data: 'subcategory_name'
+                },
+                {
+                    data: 'brand_name'
+                },
+                {
+                    data: 'barcode'
+                },
+                {
                     data: 'unit_id'
                 },
                 {
@@ -264,6 +280,10 @@
                     date: formattedDate, // 👈 use formatted date here
                     item_code: r.item_code,
                     item_name: r.item_name,
+                    category_name: r.category_name,
+                    subcategory_name: r.subcategory_name,
+                    brand_name: r.brand_name,
+                    barcode: r.barcode,
                     unit_id: r.unit_id,
                     initial_stock: parseFloat(r.initial_stock).toFixed(2),
                     inward_qty: parseFloat(r.inward_qty).toFixed(2),
@@ -363,13 +383,17 @@
                     data.push(["Item Stock Report"]);
                     data.push(["Start Date:", startDate || "All Time", "", "End Date:", endDate || "All Time"]);
                     data.push([]);
-                    data.push(["Date", "Item Code", "Item Name", "UOM", "Opening Stock", "Inward Qty", "Purchased Qty", "Purchase Return", "Sold Qty", "Sale Return", "Balance"]);
+                    data.push(["Date", "Item Code", "Item Name", "Category", "Subcategory", "Brand", "Barcode", "UOM", "Opening Stock", "Inward Qty", "Purchased Qty", "Purchase Return", "Sold Qty", "Sale Return", "Balance"]);
 
                     response.data.forEach(function(r) {
                         data.push([
                             r.date,
                             r.item_code,
                             r.item_name,
+                            r.category_name,
+                            r.subcategory_name,
+                            r.brand_name,
+                            r.barcode,
                             r.unit_id,
                             parseFloat(r.initial_stock),
                             parseFloat(r.inward_qty),
@@ -386,6 +410,10 @@
                         { wch: 12 }, // Date
                         { wch: 15 }, // Item Code
                         { wch: 30 }, // Item Name
+                        { wch: 20 }, // Category
+                        { wch: 20 }, // Subcategory
+                        { wch: 15 }, // Brand
+                        { wch: 15 }, // Barcode
                         { wch: 10 }, // UOM
                         { wch: 15 }, // Opening
                         { wch: 12 }, // Inward

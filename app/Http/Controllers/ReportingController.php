@@ -41,7 +41,7 @@ class ReportingController extends Controller
         $endDateTime   = $endDate . ' 23:59:59';
 
         // 🔹 Base query
-        $productsQuery = Product::query();
+        $productsQuery = Product::with(['category_relation', 'sub_category_relation', 'brand']);
 
         if ($productId && $productId !== 'all') {
             $productsQuery->where('id', $productId);
@@ -242,6 +242,10 @@ class ReportingController extends Controller
                 'date' => date('Y-m-d', strtotime($product->created_at)),
                 'item_code' => $product->item_code,
                 'item_name' => $product->item_name,
+                'category_name' => $product->category_relation ? $product->category_relation->name : '-',
+                'subcategory_name' => $product->sub_category_relation ? $product->sub_category_relation->name : '-',
+                'brand_name' => $product->brand ? $product->brand->name : '-',
+                'barcode' => $product->barcode_path ? $product->barcode_path : '-',
                 'unit_id' => $product->unit_id,
                 'initial_stock' => $opening, // Displaying as Opening Stock
                 'inward_qty' => $inwardQty,
