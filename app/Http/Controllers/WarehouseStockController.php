@@ -525,19 +525,8 @@ class WarehouseStockController extends Controller
         return $this->applyClosingAdjustments($stocks, $adjustments, $warehouseFilter);
     }
 
-    private function calculateStockTotals(Request $request): array
+    private function calculateStockTotals($stocks): array
     {
-        $closingEndDate = $this->resolveClosingEndDate($request);
-        $adjustments = $this->calculatePostClosingAdjustments($closingEndDate);
-        $type = $request->stock_type ?? 'all';
-        $warehouseFilter = is_numeric($type) ? $type : null;
-
-        $unitResults = $this->applyClosingAdjustments(
-            $this->buildStockQuery($request, false)->orderBy('products.id', 'desc')->get(),
-            $adjustments,
-            $warehouseFilter
-        );
-
         $totals = [
             'piece'                 => 0,
             'meter'                 => 0,
@@ -553,24 +542,7 @@ class WarehouseStockController extends Controller
             'total_stock_value'     => 0,
         ];
 
-        foreach ($unitResults as $row) {
-            $costPrice = (float) ($row->cost_price ?? 0);
-            $totalQty = (float) $row->shop_stock + (float) $row->warehouse_stock;
-            $normalized = $this->normalizeUnit($row->unit_id);
-
-            if ($normalized) {
-                $totals[$normalized] += $totalQty;
-                $totals[$normalized . '_value'] += $totalQty * $costPrice;
-            }
-        }
-
-        $summaryResults = $this->applyClosingAdjustments(
-            $this->buildStockQuery($request, true)->orderBy('products.id', 'desc')->get(),
-            $adjustments,
-            $warehouseFilter
-        );
-
-        foreach ($summaryResults as $row) {
+        foreach ($stocks as $row) {
             $costPrice = (float) ($row->cost_price ?? 0);
             $shop = (float) $row->shop_stock;
             $wh = (float) $row->warehouse_stock;
@@ -582,6 +554,12 @@ class WarehouseStockController extends Controller
             $totals['total_shop_value'] += $shop * $costPrice;
             $totals['total_warehouse_value'] += $wh * $costPrice;
             $totals['total_stock_value'] += $totalQty * $costPrice;
+
+            $normalized = $this->normalizeUnit($row->unit_id);
+            if ($normalized) {
+                $totals[$normalized] += $totalQty;
+                $totals[$normalized . '_value'] += $totalQty * $costPrice;
+            }
         }
 
         return $totals;
@@ -663,7 +641,7 @@ class WarehouseStockController extends Controller
         $isAdmin = $this->isStockAdmin();
         $closingEndDate = $this->resolveClosingEndDate($request);
         $stocks = $this->getAdjustedStocks($request);
-        $stockTotals = $isAdmin ? $this->calculateStockTotals($request) : [];
+        $stockTotals = $isAdmin ? $this->calculateStockTotals($stocks) : [];
 
         $viewData = compact(
             'stocks',
