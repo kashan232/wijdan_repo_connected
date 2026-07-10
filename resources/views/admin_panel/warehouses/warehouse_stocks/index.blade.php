@@ -655,10 +655,75 @@
 
         $('#toggleSummaryBtn').on('click', function() {
             var $cards = $('#stockSummaryCards');
+            var btn = $(this);
             if ($cards.is(':hidden')) {
-                $cards.slideDown(300);
-                $(this).html('<i class="fas fa-eye-slash"></i> Hide Totals');
-                $(this).removeClass('btn-info').addClass('btn-secondary');
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Confirm Access',
+                        text: 'Please enter your password to view totals',
+                        input: 'password',
+                        inputAttributes: {
+                            autocapitalize: 'off',
+                            placeholder: 'Admin Password'
+                        },
+                        showCancelButton: true,
+                        confirmButtonText: 'Verify & Show',
+                        showLoaderOnConfirm: true,
+                        preConfirm: (password) => {
+                            if (!password) {
+                                Swal.showValidationMessage('Password is required');
+                                return false;
+                            }
+                            return fetch("{{ route('warehouse_stocks.verify_password') }}", {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                },
+                                body: JSON.stringify({ password: password })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (!data.success) {
+                                    throw new Error(data.message || 'Incorrect password');
+                                }
+                                return data;
+                            })
+                            .catch(error => {
+                                Swal.showValidationMessage(error.message);
+                            });
+                        },
+                        allowOutsideClick: () => !Swal.isLoading()
+                    }).then((result) => {
+                        if (result.isConfirmed && result.value.success) {
+                            $cards.slideDown(300);
+                            btn.html('<i class="fas fa-eye-slash"></i> Hide Totals');
+                            btn.removeClass('btn-info').addClass('btn-secondary');
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Access Granted',
+                                timer: 1000,
+                                showConfirmButton: false
+                            });
+                        }
+                    });
+                } else {
+                    var pwd = prompt("Enter Admin Password to view totals:");
+                    if (pwd) {
+                        $.post("{{ route('warehouse_stocks.verify_password') }}", {
+                            _token: '{{ csrf_token() }}',
+                            password: pwd
+                        }, function(res) {
+                            if (res.success) {
+                                $cards.slideDown(300);
+                                btn.html('<i class="fas fa-eye-slash"></i> Hide Totals');
+                                btn.removeClass('btn-info').addClass('btn-secondary');
+                            } else {
+                                alert("Incorrect password");
+                            }
+                        });
+                    }
+                }
             } else {
                 $cards.slideUp(300);
                 $(this).html('<i class="fas fa-eye"></i> Show Totals');

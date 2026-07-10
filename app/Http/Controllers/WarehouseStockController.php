@@ -580,49 +580,59 @@ class WarehouseStockController extends Controller
             }
 
             $dateStr = \Carbon\Carbon::parse($stock->created_at)->format('d M Y');
-            $shopStock = (float) $stock->shop_stock;
-            $warehouseStock = (float) $stock->warehouse_stock;
-            $totalStock = $shopStock + $warehouseStock;
+            $location = $stock->warehouse_name ?? '— Shop —';
 
             if ($isAdmin) {
                 $costPrice = (float) ($stock->cost_price ?? 0);
-                $stockValue = $totalStock * $costPrice;
+                $totalQty = (float) $stock->shop_stock + (float) $stock->warehouse_stock;
+                $stockValue = $totalQty * $costPrice;
 
                 $data[] = [
                     $dateStr,
-                    $stock->warehouse_name ?? '— Shop —',
-                    $stock->item_name . ' (' . $stock->item_code . ')',
-                    $stock->barcode_path ?? '',
-                    $stock->unit_id ?? '-',
+                    $location,
+                    $stock->item_name,
+                    $stock->barcode_path,
+                    $stock->unit_id,
                     $stock->brand_name ?? 'N/A',
                     $costPrice,
                     $stock->price_source ?? 'N/A',
-                    $shopStock,
-                    $warehouseStock,
-                    $totalStock,
+                    (float) $stock->shop_stock,
+                    (float) $stock->warehouse_stock,
+                    $totalQty,
                     $stockValue,
-                    $remarks,
+                    $remarks
                 ];
             } else {
+                $totalQty = (float) $stock->shop_stock + (float) $stock->warehouse_stock;
                 $data[] = [
                     $dateStr,
-                    $stock->warehouse_name ?? '— Shop —',
-                    $stock->item_name . ' (' . $stock->item_code . ')',
-                    $stock->barcode_path ?? '',
-                    $stock->unit_id ?? '-',
+                    $location,
+                    $stock->item_name,
+                    $stock->barcode_path,
+                    $stock->unit_id,
                     $stock->brand_name ?? 'N/A',
-                    $shopStock,
-                    $warehouseStock,
-                    $totalStock,
-                    $remarks,
+                    (float) $stock->shop_stock,
+                    (float) $stock->warehouse_stock,
+                    $totalQty,
+                    $remarks
                 ];
             }
         }
 
         return response()->json([
-            'rows'     => $data,
             'is_admin' => $isAdmin,
+            'rows'     => $data
         ]);
+    }
+
+    public function verifyPassword(Request $request)
+    {
+        $request->validate(['password' => 'required']);
+        $user = auth()->user();
+        if (\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+            return response()->json(['success' => true]);
+        }
+        return response()->json(['success' => false, 'message' => 'Incorrect password']);
     }
 
     public function index(Request $request)
