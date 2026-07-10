@@ -233,6 +233,9 @@
             <small class="text-muted">Shop & warehouse stock overview with filters</small>
         </div>
         <div class="d-flex flex-wrap gap-2">
+            @if($isAdmin)
+            <button id="toggleSummaryBtn" class="btn btn-info btn-sm text-white" type="button"><i class="fas fa-eye"></i> Show Totals</button>
+            @endif
             <a href="{{ route('warehouse_stocks.create') }}" class="btn btn-primary btn-sm">Add Stock</a>
             <a href="{{ url()->previous() }}" class="btn btn-outline-danger btn-sm">Back</a>
             <a id="exportStockAllBtn" class="btn btn-outline-secondary btn-sm" href="javascript:void(0)">Export All</a>
@@ -333,7 +336,7 @@
             </div>
         </form>
 
-        <div id="stockSummaryCards">
+        <div id="stockSummaryCards" style="display: none;">
         @if($isAdmin)
             <div class="stock-summary-section-title">Location Totals</div>
             <div class="row g-3 stock-summary-row">
@@ -649,6 +652,19 @@
                 }
             });
         }
+
+        $('#toggleSummaryBtn').on('click', function() {
+            var $cards = $('#stockSummaryCards');
+            if ($cards.is(':hidden')) {
+                $cards.slideDown(300);
+                $(this).html('<i class="fas fa-eye-slash"></i> Hide Totals');
+                $(this).removeClass('btn-info').addClass('btn-secondary');
+            } else {
+                $cards.slideUp(300);
+                $(this).html('<i class="fas fa-eye"></i> Show Totals');
+                $(this).removeClass('btn-secondary').addClass('btn-info');
+            }
+        });
     });
 </script>
 
