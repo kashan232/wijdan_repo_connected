@@ -225,8 +225,21 @@ class WarehouseStockController extends Controller
             ->get();
 
         foreach ($transfersAfter as $transfer) {
-            $productIds = json_decode($transfer->product_id, true) ?: [];
-            $quantities = json_decode($transfer->quantity, true) ?: [];
+            $productIds = json_decode($transfer->product_id, true);
+            if (is_string($productIds)) {
+                $productIds = json_decode($productIds, true);
+            }
+            if (!is_array($productIds)) {
+                $productIds = [];
+            }
+
+            $quantities = json_decode($transfer->quantity, true);
+            if (is_string($quantities)) {
+                $quantities = json_decode($quantities, true);
+            }
+            if (!is_array($quantities)) {
+                $quantities = [];
+            }
             $fromWarehouse = (string) $transfer->from_warehouse_id;
             $transferTo = $transfer->transfer_to ?? ($transfer->to_shop ? 'shop' : 'warehouse');
             $toWarehouseId = (int) ($transfer->to_warehouse_id ?? 0);
