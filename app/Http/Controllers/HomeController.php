@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Stock;
+use App\Services\PeriodClosing\PeriodLock;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -79,41 +80,52 @@ class HomeController extends Controller
             $start = $startObj->format('Y-m-d 00:00:00');
             $end   = $endObj->format('Y-m-d 23:59:59');
 
-            // --- TOTALS ---
-            $purchasesQuery = DB::table('purchases')
-                ->whereBetween('purchase_date', [$startObj->format('Y-m-d'), $endObj->format('Y-m-d')]);
-            
-            $purchaseReturnsQuery = DB::table('purchase_returns')
-                ->whereBetween('return_date', [$startObj->format('Y-m-d'), $endObj->format('Y-m-d')]);
+            // --- TOTALS (open period only — closed period data excluded) ---
+            $purchasesQuery = PeriodLock::applyOpenPeriodFilter(
+                DB::table('purchases')
+                    ->whereBetween('purchase_date', [$startObj->format('Y-m-d'), $endObj->format('Y-m-d')])
+            );
 
-            $salesQuery = DB::table('sales')
-                ->leftJoin('customers', 'sales.customer', '=', 'customers.id')
-                ->whereBetween('sales.created_at', [$start, $end])
-                ->where(function ($q) {
-                    $q->where('sales.customer', 'Walk-in Customer')
-                        ->orWhere('customers.customer_category', 'Walking Customer')
-                        ->orWhere('customers.customer_category', 'Retailer');
-                });
+            $purchaseReturnsQuery = PeriodLock::applyOpenPeriodFilter(
+                DB::table('purchase_returns')
+                    ->whereBetween('return_date', [$startObj->format('Y-m-d'), $endObj->format('Y-m-d')])
+            );
 
-            $salesReturnsQuery = DB::table('sales_returns')
-                ->leftJoin('customers', 'sales_returns.customer', '=', 'customers.id')
-                ->whereBetween('sales_returns.created_at', [$start, $end])
-                ->where(function ($q) {
-                    $q->where('sales_returns.customer', 'Walk-in Customer')
-                        ->orWhere('customers.customer_category', 'Walking Customer')
-                        ->orWhere('customers.customer_category', 'Retailer');
-                });
+            $salesQuery = PeriodLock::applyOpenPeriodFilter(
+                DB::table('sales')
+                    ->leftJoin('customers', 'sales.customer', '=', 'customers.id')
+                    ->whereBetween('sales.created_at', [$start, $end])
+                    ->where(function ($q) {
+                        $q->where('sales.customer', 'Walk-in Customer')
+                            ->orWhere('customers.customer_category', 'Walking Customer')
+                            ->orWhere('customers.customer_category', 'Retailer');
+                    }),
+                'sales'
+            );
 
-            $totalPurchases = $purchasesQuery->sum('net_amount');
-            $totalPurchaseReturns = $purchaseReturnsQuery->sum('net_amount');
-            $totalSales = $salesQuery->sum('sales.total_net');
-            $totalCashSales = $salesQuery->sum(DB::raw('sales.cash - sales.change'));
-            $totalCardSales = $salesQuery->sum('sales.card');
-            $totalSalesReturns = $salesReturnsQuery->sum('sales_returns.total_net');
+            $salesReturnsQuery = PeriodLock::applyOpenPeriodFilter(
+                DB::table('sales_returns')
+                    ->leftJoin('customers', 'sales_returns.customer', '=', 'customers.id')
+                    ->whereBetween('sales_returns.created_at', [$start, $end])
+                    ->where(function ($q) {
+                        $q->where('sales_returns.customer', 'Walk-in Customer')
+                            ->orWhere('customers.customer_category', 'Walking Customer')
+                            ->orWhere('customers.customer_category', 'Retailer');
+                    }),
+                'sales_returns'
+            );
 
-            $totalExpenses = DB::table('expense_vouchers')
-                ->whereBetween('date', [$startObj->format('Y-m-d'), $endObj->format('Y-m-d')])
-                ->sum('total_amount');
+            $totalPurchases = (clone $purchasesQuery)->sum('net_amount');
+            $totalPurchaseReturns = (clone $purchaseReturnsQuery)->sum('net_amount');
+            $totalSales = (clone $salesQuery)->sum('sales.total_net');
+            $totalCashSales = (clone $salesQuery)->sum(DB::raw('sales.cash - sales.change'));
+            $totalCardSales = (clone $salesQuery)->sum('sales.card');
+            $totalSalesReturns = (clone $salesReturnsQuery)->sum('sales_returns.total_net');
+
+            $totalExpenses = PeriodLock::applyOpenPeriodFilter(
+                DB::table('expense_vouchers')
+                    ->whereBetween('date', [$startObj->format('Y-m-d'), $endObj->format('Y-m-d')])
+            )->sum('total_amount');
 
             // --- CHARTS ---
             $chartStart = $startObj;
@@ -127,33 +139,40 @@ class HomeController extends Controller
                 $granularity = 'weekly';
             }
 
-            // Helpers
-            $getSalesData = function($selectRaw) use ($start, $end) {
-                return DB::table('sales')
-                    ->leftJoin('customers', 'sales.customer', '=', 'customers.id')
-                    ->whereBetween('sales.created_at', [$start, $end])
-                    ->where(function ($sub) {
-                        $sub->where('sales.customer', 'Walk-in Customer')
-                            ->orWhere('customers.customer_category', 'Walking Customer')
-                            ->orWhere('customers.customer_category', 'Retailer');
-                    })
+            // Helpers (open period only)
+            $getSalesData = function ($selectRaw) use ($start, $end) {
+                return PeriodLock::applyOpenPeriodFilter(
+                    DB::table('sales')
+                        ->leftJoin('customers', 'sales.customer', '=', 'customers.id')
+                        ->whereBetween('sales.created_at', [$start, $end])
+                        ->where(function ($sub) {
+                            $sub->where('sales.customer', 'Walk-in Customer')
+                                ->orWhere('customers.customer_category', 'Walking Customer')
+                                ->orWhere('customers.customer_category', 'Retailer');
+                        }),
+                    'sales'
+                )
                     ->select(DB::raw("$selectRaw as label_key"), DB::raw('SUM(sales.total_net) as total'))
                     ->groupBy('label_key')->orderBy('label_key')->pluck('total', 'label_key');
             };
 
-            $getPurchaseData = function($selectRaw) use ($startObj, $endObj) {
-                 return DB::table('purchases')
-                    ->whereBetween('purchase_date', [$startObj->format('Y-m-d'), $endObj->format('Y-m-d')])
+            $getPurchaseData = function ($selectRaw) use ($startObj, $endObj) {
+                return PeriodLock::applyOpenPeriodFilter(
+                    DB::table('purchases')
+                        ->whereBetween('purchase_date', [$startObj->format('Y-m-d'), $endObj->format('Y-m-d')])
+                )
                     ->select(DB::raw("$selectRaw as label_key"), DB::raw('SUM(net_amount) as total'))
                     ->groupBy('label_key')->orderBy('label_key')->pluck('total', 'label_key');
             };
 
-            $getExpenseDataTrend = function($selectRaw) use ($start, $end) {
-                return DB::table('expense_vouchers')
-                   ->whereBetween('date', [substr($start, 0, 10), substr($end, 0, 10)])
-                   ->select(DB::raw("$selectRaw as label_key"), DB::raw('SUM(total_amount) as total'))
-                   ->groupBy('label_key')->orderBy('label_key')->pluck('total', 'label_key');
-           };
+            $getExpenseDataTrend = function ($selectRaw) use ($start, $end) {
+                return PeriodLock::applyOpenPeriodFilter(
+                    DB::table('expense_vouchers')
+                        ->whereBetween('date', [substr($start, 0, 10), substr($end, 0, 10)])
+                )
+                    ->select(DB::raw("$selectRaw as label_key"), DB::raw('SUM(total_amount) as total'))
+                    ->groupBy('label_key')->orderBy('label_key')->pluck('total', 'label_key');
+            };
 
             // Build Data
             $labels = [];
@@ -286,10 +305,13 @@ class HomeController extends Controller
              $startObj = Carbon::parse($startDate)->startOfMonth();
              $endObj   = Carbon::parse($endDate)->endOfMonth();
              
-             $expenseRaw = DB::table('expense_vouchers')
-                ->join('accounts', 'expense_vouchers.party_id', '=', 'accounts.id')
-                ->join('account_heads', 'accounts.head_id', '=', 'account_heads.id')
-                ->whereBetween('expense_vouchers.date', [$startObj->format('Y-m-d'), $endObj->format('Y-m-d')])
+             $expenseRaw = PeriodLock::applyOpenPeriodFilter(
+                DB::table('expense_vouchers')
+                    ->join('accounts', 'expense_vouchers.party_id', '=', 'accounts.id')
+                    ->join('account_heads', 'accounts.head_id', '=', 'account_heads.id')
+                    ->whereBetween('expense_vouchers.date', [$startObj->format('Y-m-d'), $endObj->format('Y-m-d')]),
+                'expense_vouchers'
+            )
                 ->select(
                     'account_heads.id as head_id',
                     'account_heads.name as head_name',

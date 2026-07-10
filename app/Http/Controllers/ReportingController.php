@@ -8,6 +8,7 @@ use App\Models\ExpenseVoucher;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\VendorPayment;
+use App\Services\PeriodClosing\PeriodLock;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -132,45 +133,55 @@ class ReportingController extends Controller
             }
         }
 
-        // 2. Transactions WITHIN range
-        $inwardsPeriodQuery = DB::table('inward_gatepass_items')
-            ->join('inward_gatepasses', 'inward_gatepasses.id', '=', 'inward_gatepass_items.inward_gatepass_id')
-            ->whereIn('inward_gatepass_items.product_id', $productIds)
-            ->where('inward_gatepasses.gatepass_date', '<=', $endDate);
+        $inwardsPeriodQuery = PeriodLock::applyOpenPeriodFilter(
+            DB::table('inward_gatepass_items')
+                ->join('inward_gatepasses', 'inward_gatepasses.id', '=', 'inward_gatepass_items.inward_gatepass_id')
+                ->whereIn('inward_gatepass_items.product_id', $productIds)
+                ->where('inward_gatepasses.gatepass_date', '<=', $endDate),
+            'inward_gatepasses'
+        );
         if ($startDate) {
             $inwardsPeriodQuery->where('inward_gatepasses.gatepass_date', '>=', $startDate);
         }
         $inwardsPeriodMap = $inwardsPeriodQuery->select('product_id', DB::raw('SUM(qty) as total'))
             ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
 
-        $purchasesPeriodQuery = DB::table('purchase_items')
-            ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
-            ->whereIn('purchase_items.product_id', $productIds)
-            ->where('purchases.purchase_date', '<=', $endDate);
+        $purchasesPeriodQuery = PeriodLock::applyOpenPeriodFilter(
+            DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereIn('purchase_items.product_id', $productIds)
+                ->where('purchases.purchase_date', '<=', $endDate),
+            'purchases'
+        );
         if ($startDate) {
             $purchasesPeriodQuery->where('purchases.purchase_date', '>=', $startDate);
         }
         $purchasesPeriod = $purchasesPeriodQuery->select('purchase_items.product_id', DB::raw('SUM(purchase_items.qty) as total'))
             ->groupBy('purchase_items.product_id')->pluck('total', 'product_id')->toArray();
 
-        $pReturnsPeriodQuery = DB::table('purchase_return_items')
-            ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
-            ->whereIn('purchase_return_items.product_id', $productIds)
-            ->where('purchase_returns.return_date', '<=', $endDate);
+        $pReturnsPeriodQuery = PeriodLock::applyOpenPeriodFilter(
+            DB::table('purchase_return_items')
+                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                ->whereIn('purchase_return_items.product_id', $productIds)
+                ->where('purchase_returns.return_date', '<=', $endDate),
+            'purchase_returns'
+        );
         if ($startDate) {
             $pReturnsPeriodQuery->where('purchase_returns.return_date', '>=', $startDate);
         }
         $pReturnsPeriod = $pReturnsPeriodQuery->select('purchase_return_items.product_id', DB::raw('SUM(purchase_return_items.qty) as total'))
             ->groupBy('purchase_return_items.product_id')->pluck('total', 'product_id')->toArray();
 
-        $salesPeriodQuery = DB::table('sales')
-            ->where('created_at', '<=', $endDateTime)
-            ->whereNotNull('product_code')
-            ->where(function($q) use ($productCodes) {
-                foreach ($productCodes as $code) {
-                    $q->orWhere('product_code', 'like', '%' . $code . '%');
-                }
-            });
+        $salesPeriodQuery = PeriodLock::applyOpenPeriodFilter(
+            DB::table('sales')
+                ->where('created_at', '<=', $endDateTime)
+                ->whereNotNull('product_code')
+                ->where(function ($q) use ($productCodes) {
+                    foreach ($productCodes as $code) {
+                        $q->orWhere('product_code', 'like', '%' . $code . '%');
+                    }
+                })
+        );
         if ($startDateTime) {
             $salesPeriodQuery->where('created_at', '>=', $startDateTime);
         }
@@ -187,14 +198,16 @@ class ReportingController extends Controller
             }
         }
 
-        $srPeriodQuery = DB::table('sales_returns')
-            ->where('created_at', '<=', $endDateTime)
-            ->whereNotNull('product_code')
-            ->where(function($q) use ($productCodes) {
-                foreach ($productCodes as $code) {
-                    $q->orWhere('product_code', 'like', '%' . $code . '%');
-                }
-            });
+        $srPeriodQuery = PeriodLock::applyOpenPeriodFilter(
+            DB::table('sales_returns')
+                ->where('created_at', '<=', $endDateTime)
+                ->whereNotNull('product_code')
+                ->where(function ($q) use ($productCodes) {
+                    foreach ($productCodes as $code) {
+                        $q->orWhere('product_code', 'like', '%' . $code . '%');
+                    }
+                })
+        );
         if ($startDateTime) {
             $srPeriodQuery->where('created_at', '>=', $startDateTime);
         }
@@ -297,62 +310,66 @@ class ReportingController extends Controller
         $endDate   = $request->end_date;
 
         /* ================= NORMAL PURCHASE ================= */
-        $purchaseQuery = DB::table('purchases')
-            ->leftJoin('purchase_items', 'purchases.id', '=', 'purchase_items.purchase_id')
-            ->leftJoin('products', 'purchase_items.product_id', '=', 'products.id')
-            ->leftJoin('vendors', 'purchases.vendor_id', '=', 'vendors.id')
-            ->select(
-                DB::raw("'purchase' as source_type"),
-                'purchases.purchase_date as purchase_date',
-                'purchases.invoice_no',
-                'vendors.name as vendor_name',
-                'products.item_code',
-                'products.item_name',
-                'purchase_items.qty',
-                'purchase_items.unit',
-                'purchase_items.price',
-                'purchase_items.item_discount',
-                'purchase_items.line_total',
-                'purchases.subtotal',
-                'purchases.discount',
-                'purchases.extra_cost',
-                'purchases.net_amount',
-                'purchases.paid_amount',
-                'purchases.due_amount'
-            );
+        $purchaseQuery = PeriodLock::applyOpenPeriodFilter(
+            DB::table('purchases')
+                ->leftJoin('purchase_items', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->leftJoin('products', 'purchase_items.product_id', '=', 'products.id')
+                ->leftJoin('vendors', 'purchases.vendor_id', '=', 'vendors.id')
+                ->select(
+                    DB::raw("'purchase' as source_type"),
+                    'purchases.purchase_date as purchase_date',
+                    'purchases.invoice_no',
+                    'vendors.name as vendor_name',
+                    'products.item_code',
+                    'products.item_name',
+                    'purchase_items.qty',
+                    'purchase_items.unit',
+                    'purchase_items.price',
+                    'purchase_items.item_discount',
+                    'purchase_items.line_total',
+                    'purchases.subtotal',
+                    'purchases.discount',
+                    'purchases.extra_cost',
+                    'purchases.net_amount',
+                    'purchases.paid_amount',
+                    'purchases.due_amount'
+                ),
+            'purchases'
+        );
 
         if ($startDate && $endDate) {
             $purchaseQuery->whereBetween('purchases.purchase_date', [$startDate, $endDate]);
         }
 
         /* ================= INWARD AS PURCHASE ================= */
-        $inwardQuery = DB::table('inward_gatepasses')
-            ->leftJoin('inward_gatepass_items', 'inward_gatepasses.id', '=', 'inward_gatepass_items.inward_gatepass_id')
-            ->leftJoin('products', 'inward_gatepass_items.product_id', '=', 'products.id')
-            ->leftJoin('vendors', 'inward_gatepasses.vendor_id', '=', 'vendors.id')
-            ->where('inward_gatepasses.status', 'linked')
-            ->where('inward_gatepasses.bill_status', 'billed')
-            ->select(
-                DB::raw("'inward' as source_type"),
-                'inward_gatepasses.gatepass_date as purchase_date',
-                'inward_gatepasses.invoice_no',
-                'vendors.name as vendor_name',
-                'products.item_code',
-                'products.item_name',
-                'inward_gatepass_items.qty',
-                DB::raw('products.unit_id as unit'),
-                // Use the specific transaction price from the item table, not master product price
-                DB::raw('COALESCE(inward_gatepass_items.price, products.wholesale_price) as price'),
-                'inward_gatepass_items.discount_value as item_discount',
-                // Calculate line total using the transaction price and subtracting discount
-                DB::raw('((COALESCE(inward_gatepass_items.price, products.wholesale_price) - COALESCE(inward_gatepass_items.discount_value, 0)) * inward_gatepass_items.qty) as line_total'),
-                'inward_gatepasses.subtotal',
-                'inward_gatepasses.discount',
-                'inward_gatepasses.extra_cost',
-                'inward_gatepasses.net_amount',
-                'inward_gatepasses.paid_amount',
-                'inward_gatepasses.due_amount'
-            );
+        $inwardQuery = PeriodLock::applyOpenPeriodFilter(
+            DB::table('inward_gatepasses')
+                ->leftJoin('inward_gatepass_items', 'inward_gatepasses.id', '=', 'inward_gatepass_items.inward_gatepass_id')
+                ->leftJoin('products', 'inward_gatepass_items.product_id', '=', 'products.id')
+                ->leftJoin('vendors', 'inward_gatepasses.vendor_id', '=', 'vendors.id')
+                ->where('inward_gatepasses.status', 'linked')
+                ->where('inward_gatepasses.bill_status', 'billed')
+                ->select(
+                    DB::raw("'inward' as source_type"),
+                    'inward_gatepasses.gatepass_date as purchase_date',
+                    'inward_gatepasses.invoice_no',
+                    'vendors.name as vendor_name',
+                    'products.item_code',
+                    'products.item_name',
+                    'inward_gatepass_items.qty',
+                    DB::raw('products.unit_id as unit'),
+                    DB::raw('COALESCE(inward_gatepass_items.price, products.wholesale_price) as price'),
+                    'inward_gatepass_items.discount_value as item_discount',
+                    DB::raw('((COALESCE(inward_gatepass_items.price, products.wholesale_price) - COALESCE(inward_gatepass_items.discount_value, 0)) * inward_gatepass_items.qty) as line_total'),
+                    'inward_gatepasses.subtotal',
+                    'inward_gatepasses.discount',
+                    'inward_gatepasses.extra_cost',
+                    'inward_gatepasses.net_amount',
+                    'inward_gatepasses.paid_amount',
+                    'inward_gatepasses.due_amount'
+                ),
+            'inward_gatepasses'
+        );
 
 
         if ($startDate && $endDate) {
@@ -459,7 +476,9 @@ class ReportingController extends Controller
                 });
             }
 
-            $sales = $query->orderBy('sales.created_at', 'asc')->get();
+            $sales = PeriodLock::applyOpenPeriodFilter($query, 'sales')
+                ->orderBy('sales.created_at', 'asc')
+                ->get();
 
             foreach ($sales as $sale) {
                 // --- Fetch Product Names using IDs ---
@@ -568,7 +587,9 @@ class ReportingController extends Controller
                 });
             }
 
-            $sales = $query->orderBy('sales.created_at', 'asc')->get();
+            $sales = PeriodLock::applyOpenPeriodFilter($query, 'sales')
+                ->orderBy('sales.created_at', 'asc')
+                ->get();
 
             foreach ($sales as $sale) {
                 // Store original totals for UI display
@@ -686,7 +707,9 @@ class ReportingController extends Controller
                 });
             }
 
-            $sales = $query->orderBy('sales.created_at', 'asc')->get();
+            $sales = PeriodLock::applyOpenPeriodFilter($query, 'sales')
+                ->orderBy('sales.created_at', 'asc')
+                ->get();
 
             foreach ($sales as $sale) {
                 // --- Calculate Pieces Sold ---
@@ -810,7 +833,9 @@ class ReportingController extends Controller
                 });
             }
 
-            $sales = $query->orderBy('sales.created_at', 'asc')->get();
+            $sales = PeriodLock::applyOpenPeriodFilter($query, 'sales')
+                ->orderBy('sales.created_at', 'asc')
+                ->get();
 
             $finalSales = [];
 
@@ -1367,10 +1392,10 @@ class ReportingController extends Controller
         /* ================= CALCULATE OPENING BALANCE ================= */
         // Opening = sum of ALL transactions BETWEEN start_date and selected date (exclusive)
 
-        // Sales after start_date but before selected date
-        $previousSales = Sale::whereDate('created_at', '>=', $startDate)
-            ->whereDate('created_at', '<', $today)
-            ->sum('total_net');
+        // Sales after start_date but before selected date (open period only)
+        $previousSales = PeriodLock::applyOpenPeriodFilter(
+            Sale::whereDate('created_at', '>=', $startDate)->whereDate('created_at', '<', $today)
+        )->sum('total_net');
 
         // Customer recoveries after start_date but before selected date
         $previousCustomerRecoveries = CustomerPayment::whereDate('payment_date', '>=', $startDate)
@@ -1382,10 +1407,10 @@ class ReportingController extends Controller
             ->whereDate('payment_date', '<', $today)
             ->sum('amount');
 
-        // Expenses after start_date but before selected date
-        $previousExpenses = ExpenseVoucher::whereDate('date', '>=', $startDate)
-            ->whereDate('date', '<', $today)
-            ->sum('total_amount');
+        // Expenses after start_date but before selected date (open period only)
+        $previousExpenses = PeriodLock::applyOpenPeriodFilter(
+            ExpenseVoucher::whereDate('date', '>=', $startDate)->whereDate('date', '<', $today)
+        )->sum('total_amount');
 
         // Opening = Previous Receipts - Previous Payments
         $openingBalance = ($previousSales + $previousCustomerRecoveries) - ($previousVendorPayments + $previousExpenses);
@@ -1394,8 +1419,10 @@ class ReportingController extends Controller
 
         $receipts = [];
 
-        // ✅ ALL Sales (not just walk-in)
-        $allSales = Sale::whereDate('created_at', $today)->get();
+        // ✅ ALL Sales (open period only)
+        $allSales = PeriodLock::applyOpenPeriodFilter(
+            Sale::whereDate('created_at', $today)
+        )->get();
 
         foreach ($allSales as $sale) {
             $receipts[] = [
@@ -1437,8 +1464,10 @@ class ReportingController extends Controller
             ];
         }
 
-        // ✅ ALL Expense Vouchers
-        $expenseVouchers = ExpenseVoucher::whereDate('date', $today)->get();
+        // ✅ ALL Expense Vouchers (open period only)
+        $expenseVouchers = PeriodLock::applyOpenPeriodFilter(
+            ExpenseVoucher::whereDate('date', $today)
+        )->get();
 
         foreach ($expenseVouchers as $exp) {
             $remarks = is_array($exp->remarks) ? implode(', ', $exp->remarks) : ($exp->remarks ?? '');
@@ -1487,7 +1516,9 @@ class ReportingController extends Controller
 
     public function expenseVoucherAjax(Request $request)
     {
-        $query = ExpenseVoucher::with(['accountHeadType', 'partyAccount']);
+        $query = PeriodLock::applyOpenPeriodFilter(
+            ExpenseVoucher::with(['accountHeadType', 'partyAccount'])
+        );
 
         if ($request->filled('account_heads') && !in_array('all', (array) $request->account_heads)) {
             $query->whereIn('type', (array) $request->account_heads);
