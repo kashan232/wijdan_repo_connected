@@ -21,15 +21,11 @@ class HomeController extends Controller
         $userId = Auth::id();
 
         if (Auth::user()->hasRole('period_viewer')) {
-            return redirect()->route('home')
-                ->with('error', 'Aap ke account ko sirf limited access hai.');
+            session()->flash('error', 'Aap ke account ko sirf limited access hai.');
         }
 
-        if ($usertype == 'user') {
-            return view('user_panel.dashboard', compact('userId'));
-        } elseif ($usertype == 'admin') {
-
-            return view('admin_panel.dashboard');
+        if ($usertype == 'user' || $usertype == 'admin') {
+            return view('admin_panel.dashboard', compact('userId'));
         } else {
             return redirect()->back()->with('error', 'Unauthorized access');
         }

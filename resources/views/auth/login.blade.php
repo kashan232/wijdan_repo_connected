@@ -1,324 +1,221 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
-
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title> Login</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap');
+    <title>Wijdan - Admin Login</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        font-family: "Poppins", sans-serif;
-    }
-
-    body {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #e3e3e3;
-        padding: 30px;
-    }
-
-    .container {
-        position: relative;
-        max-width: 850px;
-        width: 100%;
-        background: #fff;
-        padding: 40px 30px;
-        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
-        perspective: 2700px;
-    }
-
-    .container .cover {
-        position: absolute;
-        top: 0;
-        left: 50%;
-        height: 100%;
-        width: 50%;
-        z-index: 98;
-        transition: all 1s ease;
-        transform-origin: left;
-        transform-style: preserve-3d;
-        backface-visibility: hidden;
-    }
-
-    .container #flip:checked~.cover {
-        transform: rotateY(-180deg);
-    }
-
-    .container #flip:checked~.forms .login-form {
-        pointer-events: none;
-    }
-
-    .container .cover .front,
-    .container .cover .back {
-        position: absolute;
-        top: 0;
-        left: 0;
-        height: 100%;
-        width: 100%;
-    }
-
-    .cover .back {
-        transform: rotateY(180deg);
-    }
-
-    .container .cover img {
-        position: absolute;
-        height: 100%;
-        width: 100%;
-        object-fit: cover;
-        z-index: 10;
-    }
-
-    .container .cover .text {
-        position: absolute;
-        z-index: 10;
-        height: 100%;
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .container .cover .text::before {
-        content: '';
-        position: absolute;
-        height: 100%;
-        width: 100%;
-        opacity: 0.5;
-        background: #86b3aa;
-    }
-
-    .cover .text .text-1,
-    .cover .text .text-2 {
-        z-index: 20;
-        font-size: 26px;
-        font-weight: 600;
-        color: #fff;
-        text-align: center;
-    }
-
-    .cover .text .text-2 {
-        font-size: 15px;
-        font-weight: 500;
-    }
-
-    .container .forms {
-        height: 100%;
-        width: 100%;
-        background: #fff;
-    }
-
-    .container .form-content {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .form-content .login-form,
-    .form-content .signup-form {
-        width: calc(100% / 2 - 25px);
-    }
-
-    .forms .form-content .title {
-        position: relative;
-        font-size: 24px;
-        font-weight: 500;
-        color: #333;
-    }
-
-    .forms .form-content .title:before {
-        content: '';
-        position: absolute;
-        left: 0;
-        bottom: 0;
-        height: 3px;
-        width: 25px;
-        background: #86b3aa;
-    }
-
-    .forms .signup-form .title:before {
-        width: 20px;
-    }
-
-    .forms .form-content .input-boxes {
-        margin-top: 30px;
-    }
-
-    .forms .form-content .input-box {
-        display: flex;
-        align-items: center;
-        height: 50px;
-        width: 100%;
-        margin: 10px 0;
-        position: relative;
-    }
-
-    .form-content .input-box input {
-        height: 100%;
-        width: 100%;
-        outline: none;
-        border: none;
-        padding: 0 30px;
-        font-size: 16px;
-        font-weight: 500;
-        border-bottom: 2px solid rgba(0, 0, 0, 0.2);
-        transition: all 0.3s ease;
-    }
-
-    .form-content .input-box input:focus,
-    .form-content .input-box input:valid {
-        border-color: #86b3aa;
-    }
-
-    .form-content .input-box i {
-        position: absolute;
-        color: #86b3aa;
-        font-size: 17px;
-    }
-
-    .forms .form-content .text {
-        font-size: 14px;
-        font-weight: 500;
-        color: #333;
-    }
-
-    .forms .form-content .text a {
-        text-decoration: none;
-    }
-
-    .forms .form-content .text a:hover {
-        text-decoration: underline;
-    }
-
-    .forms .form-content .button {
-        color: #fff;
-        margin-top: 40px;
-    }
-
-    .forms .form-content .button input {
-        color: #fff;
-        background: #86b3aa;
-        border-radius: 6px;
-        padding: 0;
-        cursor: pointer;
-        transition: all 0.4s ease;
-    }
-
-    .forms .form-content .button input:hover {
-        background: #86b3aa;
-    }
-
-    .forms .form-content label {
-        color: #86b3aa;
-        cursor: pointer;
-    }
-
-    .forms .form-content label:hover {
-        text-decoration: underline;
-    }
-
-    .forms .form-content .login-text,
-    .forms .form-content .sign-up-text {
-        text-align: center;
-        margin-top: 25px;
-    }
-
-    .container #flip {
-        display: none;
-    }
-
-    @media (max-width: 730px) {
-        .container .cover {
-            display: none;
+    <style>
+        :root {
+            --accent-color: #d4af37; /* Gold */
+            --text-light: #fdfdfd;
         }
 
-        .form-content .login-form,
-        .form-content .signup-form {
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: url('{{ asset("wijdan_fabric_bg.png") }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-light);
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 100%);
+            z-index: 1;
+        }
+
+        .login-container {
+            position: relative;
+            z-index: 5;
             width: 100%;
+            max-width: 450px;
+            padding: 40px;
+            background: rgba(25, 25, 25, 0.65);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            animation: fadeIn 1s ease-out;
+            text-align: center;
         }
 
-        .form-content .signup-form {
-            display: none;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .container #flip:checked~.forms .signup-form {
-            display: block;
+        .brand-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: var(--accent-color);
+            margin-bottom: 5px;
+            letter-spacing: 2px;
         }
 
-        .container #flip:checked~.forms .login-form {
-            display: none;
+        .subtitle {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #ccc;
+            margin-bottom: 30px;
         }
-    }
 
-    .alert {
-        position: relative;
-        padding: 0.75rem 1.25rem;
-        border: 1px solid transparent;
-        border-radius: 0.25rem;
-        margin: 10px 0;
-    }
+        .alert-danger {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            text-align: left;
+        }
 
-    .alert-danger {
-        color: #721c24;
-        background-color: #f8d7da;
-        border-color: #f5c6cb;
-    }
-</style>
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+            text-align: left;
+        }
 
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255,255,255,0.5);
+            font-size: 1.1rem;
+            transition: color 0.3s ease;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input::placeholder {
+            color: rgba(255,255,255,0.4);
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent-color);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .input-group input:focus + i,
+        .input-group input:valid + i {
+            color: var(--accent-color);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            background: #b5952f;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 25px;
+            color: rgba(255,255,255,0.5);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: var(--accent-color);
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                margin: 20px;
+                padding: 30px 20px;
+            }
+            .brand-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
 <body>
-    <div class="container">
-        <input type="checkbox" id="flip">
-        <div class="cover">
-            <div class="front">
-                <img src="https://www.wijdanstore.com/cdn/shop/files/C7AA8C11-D2D0-4963-8962-4CF427396551.jpg?v=1707657192&width=720" alt="">
-               
-            </div>
-        </div>
-        <div class="forms">
-            <div class="form-content">
-                <div class="login-form">
-                    <div class="title">Login</div>
-                    <form method="POST" action="{{ route('login') }}">
-                        @csrf
-                        @if ($errors->any())
-                        <div class="alert alert-danger mt-2">
-                            @foreach ($errors->all() as $error)
-                            <p>{{ $error }}</p>
-                            @endforeach
-                        </div>
-                        @endif
-                        <div class="input-boxes">
-                            <div class="input-box">
-                                <i class="fas fa-envelope"></i>
-                                <x-input-label for="email" />
-                                <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" placeholder="Email" required autofocus autocomplete="username" />
-                            </div>
-                            <div class="input-box">
-                                <i class="fas fa-lock"></i>
-                                <x-input-label for="password" />
-                                <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" placeholder="Password" required autocomplete="current-password" />
-                            </div>
-                            <div class="button input-box">
-                                <input type="Submit" value="Login">
-                            </div>
-                        </div>
-                    </form>
-                </div>
 
+    <div class="overlay"></div>
+
+    <div class="login-container">
+        <h1 class="brand-title">Wijdan</h1>
+        <div class="subtitle">Admin Portal</div>
+
+        <form method="POST" action="{{ route('login') }}">
+            @csrf
+            
+            @if ($errors->any())
+            <div class="alert-danger">
+                @foreach ($errors->all() as $error)
+                    <p><i class="fas fa-exclamation-circle"></i> {{ $error }}</p>
+                @endforeach
             </div>
-        </div>
+            @endif
+
+            <div class="input-group">
+                <input id="email" type="email" name="email" value="{{ old('email') }}" placeholder="Email Address" required autofocus autocomplete="username">
+                <i class="fas fa-envelope"></i>
+            </div>
+
+            <div class="input-group">
+                <input id="password" type="password" name="password" placeholder="Password" required autocomplete="current-password">
+                <i class="fas fa-lock"></i>
+            </div>
+
+            <button type="submit" class="login-btn">Secure Login</button>
+        </form>
+
+        <a href="{{ url('/') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Main Site</a>
     </div>
-</body>
 
+</body>
 </html>

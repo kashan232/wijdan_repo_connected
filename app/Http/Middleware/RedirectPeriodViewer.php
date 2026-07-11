@@ -12,17 +12,18 @@ class RedirectPeriodViewer
     {
         $user = $request->user();
 
-        if ($user && $user->hasRole('period_viewer')) {
-            if (
-                !$request->routeIs('home')
-                && !$request->is('home')
-                && !$request->routeIs('logout')
-                && !$request->is('logout')
-            ) {
-                return redirect()->route('home')
-                    ->with('error', 'Aap ke account ko sirf limited access hai. Period archive ab sirf admin ke liye hai.');
-            }
-        }
+        // Middleware disabled: Admin wants this user to have access to other pages based on Spatie permissions.
+        // if ($user && $user->hasRole('period_viewer')) {
+        //     if (
+        //         !$request->routeIs('home')
+        //         && !$request->is('home')
+        //         && !$request->routeIs('logout')
+        //         && !$request->is('logout')
+        //     ) {
+        //         return redirect()->route('home')
+        //             ->with('error', 'Aap ke account ko sirf limited access hai. Period archive ab sirf admin ke liye hai.');
+        //     }
+        // }
 
         return $next($request);
     }

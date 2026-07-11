@@ -12,7 +12,12 @@
         </div>
 
         @if($isAdmin)
-        <div class="card shadow-sm mt-3 mb-3 border-0" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+        <div class="d-flex justify-content-end mb-2">
+            <button id="toggleExpenseTotalBtn" class="btn btn-info text-white">
+                <i class="fas fa-eye"></i> Show Total Expense
+            </button>
+        </div>
+        <div id="expenseTotalCard" class="card shadow-sm mt-3 mb-3 border-0" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); display: none;">
             <div class="card-body py-3 d-flex justify-content-between align-items-center text-white">
                 <div>
                     <div class="small text-white-50">Total Expense</div>
@@ -119,6 +124,84 @@
             language: {
                 search: "_INPUT_",
                 searchPlaceholder: "Search Sale..."
+            }
+        });
+
+        $('#toggleExpenseTotalBtn').on('click', function() {
+            var $card = $('#expenseTotalCard');
+            var btn = $(this);
+            if ($card.is(':hidden')) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Confirm Access',
+                        text: 'Please enter your password to view total expense',
+                        input: 'password',
+                        inputAttributes: {
+                            autocapitalize: 'off',
+                            placeholder: 'Admin Password'
+                        },
+                        showCancelButton: true,
+                        confirmButtonText: 'Verify & Show',
+                        showLoaderOnConfirm: true,
+                        preConfirm: (password) => {
+                            if (!password) {
+                                Swal.showValidationMessage('Password is required');
+                                return false;
+                            }
+                            return fetch("{{ route('warehouse_stocks.verify_password') }}", {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                },
+                                body: JSON.stringify({ password: password })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (!data.success) {
+                                    throw new Error(data.message || 'Incorrect password');
+                                }
+                                return data;
+                            })
+                            .catch(error => {
+                                Swal.showValidationMessage(error.message);
+                            });
+                        },
+                        allowOutsideClick: () => !Swal.isLoading()
+                    }).then((result) => {
+                        if (result.isConfirmed && result.value.success) {
+                            $card.slideDown(300);
+                            btn.html('<i class="fas fa-eye-slash"></i> Hide Total Expense');
+                            btn.removeClass('btn-info').addClass('btn-secondary');
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Access Granted',
+                                timer: 1000,
+                                showConfirmButton: false
+                            });
+                        }
+                    });
+                } else {
+                    var pwd = prompt("Enter Admin Password to view total expense:");
+                    if (pwd) {
+                        $.post("{{ route('warehouse_stocks.verify_password') }}", {
+                            _token: '{{ csrf_token() }}',
+                            password: pwd
+                        }, function(res) {
+                            if (res.success) {
+                                $card.slideDown(300);
+                                btn.html('<i class="fas fa-eye-slash"></i> Hide Total Expense');
+                                btn.removeClass('btn-info').addClass('btn-secondary');
+                            } else {
+                                alert("Incorrect password");
+                            }
+                        });
+                    }
+                }
+            } else {
+                $card.slideUp(300);
+                $(this).html('<i class="fas fa-eye"></i> Show Total Expense');
+                $(this).removeClass('btn-secondary').addClass('btn-info');
             }
         });
     });
