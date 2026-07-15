@@ -512,6 +512,9 @@ class ProductController extends Controller
             return redirect()->back()->with('error', 'CSV file is empty.');
         }
 
+        // Remove UTF-8 BOM if present in the first header
+        $headerRow[0] = preg_replace('/^[\xef\xbb\xbf]+/', '', $headerRow[0]);
+
         $columnMap = $this->buildImportColumnMap($headerRow);
         if (!isset($columnMap['barcode']) && !isset($columnMap['item_name'])) {
             fclose($handle);
@@ -583,8 +586,12 @@ class ProductController extends Controller
                         ->where('warehouse_id', $warehouseId)
                         ->value('quantity') ?? 0);
 
-                    $newShop = $hasShop ? max(0, (float) ($data['shop_qty'] ?? 0)) : $currentShop;
-                    $newWh = $hasWarehouse ? max(0, (float) ($data['warehouse_qty'] ?? 0)) : $currentWh;
+                    $newShop = ($hasShop && $data['shop_qty'] !== null && $data['shop_qty'] !== '') 
+                        ? max(0, (float) $data['shop_qty']) 
+                        : $currentShop;
+                    $newWh = ($hasWarehouse && $data['warehouse_qty'] !== null && $data['warehouse_qty'] !== '') 
+                        ? max(0, (float) $data['warehouse_qty']) 
+                        : $currentWh;
 
                     $this->syncImportedStocks($product->id, $newShop, $newWh, $warehouseId);
                     $productUpdates['initial_stock'] = $newShop + $newWh;
