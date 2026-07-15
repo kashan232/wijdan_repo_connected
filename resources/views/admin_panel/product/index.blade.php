@@ -649,6 +649,38 @@
             downloadWorkbook(wb, 'products_selected_' + ts + '.xlsx');
         });
 
+        @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: "{!! session('success') !!}",
+            timer: 4000,
+            showConfirmButton: false
+        });
+        @endif
+
+        @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: "{!! session('error') !!}",
+        });
+        @endif
+
+        @if(session('import_errors'))
+        Swal.fire({
+            icon: 'warning',
+            title: 'Warnings',
+            html: `
+                <ul style="text-align: left;">
+                    @foreach(session('import_errors') as $err)
+                        <li>{{ $err }}</li>
+                    @endforeach
+                </ul>
+            `
+        });
+        @endif
+
     })();
 </script>
 
