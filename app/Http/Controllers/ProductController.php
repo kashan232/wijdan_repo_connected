@@ -710,42 +710,65 @@ class ProductController extends Controller
                     $barcode = (string) random_int(100000000000, 999999999999);
                 }
 
-                $shopQty = max(0, (float) ($data['shop_qty'] ?? 0));
-                $warehouseQty = max(0, (float) ($data['warehouse_qty'] ?? 0));
-                $initialStock = $shopQty + $warehouseQty;
+                $shopQtyProvided = isset($data['shop_qty']) && $data['shop_qty'] !== '';
+                $warehouseQtyProvided = isset($data['warehouse_qty']) && $data['warehouse_qty'] !== '';
 
-                $productData = [
-                    'creater_id'      => $userId,
-                    'category_id'     => $categoryId,
-                    'sub_category_id' => $subCategoryId,
-                    'item_name'       => $data['item_name'],
-                    'barcode_path'    => $barcode,
-                    'unit_id'         => $unit,
-                    'brand_id'        => $brandId,
-                    'wholesale_price' => (float) ($data['wholesale_price'] ?? 0),
-                    'price'           => (float) ($data['retail_price'] ?? $data['wholesale_price'] ?? 0),
-                    'initial_stock'   => $initialStock,
-                    'alert_quantity'  => (int) ($data['alert_quantity'] ?? 0),
-                    'note'            => $data['note'] ?? null,
-                    'updated_at'      => now(),
-                ];
+                $shopQty = $shopQtyProvided ? max(0, (float) $data['shop_qty']) : null;
+                $warehouseQty = $warehouseQtyProvided ? max(0, (float) $data['warehouse_qty']) : null;
+
+                $productData = [];
+                if (!empty($data['item_name'])) $productData['item_name'] = $data['item_name'];
+                if ($categoryId) $productData['category_id'] = $categoryId;
+                if ($subCategoryId) $productData['sub_category_id'] = $subCategoryId;
+                if ($brandId) $productData['brand_id'] = $brandId;
+                if (isset($data['unit']) && $data['unit'] !== '') $productData['unit_id'] = $unit;
+                if (isset($data['wholesale_price']) && $data['wholesale_price'] !== '') $productData['wholesale_price'] = (float) $data['wholesale_price'];
+                if (isset($data['retail_price']) && $data['retail_price'] !== '') $productData['price'] = (float) $data['retail_price'];
+                if (isset($data['alert_quantity']) && $data['alert_quantity'] !== '') $productData['alert_quantity'] = (int) $data['alert_quantity'];
+                if (isset($data['note']) && $data['note'] !== '') $productData['note'] = $data['note'];
+                $productData['updated_at'] = now();
 
                 $existing = Product::where('barcode_path', $barcode)->first();
 
                 if ($existing) {
+                    // Fetch current stocks if not provided
+                    $currentShop = DB::table('stocks')
+                        ->where('product_id', $existing->id)
+                        ->where('branch_id', 1)
+                        ->where('warehouse_id', 1)
+                        ->value('qty') ?? 0;
+                    
+                    $currentWh = DB::table('warehouse_stocks')
+                        ->where('product_id', $existing->id)
+                        ->where('warehouse_id', $lookups['default_warehouse_id'])
+                        ->value('quantity') ?? 0;
+                        
+                    $finalShopQty = $shopQtyProvided ? $shopQty : $currentShop;
+                    $finalWarehouseQty = $warehouseQtyProvided ? $warehouseQty : $currentWh;
+                    
+                    $productData['initial_stock'] = $finalShopQty + $finalWarehouseQty;
+
                     $existing->update($productData);
                     $product = $existing;
                     $updated++;
+                    
+                    $this->syncImportedStocks($product->id, $finalShopQty, $finalWarehouseQty, $lookups['default_warehouse_id']);
                 } else {
-                    $product = Product::create(array_merge($productData, [
-                        'item_code'  => 'ITEM-' . str_pad((string) $nextItemNumber, 4, '0', STR_PAD_LEFT),
-                        'created_at' => now(),
-                    ]));
+                    $finalShopQty = $shopQtyProvided ? $shopQty : 0;
+                    $finalWarehouseQty = $warehouseQtyProvided ? $warehouseQty : 0;
+                    
+                    $productData['initial_stock'] = $finalShopQty + $finalWarehouseQty;
+                    $productData['creater_id'] = $userId;
+                    $productData['barcode_path'] = $barcode;
+                    $productData['item_code'] = 'ITEM-' . str_pad((string) $nextItemNumber, 4, '0', STR_PAD_LEFT);
+                    $productData['created_at'] = now();
+                    
+                    $product = Product::create($productData);
                     $nextItemNumber++;
                     $created++;
+                    
+                    $this->syncImportedStocks($product->id, $finalShopQty, $finalWarehouseQty, $lookups['default_warehouse_id']);
                 }
-
-                $this->syncImportedStocks($product->id, $shopQty, $warehouseQty, $lookups['default_warehouse_id']);
             }
 
             DB::commit();

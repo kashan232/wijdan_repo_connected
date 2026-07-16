@@ -667,6 +667,20 @@
         });
         @endif
 
+        @if($errors->any())
+        Swal.fire({
+            icon: 'error',
+            title: 'Validation Error',
+            html: `
+                <ul style="text-align: left;">
+                    @foreach($errors->all() as $err)
+                        <li>{{ $err }}</li>
+                    @endforeach
+                </ul>
+            `
+        });
+        @endif
+
         @if(session('import_errors'))
         Swal.fire({
             icon: 'warning',
