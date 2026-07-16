@@ -975,7 +975,7 @@ class ProductController extends Controller
                     'qty' => (int) $shopQty,
                     'updated_at' => now(),
                 ]);
-        } elseif ($shopQty > 0) {
+        } else {
             DB::table('stocks')->insert([
                 'branch_id' => $branchId,
                 'warehouse_id' => 1,
@@ -999,7 +999,7 @@ class ProductController extends Controller
                     'quantity' => (int) $warehouseQty,
                     'updated_at' => now(),
                 ]);
-        } elseif ($warehouseQty > 0) {
+        } else {
             DB::table('warehouse_stocks')->insert([
                 'warehouse_id' => $warehouseId,
                 'product_id' => $productId,
