@@ -337,10 +337,26 @@
                 @csrf
                 <div class="modal-body">
                     <p class="text-muted small mb-3">
-                        CSV upload karein — pehle <strong>Barcode</strong> se product dhundha jayega.
-                        Agar barcode galat hai ya nahi mila to <strong>Item Name</strong> se match hoga.
-                        Sirf ye 3 fields update hongi: <strong>Retail Price</strong>, <strong>Shop Qty</strong>, <strong>W/H Qty</strong>.
+                        CSV mein jo <strong>Shop Qty</strong> / <strong>W/H Qty</strong> hai wo us <strong>Stock as of date</strong> tak ka stock hai.
+                        Us date ke baad ki purchase, inward, transfer, sale waghera zero nahi hongi — system unko add karke DB update karega,
+                        taake <strong>Warehouse Stocks</strong> page par wahi qty dikhe jo Excel mein hai (closing date wahi rakhein jo warehouse page par filter hai).
                     </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Stock as of date</label>
+                        <input type="date" name="stock_as_of_date" class="form-control" required
+                               value="{{ old('stock_as_of_date', $defaultStockAsOfDate ?? config('stock.yearly_closing_date')) }}">
+                        <small class="text-muted">Example: 15 July — CSV qty 15 July ki hai; 15 July ke baad ka movement add-on hoga.</small>
+                    </div>
+                    @if(!empty($warehouses) && $warehouses->count())
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Warehouse (W/H Qty column)</label>
+                        <select name="warehouse_id" class="form-control">
+                            @foreach($warehouses as $wh)
+                                <option value="{{ $wh->id }}" @selected($loop->first)>{{ $wh->warehouse_name ?? ('Warehouse #' . $wh->id) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
                     <div class="mb-3">
                         <a href="{{ route('products.update.template') }}" class="btn btn-outline-success btn-sm">
                             ⬇ Download Update Template
@@ -649,24 +665,6 @@
             downloadWorkbook(wb, 'products_selected_' + ts + '.xlsx');
         });
 
-        @if(session('success'))
-        Swal.fire({
-            icon: 'success',
-            title: 'Success!',
-            text: "{!! session('success') !!}",
-            timer: 4000,
-            showConfirmButton: false
-        });
-        @endif
-
-        @if(session('error'))
-        Swal.fire({
-            icon: 'error',
-            title: 'Error!',
-            text: "{!! session('error') !!}",
-        });
-        @endif
-
         @if($errors->any())
         Swal.fire({
             icon: 'error',
@@ -679,19 +677,32 @@
                 </ul>
             `
         });
-        @endif
-
-        @if(session('import_errors'))
+        @elseif(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: "{!! addslashes(session('error')) !!}",
+        });
+        @elseif(session()->has('import_errors') && is_array(session('import_errors')) && count(session('import_errors')) > 0)
         Swal.fire({
             icon: 'warning',
-            title: 'Warnings',
+            title: 'Completed with Warnings',
             html: `
+                <b>{!! addslashes(session('success') ?? 'Completed') !!}</b><br><br>
                 <ul style="text-align: left;">
                     @foreach(session('import_errors') as $err)
-                        <li>{{ $err }}</li>
+                        <li>{{ addslashes($err) }}</li>
                     @endforeach
                 </ul>
             `
+        });
+        @elseif(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: "{!! addslashes(session('success')) !!}",
+            timer: 4000,
+            showConfirmButton: false
         });
         @endif
 

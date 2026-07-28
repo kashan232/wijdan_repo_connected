@@ -8,6 +8,8 @@ use App\Models\Subcategory;
 use App\Models\ProductDiscount;
 use App\Models\Brand;
 use App\Models\Unit;
+use App\Models\Warehouse;
+use App\Services\Stock\PostClosingStockAdjustmentService;
 use Illuminate\Support\Facades\DB;
 // use App\Models\Size;
 use Carbon\Carbon;
@@ -78,10 +80,12 @@ class ProductController extends Controller
 
         // 🔧 THIS LINE FIXES EVERYTHING
         $categories = Category::orderBy('id', 'desc')->get();
+        $warehouses = Warehouse::orderBy('id')->get();
+        $defaultStockAsOfDate = config('stock.yearly_closing_date', date('Y-m-d'));
         if ($request->ajax()) {
-            return view('admin_panel.product.index', compact('products', 'categories'))->render();
+            return view('admin_panel.product.index', compact('products', 'categories', 'warehouses', 'defaultStockAsOfDate'))->render();
         }
-        return view('admin_panel.product.index', compact('products', 'categories'));
+        return view('admin_panel.product.index', compact('products', 'categories', 'warehouses', 'defaultStockAsOfDate'));
     }
 
 
@@ -494,6 +498,8 @@ class ProductController extends Controller
     {
         $request->validate([
             'update_file' => 'required|file|mimes:csv,txt|max:20480',
+            'stock_as_of_date' => 'required|date',
+            'warehouse_id' => 'nullable|integer|exists:warehouses,id',
         ]);
 
         if (!Auth::id()) {
@@ -530,7 +536,12 @@ class ProductController extends Controller
             return redirect()->back()->with('error', 'CSV must contain at least one of: Retail Price, Shop Qty, W/H Qty.');
         }
 
-        $warehouseId = (int) (DB::table('warehouses')->orderBy('id')->value('id') ?? 1);
+        $warehouseId = (int) ($request->warehouse_id ?? DB::table('warehouses')->orderBy('id')->value('id') ?? 1);
+        $stockAsOfDate = $request->stock_as_of_date;
+        /** @var PostClosingStockAdjustmentService $adjustmentService */
+        $adjustmentService = app(PostClosingStockAdjustmentService::class);
+        $postClosingAdjustments = $adjustmentService->calculate($stockAsOfDate);
+
         $updated = 0;
         $skipped = 0;
         $errors = [];
@@ -575,22 +586,29 @@ class ProductController extends Controller
                 }
 
                 if ($hasShop || $hasWarehouse) {
-                    $currentShop = (int) (DB::table('stocks')
+                    $excelShop = ($hasShop && $data['shop_qty'] !== null && $data['shop_qty'] !== '')
+                        ? max(0, (float) $data['shop_qty'])
+                        : null;
+                    $excelWh = ($hasWarehouse && $data['warehouse_qty'] !== null && $data['warehouse_qty'] !== '')
+                        ? max(0, (float) $data['warehouse_qty'])
+                        : null;
+
+                    $currentShop = (float) (DB::table('stocks')
                         ->where('product_id', $product->id)
                         ->where('branch_id', 1)
                         ->where('warehouse_id', 1)
                         ->value('qty') ?? 0);
 
-                    $currentWh = (int) (DB::table('warehouse_stocks')
+                    $currentWh = (float) (DB::table('warehouse_stocks')
                         ->where('product_id', $product->id)
                         ->where('warehouse_id', $warehouseId)
-                        ->value('quantity') ?? 0);
+                        ->sum('quantity'));
 
-                    $newShop = ($hasShop && $data['shop_qty'] !== null && $data['shop_qty'] !== '') 
-                        ? max(0, (float) $data['shop_qty']) 
+                    $newShop = $excelShop !== null
+                        ? $adjustmentService->storedShopFromExcelBaseline($excelShop, $postClosingAdjustments, (int) $product->id)
                         : $currentShop;
-                    $newWh = ($hasWarehouse && $data['warehouse_qty'] !== null && $data['warehouse_qty'] !== '') 
-                        ? max(0, (float) $data['warehouse_qty']) 
+                    $newWh = $excelWh !== null
+                        ? $adjustmentService->storedWarehouseFromExcelBaseline($excelWh, $postClosingAdjustments, (int) $product->id, $warehouseId)
                         : $currentWh;
 
                     $this->syncImportedStocks($product->id, $newShop, $newWh, $warehouseId);
@@ -619,7 +637,7 @@ class ProductController extends Controller
 
         fclose($handle);
 
-        $message = "Bulk update complete: {$updated} products updated";
+        $message = "Bulk update complete: {$updated} products updated (stock as of {$stockAsOfDate}, post-date movements added)";
         if ($skipped > 0) {
             $message .= ", {$skipped} skipped";
         }
@@ -792,15 +810,24 @@ class ProductController extends Controller
 
     private function findProductForBulkUpdate(string $barcode, string $itemName): ?Product
     {
+        $barcode = trim($barcode);
         if ($barcode !== '') {
             $product = Product::where('barcode_path', $barcode)->first();
+            if ($product) {
+                return $product;
+            }
+            $product = Product::where('item_code', $barcode)->first();
             if ($product) {
                 return $product;
             }
         }
 
         if ($itemName !== '') {
-            return Product::whereRaw('LOWER(TRIM(item_name)) = ?', [strtolower($itemName)])->first();
+            $normalized = strtolower(trim($itemName));
+            $product = Product::whereRaw('LOWER(TRIM(item_name)) = ?', [$normalized])->first();
+            if ($product) {
+                return $product;
+            }
         }
 
         return null;
@@ -961,6 +988,8 @@ class ProductController extends Controller
     private function syncImportedStocks(int $productId, float $shopQty, float $warehouseQty, int $warehouseId): void
     {
         $branchId = 1;
+        $shopQtyInt = (int) round($shopQty);
+        $warehouseQtyInt = (int) round($warehouseQty);
 
         $shopRow = DB::table('stocks')
             ->where('product_id', $productId)
@@ -972,7 +1001,7 @@ class ProductController extends Controller
             DB::table('stocks')
                 ->where('id', $shopRow->id)
                 ->update([
-                    'qty' => (int) $shopQty,
+                    'qty' => $shopQtyInt,
                     'updated_at' => now(),
                 ]);
         } else {
@@ -980,30 +1009,35 @@ class ProductController extends Controller
                 'branch_id' => $branchId,
                 'warehouse_id' => 1,
                 'product_id' => $productId,
-                'qty' => (int) $shopQty,
+                'qty' => $shopQtyInt,
                 'reserved_qty' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         }
 
-        $whRow = DB::table('warehouse_stocks')
+        $whIds = DB::table('warehouse_stocks')
             ->where('product_id', $productId)
             ->where('warehouse_id', $warehouseId)
-            ->first();
+            ->orderBy('id')
+            ->pluck('id');
 
-        if ($whRow) {
+        if ($whIds->isNotEmpty()) {
+            $keepId = $whIds->first();
+            if ($whIds->count() > 1) {
+                DB::table('warehouse_stocks')->whereIn('id', $whIds->slice(1)->values())->delete();
+            }
             DB::table('warehouse_stocks')
-                ->where('id', $whRow->id)
+                ->where('id', $keepId)
                 ->update([
-                    'quantity' => (int) $warehouseQty,
+                    'quantity' => $warehouseQtyInt,
                     'updated_at' => now(),
                 ]);
         } else {
             DB::table('warehouse_stocks')->insert([
                 'warehouse_id' => $warehouseId,
                 'product_id' => $productId,
-                'quantity' => (int) $warehouseQty,
+                'quantity' => $warehouseQtyInt,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
