@@ -10,5 +10,5 @@ return [
     | Transactions after this date do not affect displayed qty or value.
     |
     */
-    'yearly_closing_date' => env('STOCK_CLOSING_DATE', '2026-06-21'),
+    'yearly_closing_date' => env('STOCK_CLOSING_DATE', date('Y-m-d')),
 ];

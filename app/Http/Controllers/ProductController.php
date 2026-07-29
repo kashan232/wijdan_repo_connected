@@ -498,7 +498,6 @@ class ProductController extends Controller
     {
         $request->validate([
             'update_file' => 'required|file|mimes:csv,txt|max:20480',
-            'stock_as_of_date' => 'required|date',
             'warehouse_id' => 'nullable|integer|exists:warehouses,id',
         ]);
 
@@ -537,10 +536,6 @@ class ProductController extends Controller
         }
 
         $warehouseId = (int) ($request->warehouse_id ?? DB::table('warehouses')->orderBy('id')->value('id') ?? 1);
-        $stockAsOfDate = $request->stock_as_of_date;
-        /** @var PostClosingStockAdjustmentService $adjustmentService */
-        $adjustmentService = app(PostClosingStockAdjustmentService::class);
-        $postClosingAdjustments = $adjustmentService->calculate($stockAsOfDate);
 
         $updated = 0;
         $skipped = 0;
@@ -604,12 +599,8 @@ class ProductController extends Controller
                         ->where('warehouse_id', $warehouseId)
                         ->sum('quantity'));
 
-                    $newShop = $excelShop !== null
-                        ? $adjustmentService->storedShopFromExcelBaseline($excelShop, $postClosingAdjustments, (int) $product->id)
-                        : $currentShop;
-                    $newWh = $excelWh !== null
-                        ? $adjustmentService->storedWarehouseFromExcelBaseline($excelWh, $postClosingAdjustments, (int) $product->id, $warehouseId)
-                        : $currentWh;
+                    $newShop = $excelShop !== null ? $excelShop : $currentShop;
+                    $newWh = $excelWh !== null ? $excelWh : $currentWh;
 
                     $this->syncImportedStocks($product->id, $newShop, $newWh, $warehouseId);
                     $productUpdates['initial_stock'] = $newShop + $newWh;
@@ -637,9 +628,9 @@ class ProductController extends Controller
 
         fclose($handle);
 
-        $message = "Bulk update complete: {$updated} products updated (stock as of {$stockAsOfDate}, post-date movements added)";
+        $message = "Bulk update complete: {$updated} products updated.";
         if ($skipped > 0) {
-            $message .= ", {$skipped} skipped";
+            $message .= " {$skipped} skipped.";
         }
 
         return redirect()->route('product')
@@ -847,7 +838,7 @@ class ProductController extends Controller
             'wholesale_price' => ['wholesale_price', 'wholesale price', 'cost price', 'cost'],
             'retail_price' => ['retail_price', 'retail price', 'price', 'sale price'],
             'shop_qty' => ['shop_qty', 'shop qty', 'shop quantity', 'shop stock', 'stock'],
-            'warehouse_qty' => ['warehouse_qty', 'warehouse qty', 'w/h qty', 'wh qty', 'warehouse quantity', 'warehouse stock'],
+            'warehouse_qty' => ['warehouse_qty', 'warehouse qty', 'w/h qty', 'wh qty', 'warehouse quantity', 'warehouse stock', 'warehouse'],
             'alert_quantity' => ['alert_quantity', 'alert quantity', 'alert qty'],
             'note' => ['note', 'remarks', 'remark'],
         ];

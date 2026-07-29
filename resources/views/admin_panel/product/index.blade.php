@@ -336,17 +336,9 @@
             <form action="{{ route('products.update.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
-                    <p class="text-muted small mb-3">
-                        CSV mein jo <strong>Shop Qty</strong> / <strong>W/H Qty</strong> hai wo us <strong>Stock as of date</strong> tak ka stock hai.
-                        Us date ke baad ki purchase, inward, transfer, sale waghera zero nahi hongi — system unko add karke DB update karega,
-                        taake <strong>Warehouse Stocks</strong> page par wahi qty dikhe jo Excel mein hai (closing date wahi rakhein jo warehouse page par filter hai).
+                            <p class="text-muted small mb-3">
+                        CSV mein jo <strong>Shop Qty</strong> aur <strong>W/H Qty</strong> hai wo bilkul exact wahi stock hoga jo ab system mein dikhega. System koi plus/minus nahi karega.
                     </p>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Stock as of date</label>
-                        <input type="date" name="stock_as_of_date" class="form-control" required
-                               value="{{ old('stock_as_of_date', $defaultStockAsOfDate ?? config('stock.yearly_closing_date')) }}">
-                        <small class="text-muted">Example: 15 July — CSV qty 15 July ki hai; 15 July ke baad ka movement add-on hoga.</small>
-                    </div>
                     @if(!empty($warehouses) && $warehouses->count())
                     <div class="mb-3">
                         <label class="form-label fw-bold">Warehouse (W/H Qty column)</label>
