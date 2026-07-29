@@ -61,7 +61,7 @@ class WarehouseStockController extends Controller
 
     private function resolveClosingEndDate(Request $request): string
     {
-        return $request->closing_end_date ?: config('stock.yearly_closing_date', '2026-06-21');
+        return $request->closing_end_date ?: config('stock.yearly_closing_date', date('Y-m-d'));
     }
 
     private function calculatePostClosingAdjustments(string $closingDate): array
