@@ -57,7 +57,7 @@ class BiometricDeviceService
         }
 
         if ($protocol === 'zkteco') {
-            $zk = new ZKTecoService($device->ip_address, $device->port);
+            $zk = new \Rats\Zkteco\Lib\ZKTeco($device->ip_address, $device->port);
             return $zk->connect();
         }
 
@@ -82,7 +82,7 @@ class BiometricDeviceService
             // Try ZKTeco if explicit or auto
             if ($device->protocol === 'zkteco' || ($isAuto && $this->isZkDevice($device))) {
                 $zkAttempted = true;
-                $zk = new ZKTecoService($device->ip_address, $device->port);
+                $zk = new \Rats\Zkteco\Lib\ZKTeco($device->ip_address, $device->port);
                 if ($zk->connect()) {
                     return [
                         'success' => true,
@@ -150,7 +150,7 @@ class BiometricDeviceService
     {
         try {
             if ($this->isZkDevice($device)) {
-                $zk = new ZKTecoService($device->ip_address, $device->port);
+                $zk = new \Rats\Zkteco\Lib\ZKTeco($device->ip_address, $device->port);
                 if ($zk->connect()) {
                     $logs = $zk->getAttendance();
                     $zk->disconnect();
@@ -380,7 +380,7 @@ class BiometricDeviceService
     {
         try {
             if ($this->isZkDevice($device)) {
-                $zk = new ZKTecoService($device->ip_address, $device->port);
+                $zk = new \Rats\Zkteco\Lib\ZKTeco($device->ip_address, $device->port);
                 if ($zk->connect()) {
                     return false; // Not yet implemented for standalone ZK
                 }
@@ -413,6 +413,23 @@ class BiometricDeviceService
     public function addUserToDevice(BiometricDevice $device, string $userId, string $name, string $password = ''): bool
     {
         try {
+            if ($this->isZkDevice($device)) {
+                $zk = new \Rats\Zkteco\Lib\ZKTeco($device->ip_address, $device->port);
+                if ($zk->connect()) {
+                    // For ZKTeco, we use $userId for both uid (internal) and userid (display ID)
+                    // We generate a numeric uid if $userId is not purely numeric or too large, but for now we try to cast.
+                    $uid = (int) preg_replace('/\D/', '', $userId);
+                    if ($uid <= 0) $uid = crc32($userId) % 65000;
+                    
+                    $success = $zk->setUser($uid, $userId, $name, $password, \Rats\Zkteco\Lib\Helper\Util::LEVEL_USER, 0);
+                    $zk->disconnect();
+                    // ZKTeco library returns an empty string "" on success which evaluates to false if cast to bool.
+                    // We must check strict !== false
+                    return $success !== false;
+                }
+                return false;
+            }
+
             $client = new Client([
                 'base_uri' => "http://{$device->ip_address}:{$device->port}/",
                 'timeout' => 10,
@@ -553,10 +570,13 @@ class BiometricDeviceService
      */
     protected function getDecryptedPassword(BiometricDevice $device): string
     {
+        if (empty($device->password)) {
+            return '';
+        }
         try {
             return Crypt::decryptString($device->password);
         } catch (Exception $e) {
-            return $device->password;
+            return (string) $device->password;
         }
     }
 
