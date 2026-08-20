@@ -25,6 +25,19 @@ class BiometricDeviceService
                stripos($device->model ?? '', 'ZK') !== false;
     }
 
+    /**
+     * Get a ZKTeco client instance with configured socket timeout
+     */
+    public function getZkClient(BiometricDevice $device, int $timeoutSeconds = 4): \Rats\Zkteco\Lib\ZKTeco
+    {
+        $zk = new \Rats\Zkteco\Lib\ZKTeco($device->ip_address, (int) ($device->port ?: 4370));
+        if (isset($zk->_zkclient) && (is_resource($zk->_zkclient) || $zk->_zkclient instanceof \Socket)) {
+            @socket_set_option($zk->_zkclient, SOL_SOCKET, SO_RCVTIMEO, ['sec' => $timeoutSeconds, 'usec' => 0]);
+            @socket_set_option($zk->_zkclient, SOL_SOCKET, SO_SNDTIMEO, ['sec' => $timeoutSeconds, 'usec' => 0]);
+        }
+        return $zk;
+    }
+
     protected function getClient(BiometricDevice $device)
     {
         // Try to decrypt or use as is
@@ -57,7 +70,7 @@ class BiometricDeviceService
         }
 
         if ($protocol === 'zkteco') {
-            $zk = new \Rats\Zkteco\Lib\ZKTeco($device->ip_address, $device->port);
+            $zk = $this->getZkClient($device, 4);
             return $zk->connect();
         }
 
@@ -82,7 +95,7 @@ class BiometricDeviceService
             // Try ZKTeco if explicit or auto
             if ($device->protocol === 'zkteco' || ($isAuto && $this->isZkDevice($device))) {
                 $zkAttempted = true;
-                $zk = new \Rats\Zkteco\Lib\ZKTeco($device->ip_address, $device->port);
+                $zk = $this->getZkClient($device, 4);
                 if ($zk->connect()) {
                     return [
                         'success' => true,
@@ -150,14 +163,14 @@ class BiometricDeviceService
     {
         try {
             if ($this->isZkDevice($device)) {
-                $zk = new \Rats\Zkteco\Lib\ZKTeco($device->ip_address, $device->port);
+                $zk = $this->getZkClient($device, 6);
                 if ($zk->connect()) {
                     $logs = $zk->getAttendance();
                     $zk->disconnect();
-                    return $logs;
+                    return is_array($logs) ? $logs : [];
                 }
                 Log::error("ZKTeco Log Pull Failed for {$device->ip_address}: Could not connect");
-                return [];
+                throw new Exception("Could not connect to device '{$device->name}' ({$device->ip_address}:{$device->port}). Check if device is powered on and accessible.");
             }
 
             // Try JSON format first (since it worked for user push)
@@ -380,9 +393,10 @@ class BiometricDeviceService
     {
         try {
             if ($this->isZkDevice($device)) {
-                $zk = new \Rats\Zkteco\Lib\ZKTeco($device->ip_address, $device->port);
+                $zk = $this->getZkClient($device, 4);
                 if ($zk->connect()) {
-                    return false; // Not yet implemented for standalone ZK
+                    $zk->disconnect();
+                    return true;
                 }
                 return false;
             }
@@ -414,7 +428,7 @@ class BiometricDeviceService
     {
         try {
             if ($this->isZkDevice($device)) {
-                $zk = new \Rats\Zkteco\Lib\ZKTeco($device->ip_address, $device->port);
+                $zk = $this->getZkClient($device, 5);
                 if ($zk->connect()) {
                     // For ZKTeco, we use $userId for both uid (internal) and userid (display ID)
                     // We generate a numeric uid if $userId is not purely numeric or too large, but for now we try to cast.

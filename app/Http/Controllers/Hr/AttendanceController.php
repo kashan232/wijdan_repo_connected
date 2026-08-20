@@ -909,6 +909,8 @@ class AttendanceController extends Controller
      */
     public function pullFromDevices()
     {
+        @set_time_limit(180);
+
         if (! auth()->user()->can('hr.biometric.devices.edit')) {
             \Log::warning('Unauthorized pull attendance attempt by user '.auth()->id());
             return response()->json(['error' => 'Unauthorized action.'], 403);
@@ -923,7 +925,7 @@ class AttendanceController extends Controller
                 \Log::warning('Pull Attendance: No active biometric devices found');
                 return response()->json([
                     'success' => false,
-                    'error' => 'No active biometric devices configured. Please add and activate at least one device.',
+                    'error' => 'No active biometric devices configured. Please activate your biometric device in Biometric Devices settings.',
                 ], 400);
             }
             
@@ -959,13 +961,21 @@ class AttendanceController extends Controller
                 }
             }
 
-            $message = "Pulled logs from {$devices->count()} device(s). ";
-            $message .= "Created: {$results['created']}, ";
-            $message .= "Duplicates: {$results['duplicates']}, ";
-            $message .= "Skipped: {$results['skipped']}";
+            if ($results['created'] === 0 && $results['duplicates'] === 0 && !empty($deviceErrors) && $results['failed'] === $devices->count()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => '<b>Device Connection Failed:</b><br>' . implode('<br>', $deviceErrors),
+                ], 400);
+            }
+
+            $message = "<b>Attendance Pulled Successfully!</b><br>";
+            $message .= "Processed from {$devices->count()} device(s).<br>";
+            $message .= "<b>Synced / Updated:</b> {$results['created']}<br>";
+            $message .= "<b>Duplicates Ignored:</b> {$results['duplicates']}<br>";
+            $message .= "<b>Skipped:</b> {$results['skipped']}";
             
             if (!empty($deviceErrors)) {
-                $message .= ". Errors: " . implode('; ', $deviceErrors);
+                $message .= "<br><br><span class='text-warning'><b>Warnings:</b> " . implode('; ', $deviceErrors) . "</span>";
             }
             
             \Log::info("Pull Attendance: Completed - $message");

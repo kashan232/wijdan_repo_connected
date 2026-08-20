@@ -153,15 +153,19 @@
                                     <div class="btn-group w-100 mb-2" role="group">
                                         @can('hr.biometric.devices.edit')
                                             <button class="btn btn-sm btn-primary test-connection-btn"
-                                                data-id="{{ $device->id }}">
+                                                data-id="{{ $device->id }}" title="Test Connection">
                                                 <i class="fa fa-plug"></i> Test
                                             </button>
                                             <button class="btn btn-sm btn-info sync-employees-btn"
-                                                 data-id="{{ $device->id }}">
+                                                 data-id="{{ $device->id }}" title="Sync Employees to Device">
                                                  <i class="fa fa-users"></i> Sync
                                              </button>
+                                             <button class="btn btn-sm btn-success pull-attendance-btn"
+                                                 data-id="{{ $device->id }}" title="Pull Attendance from this Device">
+                                                 <i class="fa fa-download"></i> Pull
+                                             </button>
                                              <button class="btn btn-sm btn-dark sync-time-btn"
-                                                 data-id="{{ $device->id }}">
+                                                 data-id="{{ $device->id }}" title="Sync Device Time">
                                                  <i class="fa fa-clock"></i> Time
                                              </button>
                                         @endcan
