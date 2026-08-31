@@ -1035,7 +1035,9 @@ class ReportingController extends Controller
             ->whereBetween('created_at', [$start, $end])
             ->get()
             ->map(function ($s) {
-                $debitAmount = (float) ($s->total_net ?? $s->total_bill_amount);
+                // To get original debit, we add back ALL returns for this sale.
+                $returnsForSale = DB::table('sales_returns')->where('sale_id', $s->id)->sum('total_net');
+                $debitAmount = (float) ($s->total_net ?? $s->total_bill_amount) + (float) $returnsForSale;
 
                 return [
                     'date' => $s->created_at,
@@ -1070,9 +1072,6 @@ class ReportingController extends Controller
         // ---------------- SALE RETURNS (Credit) ----------------
         $saleReturns = collect();
         foreach ($allSaleReturns as $saleId => $returns) {
-            $saleCreatedAt = $saleCreatedMap[$saleId] ?? null;
-            $isPriorSale = $saleCreatedAt && $saleCreatedAt < $start;
-
             foreach ($returns as $r) {
                 $returnAmount = (float) $r->total_net;
                 $referenceText = $r->reference ? '(' . $r->reference . ') ' : '';
@@ -1082,13 +1081,10 @@ class ReportingController extends Controller
                     'sort_type' => 3,
                     'invoice' => 'SR-' . $r->sale_id,
                     'reference' => $r->reference,
-                    'description' => $isPriorSale
-                        ? $referenceText . 'By Sale Return'
-                        : $referenceText . 'Sale Return (adjusted in sale) - Rs. ' . number_format($returnAmount, 2),
+                    'description' => $referenceText . 'By Sale Return',
                     'debit' => 0,
                     'credit' => $returnAmount,
-                    // Same-period returns already in sale total_net; show credit but don't double-deduct balance.
-                    'balance_credit' => $isPriorSale ? $returnAmount : 0,
+                    'balance_credit' => $returnAmount,
                     'original_sale_id' => $r->sale_id
                 ]);
             }
