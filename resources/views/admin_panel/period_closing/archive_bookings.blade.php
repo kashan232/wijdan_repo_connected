@@ -17,15 +17,33 @@
 $totalNet=floatval($booking->total_net??0);
 $advance=floatval($booking->advance_payment??$booking->cash??0);
 $remaining=$totalNet-$advance;
+
+$names=[];
+foreach(explode(',',$booking->product??'') as $pid){
+    if(trim($pid) !== '') {
+        $p=\App\Models\Product::find(trim($pid));
+        if($p) $names[]=e($p->item_name);
+    }
+}
+$productNamesHtml = implode('<br>',$names);
+
+$qtyArr = array_filter(explode(',',$booking->qty??''), 'strlen');
+$qtyHtml = implode('<br>', $qtyArr);
+
+$prices = array_map(fn($x)=>number_format((float)$x,2), array_filter(explode(',',$booking->per_price??''), 'strlen'));
+$pricesHtml = implode('<br>', $prices);
+
+$discounts = array_map(fn($x)=>number_format((float)$x,2), array_filter(explode(',',$booking->per_discount??''), 'strlen'));
+$discountsHtml = implode('<br>', $discounts);
 @endphp
 <tr>
 <td>{{ $booking->id }}</td>
 <td>{{ $booking->customer_relation->customer_name??'Walk-in' }}</td>
 <td>{{ $booking->reference }}</td>
-<td>@php $names=[]; foreach(explode(',',$booking->product??'') as $pid){ $p=\App\Models\Product::find(trim($pid)); if($p)$names[]=e($p->item_name);} @endphp{!! implode('<br>',$names) !!}</td>
-<td>{!! implode('<br>',explode(',',$booking->qty??'')) !!}</td>
-<td>@php $p=array_map(fn($x)=>number_format((float)$x,2),explode(',',$booking->per_price??'')); @endphp{!! implode('<br>',$p) !!}</td>
-<td>@php $d=array_map(fn($x)=>number_format((float)$x,2),explode(',',$booking->per_discount??'')); @endphp{!! implode('<br>',$d) !!}</td>
+<td>{!! $productNamesHtml !!}</td>
+<td>{!! $qtyHtml !!}</td>
+<td>{!! $pricesHtml !!}</td>
+<td>{!! $discountsHtml !!}</td>
 <td>{{ number_format($totalNet,2) }}</td>
 <td>{{ number_format($advance,2) }}</td>
 <td class="{{ $remaining<=0?'text-success':'text-danger' }}">{{ number_format($remaining,2) }}</td>
