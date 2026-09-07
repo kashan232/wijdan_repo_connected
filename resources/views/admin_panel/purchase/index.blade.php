@@ -63,7 +63,7 @@
 
                         @if($isAdmin)
                         <div class="row g-3 mt-3 px-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
                                     <div class="card-body py-3 d-flex justify-content-between align-items-center text-white">
                                         <div>
@@ -71,13 +71,13 @@
                                             <div class="fs-4 fw-bold">Rs. {{ number_format($totalPurchase, 2) }}</div>
                                         </div>
                                         <div class="text-end">
-                                            <div class="small text-white-50">Purchase Records</div>
+                                            <div class="small text-white-50">Records</div>
                                             <div class="fs-5 fw-semibold">{{ $purchaseCount }}</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #198754 0%, #146c43 100%);">
                                     <div class="card-body py-3 d-flex justify-content-between align-items-center text-white">
                                         <div>
@@ -85,8 +85,22 @@
                                             <div class="fs-4 fw-bold">Rs. {{ number_format($totalInward, 2) }}</div>
                                         </div>
                                         <div class="text-end">
-                                            <div class="small text-white-50">Billed Inward Records</div>
+                                            <div class="small text-white-50">Records</div>
                                             <div class="fs-5 fw-semibold">{{ $inwardCount }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #6f42c1 0%, #4a238e 100%);">
+                                    <div class="card-body py-3 d-flex justify-content-between align-items-center text-white">
+                                        <div>
+                                            <div class="small text-white-50">Grand Total</div>
+                                            <div class="fs-4 fw-bold">Rs. {{ number_format($totalPurchase + $totalInward, 2) }}</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="small text-white-50">Total Records</div>
+                                            <div class="fs-5 fw-semibold">{{ $purchaseCount + $inwardCount }}</div>
                                         </div>
                                     </div>
                                 </div>
