@@ -22,6 +22,39 @@ class VendorController extends Controller
         return view('admin_panel.vendors.index', compact('vendors', 'totalClosingBalance'));
     }
 
+    public function actual_balances()
+    {
+        $sql = "
+            SELECT 
+                v.id AS vendor_id,
+                v.name AS vendor_name,
+                v.opening_balance AS initial_opening,
+                COALESCE(p.total_purchase, 0) AS total_purchases,
+                COALESCE(ig.total_inward, 0) AS total_inwards,
+                COALESCE(pr.total_pur_return, 0) AS total_returns,
+                COALESCE(vp.total_payment, 0) AS total_payments,
+                
+                (v.opening_balance 
+                 + COALESCE(p.total_purchase, 0) 
+                 + COALESCE(ig.total_inward, 0) 
+                 - COALESCE(pr.total_pur_return, 0) 
+                 - COALESCE(vp.total_payment, 0)
+                ) AS calculated_true_balance,
+                
+                vl.closing_balance AS system_saved_balance
+            FROM vendors v
+            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_purchase FROM purchases GROUP BY vendor_id) p ON p.vendor_id = v.id
+            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_inward FROM inward_gatepasses WHERE bill_status = 'billed' GROUP BY vendor_id) ig ON ig.vendor_id = v.id
+            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_pur_return FROM purchase_returns GROUP BY vendor_id) pr ON pr.vendor_id = v.id
+            LEFT JOIN (SELECT vendor_id, SUM(amount) AS total_payment FROM vendor_payments GROUP BY vendor_id) vp ON vp.vendor_id = v.id
+            LEFT JOIN vendor_ledgers vl ON vl.vendor_id = v.id
+        ";
+        
+        $results = \Illuminate\Support\Facades\DB::select($sql);
+        
+        return view('admin_panel.vendors.actual_balances', compact('results'));
+    }
+
     // Store or update vendor information
     public function store(Request $request)
     {

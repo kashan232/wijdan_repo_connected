@@ -18,6 +18,9 @@
                 </div>
 
                 <div class="d-flex gap-2">
+                    <a href="{{ route('vendor.actual_balances') }}" class="btn btn-outline-warning btn-sm">
+                        Actual Balances
+                    </a>
                     <a href="{{ url('vendors-ledger') }}" class="btn btn-outline-primary btn-sm">
                         Vendor Ledger
                     </a>

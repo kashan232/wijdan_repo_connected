@@ -148,6 +148,7 @@ Route::middleware('auth')->group(function () {
 
     // Vendor Routes
     Route::get('/vendors', [VendorController::class, 'index'])->name('vendors')->middleware('permission:Vendor');
+    Route::get('/vendors/actual-balances', [VendorController::class, 'actual_balances'])->name('vendor.actual_balances');
     Route::post('/vendor/store', [VendorController::class, 'store'])->name('vendor.store');
     Route::get('/vendor/delete/{id}', [VendorController::class, 'delete'])->name('vendor.delete');
     Route::get('/vendor/toggle-status/{id}', [VendorController::class, 'toggleStatus'])->name('vendor.toggleStatus');
