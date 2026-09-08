@@ -295,6 +295,15 @@ class InwardgatepassController extends Controller
                 }
             }
 
+            // 🔹 Reverse Vendor Ledger if it was billed
+            if ($gatepass->bill_status === 'billed') {
+                $ledger = \App\Models\VendorLedger::where('vendor_id', $gatepass->vendor_id)->first();
+                if ($ledger) {
+                    $ledger->closing_balance -= $gatepass->net_amount;
+                    $ledger->save();
+                }
+            }
+
             // Delete items first
             InwardGatepassItem::where('inward_gatepass_id', $gatepass->id)->delete();
 

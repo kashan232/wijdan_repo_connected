@@ -795,8 +795,34 @@ class PurchaseController extends Controller
     public function destroy($id)
     {
         try {
-            $purchase = Purchase::findOrFail($id);
+            $purchase = Purchase::with('items')->findOrFail($id);
             $this->guardClosedPeriodRecord($purchase);
+            
+            // 🔹 Reverse Vendor Ledger
+            $ledger = \App\Models\VendorLedger::where('vendor_id', $purchase->vendor_id)->first();
+            if ($ledger) {
+                $ledger->closing_balance -= $purchase->net_amount;
+                $ledger->save();
+            }
+
+            // 🔹 Reverse Stock
+            foreach ($purchase->items as $item) {
+                if ($purchase->purchase_to === 'warehouse') {
+                    $stock = \App\Models\Stock::where('warehouse_id', $purchase->warehouse_id)
+                        ->where('product_id', $item->product_id)
+                        ->first();
+                } else {
+                    $stock = \App\Models\Stock::whereNull('warehouse_id')
+                        ->where('product_id', $item->product_id)
+                        ->first();
+                }
+                
+                if ($stock) {
+                    $stock->qty -= $item->qty;
+                    $stock->save();
+                }
+            }
+
             $purchase->delete();
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
