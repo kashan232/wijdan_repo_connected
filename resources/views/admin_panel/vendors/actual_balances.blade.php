@@ -31,7 +31,7 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-striped align-middle mb-0">
+                            <table id="actualBalancesTable" class="table table-bordered table-striped align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
                                         <th>ID</th>
@@ -75,4 +75,15 @@
     </div>
     </div>
 </div>
+
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        $('#actualBalancesTable').DataTable({
+            "order": [],
+            "pageLength": 25
+        });
+    });
+</script>
+@endsection
 @endsection
