@@ -22,6 +22,43 @@
         </div>
         <!-- end page title -->
 
+        @php
+            $totalCalculated = 0;
+            $totalSaved = 0;
+            foreach($results as $row) {
+                $totalCalculated += $row->calculated_true_balance;
+                $totalSaved += $row->system_saved_balance;
+            }
+            $totalDiff = $totalCalculated - $totalSaved;
+        @endphp
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card bg-primary text-white shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-white mb-2">Total Calculated True Balance</h5>
+                        <h3 class="mb-0 text-white">Rs. {{ number_format($totalCalculated, 2) }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-secondary text-white shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-white mb-2">Total System Saved Balance</h5>
+                        <h3 class="mb-0 text-white">Rs. {{ number_format($totalSaved, 2) }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card {{ round($totalDiff, 2) != 0 ? 'bg-danger' : 'bg-success' }} text-white shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-white mb-2">Total Difference</h5>
+                        <h3 class="mb-0 text-white">Rs. {{ number_format($totalDiff, 2) }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-12">
                 <div class="card">
