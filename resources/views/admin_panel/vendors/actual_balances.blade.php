@@ -92,7 +92,7 @@
             "pageLength": 25
         });
 
-        $(document).on('click', '.fix-btn', function() {
+        $('#actualBalancesTable tbody').on('click', '.fix-btn', function() {
             var btn = $(this);
             var vendor_id = btn.data('id');
             var diff = btn.data('diff');
