@@ -55,6 +55,22 @@ class VendorController extends Controller
         return view('admin_panel.vendors.actual_balances', compact('results'));
     }
 
+    public function fix_balance(Request $request)
+    {
+        $request->validate([
+            'vendor_id' => 'required|exists:vendors,id',
+            'difference' => 'required|numeric'
+        ]);
+
+        $vendor = Vendor::findOrFail($request->vendor_id);
+        
+        // Equation: New Opening = Old Opening - Difference
+        $vendor->opening_balance = $vendor->opening_balance - $request->difference;
+        $vendor->save();
+
+        return response()->json(['success' => true, 'message' => 'Balance fixed successfully by adjusting opening balance.']);
+    }
+
     // Store or update vendor information
     public function store(Request $request)
     {

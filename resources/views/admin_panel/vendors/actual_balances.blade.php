@@ -44,6 +44,7 @@
                                         <th class="text-primary">Calculated True Balance</th>
                                         <th class="text-secondary">System Saved Balance</th>
                                         <th>Difference</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -63,6 +64,13 @@
                                             <td class="text-primary fw-bold">{{ number_format($row->calculated_true_balance, 2) }}</td>
                                             <td class="text-secondary fw-bold">{{ number_format($row->system_saved_balance, 2) }}</td>
                                             <td class="{{ $diffClass }}">{{ number_format($diff, 2) }}</td>
+                                            <td>
+                                                @if(round($diff, 2) != 0)
+                                                    <button class="btn btn-sm btn-danger fix-btn" data-id="{{ $row->vendor_id }}" data-diff="{{ $diff }}">Fix Auto</button>
+                                                @else
+                                                    <span class="badge bg-success">OK</span>
+                                                @endif
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -82,6 +90,38 @@
         $('#actualBalancesTable').DataTable({
             "order": [],
             "pageLength": 25
+        });
+
+        $('.fix-btn').click(function() {
+            var btn = $(this);
+            var vendor_id = btn.data('id');
+            var diff = btn.data('diff');
+
+            if (confirm('Are you sure you want to fix the calculated balance to match the system saved balance by adjusting the opening balance by ' + diff + '?')) {
+                btn.prop('disabled', true).text('Fixing...');
+                $.ajax({
+                    url: '{{ route('vendor.fix_balance') }}',
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        vendor_id: vendor_id,
+                        difference: diff
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            location.reload();
+                        } else {
+                            alert('Something went wrong!');
+                            btn.prop('disabled', false).text('Fix Auto');
+                        }
+                    },
+                    error: function() {
+                        alert('Error processing request.');
+                        btn.prop('disabled', false).text('Fix Auto');
+                    }
+                });
+            }
         });
     });
 </script>
