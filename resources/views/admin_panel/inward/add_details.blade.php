@@ -442,6 +442,11 @@
                 addRow();
                 return false;
             }
+            
+            // Disable the submit button to prevent double form submission
+            let submitBtn = $(this).find('button[type="submit"]');
+            submitBtn.prop('disabled', true);
+            submitBtn.html('✔ Saving...');
         });
 
         /* ================= PREVENT ENTER SUBMIT ================= */

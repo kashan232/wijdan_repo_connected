@@ -429,7 +429,9 @@
                 const pid = $(this).find('.product_id').val();
                 if (!pid) $(this).remove();
             });
-            if ($('input[name="product_id[]"]').filter(function() {
+            
+            // Check if there are any items (only if the table exists)
+            if ($('#gatepassItems').length > 0 && $('input[name="product_id[]"]').filter(function() {
                     return $(this).val() != '';
                 }).length === 0) {
                 e.preventDefault();
@@ -438,6 +440,11 @@
                 Swal.fire('Error', 'Please add at least one product for the gatepass', 'error');
                 return false;
             }
+            
+            // Disable the submit button to prevent multiple submissions
+            let submitBtn = $(this).find('button[type="submit"]');
+            submitBtn.prop('disabled', true);
+            submitBtn.html('💾 Saving...');
         });
 
         // prevent Enter submit

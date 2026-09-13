@@ -221,6 +221,12 @@ $(document).ready(function () {
         }
     });
 
+    $('form').on('submit', function() {
+        let submitBtn = $(this).find('button[type="submit"]');
+        submitBtn.prop('disabled', true);
+        submitBtn.html('💾 Updating...');
+    });
+
 });
 </script>
 @endsection

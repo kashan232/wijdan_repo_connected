@@ -109,6 +109,13 @@
                 $(this).val(0);
             }
         });
+
+        // Disable submit button on form submit to prevent double submission
+        $('form').on('submit', function() {
+            let submitBtn = $(this).find('button[type="submit"]');
+            submitBtn.prop('disabled', true);
+            submitBtn.html('Processing...');
+        });
     });
 </script>
 @endsection

@@ -190,6 +190,13 @@
             }
         });
 
+        // Disable submit button on form submit to prevent double submission
+        $('form').on('submit', function() {
+            let submitBtn = $(this).find('button[type="submit"]');
+            submitBtn.prop('disabled', true);
+            submitBtn.html('Updating...');
+        });
+
         // ===== ALTERNATIVE: Prevent Enter on specific input fields =====
         $('input, select').on('keydown', function(e) {
             if (e.which === 13 || e.keyCode === 13) {
