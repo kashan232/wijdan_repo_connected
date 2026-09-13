@@ -482,19 +482,13 @@
 
         // Validate quantity vs stock
         $(document).on('input', '.quantity', function() {
-
-            const $row = $(this).closest('tr');
             const val = $(this).val();
             if (val === '' || val === '-') {
                 return;
             }
             const entered = Number(val);
             if (isNaN(entered)) return;
-            if (typeof maxAttr === 'undefined') return;
-            const max = Number(maxAttr);
-            if (!isNaN(max)) {
-                $row.find('.stock').val(max - entered);
-            }
+            // Removed broken maxAttr validation that was causing confusion
         });
 
         $(document).on('input', '.quantity', function() {
@@ -547,56 +541,24 @@
         }
     });
 
-    $(document).on('keydown', function(e) {
-
-        if ($(e.target).is('textarea')) return;
-
-        IS_SCANNING = true;
-
-        if (e.key === 'Enter') {
-            e.preventDefault();
-
-            if (scanBuffer.length >= 5) {
-                handleTransferBarcode(scanBuffer);
-            }
-
-            scanBuffer = '';
-            IS_SCANNING = false;
-            return;
-        }
-
-        if (e.key.length === 1) {
-            scanBuffer += e.key;
-        }
-
-        clearTimeout(scanTimer);
-        scanTimer = setTimeout(() => {
-            scanBuffer = '';
-            IS_SCANNING = false;
-        }, 120);
-    });
-    $(document).on('focus', '.quantity', function() {
-        $(this).removeAttr('max');
-    });
-
     // ------------------- SCANNER BUFFER -------------------
     let scanBuffer = '';
     let scanTimer = null;
     let lastBarcode = null;
     let lastScanTime = 0;
-    const SCAN_DELAY = 500; // ms to prevent double scan
+    const SCAN_DELAY = 100; // ms to prevent double scan, reduced for fast scanning
 
     $(document).on('keydown', function(e) {
-        // Ignore typing in textareas and search inputs
-        if ($(e.target).is('textarea, input')) return;
-        // Enter key → process scan
-        if (e.key === 'Enter') {
-            e.preventDefault();
+        // Ignore typing in textareas and normal inputs EXCEPT the readonly productSearch
+        if ($(e.target).is('textarea') || ($(e.target).is('input') && !$(e.target).hasClass('productSearch'))) {
+            return;
+        }
 
-            if (scanBuffer.length >= 5) {
+        if (e.key === 'Enter') {
+            if (scanBuffer.length >= 2) {
+                e.preventDefault();
                 handleTransferBarcode(scanBuffer.trim());
             }
-
             scanBuffer = '';
             return;
         }
@@ -610,7 +572,7 @@
         clearTimeout(scanTimer);
         scanTimer = setTimeout(() => {
             scanBuffer = '';
-        }, 200); // 200ms safe for scanners
+        }, 150); // 150ms safe for scanners
     });
 
     // ------------------- HANDLE BARCODE -------------------

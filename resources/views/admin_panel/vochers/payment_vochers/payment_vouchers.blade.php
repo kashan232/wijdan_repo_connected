@@ -371,6 +371,13 @@
         // recalc after adding
         calculateAccountsTotal();
     });
+
+    // Disable submit button on form submit to prevent double submission
+    $('form').on('submit', function() {
+        let submitBtn = $(this).find('button[type="submit"], button:contains("Save")');
+        submitBtn.prop('disabled', true);
+        submitBtn.html('Saving...');
+    });
 </script>
 
 @endsection
