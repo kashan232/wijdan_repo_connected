@@ -1079,7 +1079,7 @@ class ReportingController extends Controller
                 $saleReturns->push([
                     'date' => $r->created_at,
                     'sort_type' => 3,
-                    'invoice' => 'SR-' . $r->sale_id,
+                    'invoice' => 'SR-' . $r->id,
                     'reference' => $r->reference,
                     'description' => $referenceText . 'By Sale Return',
                     'debit' => 0,

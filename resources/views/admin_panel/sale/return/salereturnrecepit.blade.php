@@ -279,7 +279,7 @@
     <table>
       <tr>
         <th>Inv Number</th>
-        <td>{{ $return->id }}</td>
+        <td>SR-{{ $return->id }}</td>
       </tr>
       <tr>
         <th>Date</th>
@@ -460,7 +460,7 @@
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       // 🏷️ Barcode Generation
-      JsBarcode("#barcode", "{{ $return->id }}", {
+      JsBarcode("#barcode", "SR-{{ $return->id }}", {
         format: "CODE128",
         lineColor: "#000",
         width: 1,

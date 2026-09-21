@@ -1299,7 +1299,7 @@ class SaleController extends Controller
 
                 $data[] = [
                     $skip + $index + 1,
-                    $return->sale->invoice_no ?? 'N/A',
+                    'SR-' . $return->id . '<br><small class="text-muted">Ref: ' . ($return->sale->invoice_no ?? 'N/A') . '</small>',
                     $productsHtml,
                     $return->sale->customer_relation->customer_name ?? 'N/A',
                     '<div class="text-center">' . $return->total_items . '</div>',
