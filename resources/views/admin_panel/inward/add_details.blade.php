@@ -427,7 +427,12 @@
         });
 
         /* ================= FORM SUBMIT VALIDATION ================= */
+        let isSubmitting = false;
         $('#gatepassForm').on('submit', function(e) {
+            if (isSubmitting) {
+                e.preventDefault();
+                return false;
+            }
 
             // remove empty rows
             $('#gatepassItems tr').each(function() {
@@ -443,6 +448,7 @@
                 return false;
             }
             
+            isSubmitting = true;
             // Disable the submit button to prevent double form submission
             let submitBtn = $(this).find('button[type="submit"]');
             submitBtn.prop('disabled', true);

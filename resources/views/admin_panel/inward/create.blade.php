@@ -95,7 +95,13 @@
                             <div class="alert alert-success">{{ session('success') }}</div>
                             @endif
 
-                            <form action="{{ route('store.InwardGatepass') }}" method="POST" id="gatepassForm">
+                            <form action="{{ route('store.InwardGatepass') }}" method="POST" id="gatepassForm" onsubmit="
+                                if (window.isSubmittingForm) return false; 
+                                window.isSubmittingForm = true; 
+                                let btn = this.querySelector('button[type=submit]'); 
+                                if (btn) { btn.disabled = true; btn.innerHTML = 'Wait...'; } 
+                                return true;
+                            ">
                                 @csrf
 
                                 <!-- ================= BASIC INFO ================= -->
@@ -293,11 +299,7 @@
         });
 
     });
-</script>
-@endsection
 
-@section('scripts')
-<script>
     $(document).ready(function() {
         $('.select2').select2({
             width: '100%',
@@ -421,30 +423,6 @@
             if ($('#gatepassItems tr').length > 1) {
                 $(this).closest('tr').remove();
             }
-        });
-
-        // form submit check
-        $('#gatepassForm').on('submit', function(e) {
-            $('#gatepassItems tr').each(function() {
-                const pid = $(this).find('.product_id').val();
-                if (!pid) $(this).remove();
-            });
-            
-            // Check if there are any items (only if the table exists)
-            if ($('#gatepassItems').length > 0 && $('input[name="product_id[]"]').filter(function() {
-                    return $(this).val() != '';
-                }).length === 0) {
-                e.preventDefault();
-                appendBlankRow();
-
-                Swal.fire('Error', 'Please add at least one product for the gatepass', 'error');
-                return false;
-            }
-            
-            // Disable the submit button to prevent multiple submissions
-            let submitBtn = $(this).find('button[type="submit"]');
-            submitBtn.prop('disabled', true);
-            submitBtn.html('💾 Saving...');
         });
 
         // prevent Enter submit

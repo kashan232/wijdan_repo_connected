@@ -191,7 +191,13 @@
         });
 
         // Disable submit button on form submit to prevent double submission
-        $('form').on('submit', function() {
+        let isSubmitting = false;
+        $('form').on('submit', function(e) {
+            if (isSubmitting) {
+                e.preventDefault();
+                return false;
+            }
+            isSubmitting = true;
             let submitBtn = $(this).find('button[type="submit"]');
             submitBtn.prop('disabled', true);
             submitBtn.html('Updating...');
