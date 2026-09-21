@@ -254,7 +254,7 @@
                             <div class="col-md-6 mb-3">
                                 <label class="form-label"><i class="fa fa-lock"></i> Password</label>
                                 <input type="password" name="password" id="device_password" class="form-control"
-                                    placeholder="Optional">
+                                    placeholder="Optional" autocomplete="new-password">
                             </div>
 
                             <div class="col-md-6 mb-3">

@@ -24,12 +24,12 @@
                             </div>
                         @endif
 
-                        <form action="{{ route('period.access.verify') }}" method="POST">
+                        <form action="{{ route('period.access.verify') }}" method="POST" autocomplete="off">
                             @csrf
                             <div class="mb-3">
                                 <label class="pc-form-label">Access Password</label>
                                 <input type="password" name="access_password" class="form-control pc-form-control"
-                                    required autofocus placeholder="Password enter karein">
+                                    required autofocus placeholder="Password enter karein" autocomplete="new-password">
                             </div>
                             <button type="submit" class="btn btn-primary pc-btn-primary w-100">
                                 <i class="fas fa-unlock me-2"></i>Verify & Continue

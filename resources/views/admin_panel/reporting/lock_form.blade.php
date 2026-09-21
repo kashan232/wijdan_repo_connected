@@ -23,13 +23,13 @@
                                 </div>
                             @endif
 
-                            <form action="{{ route('report.unlock') }}" method="POST">
+                            <form action="{{ route('report.unlock') }}" method="POST" autocomplete="off">
                                 @csrf
                                 <input type="hidden" name="intended" value="{{ $intended }}">
                                 
                                 <div class="mb-3">
                                     <label for="password" class="form-label">Password</label>
-                                    <input type="password" name="password" id="password" class="form-control" placeholder="Enter your login password" required autofocus>
+                                    <input type="password" name="password" id="password" class="form-control" placeholder="Enter your login password" required autofocus autocomplete="new-password">
                                 </div>
 
                                 <div class="d-grid gap-2">

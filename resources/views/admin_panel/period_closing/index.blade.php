@@ -53,18 +53,18 @@
                             Yeh password page access aur period closing dono ke liye use hoga. Sirf admin in pages ko khol sakta hai.
                         </p>
 
-                        <form action="{{ route('period.closing.settings') }}" method="POST" class="mt-3">
+                        <form action="{{ route('period.closing.settings') }}" method="POST" class="mt-3" autocomplete="off">
                             @csrf
 
                             <div class="pc-section-title"><i class="fas fa-key me-1"></i> Access & Closing Password</div>
                             <div class="mb-3">
                                 <label class="pc-form-label">Password</label>
                                 <input type="password" name="closing_password" class="form-control pc-form-control" required minlength="4"
-                                    placeholder="{{ $hasPassword ? 'Naya password set karein' : 'Password set karein' }}">
+                                    placeholder="{{ $hasPassword ? 'Naya password set karein' : 'Password set karein' }}" autocomplete="new-password">
                             </div>
                             <div class="mb-3">
                                 <label class="pc-form-label">Confirm Password</label>
-                                <input type="password" name="closing_password_confirmation" class="form-control pc-form-control" required minlength="4">
+                                <input type="password" name="closing_password_confirmation" class="form-control pc-form-control" required minlength="4" autocomplete="new-password">
                             </div>
 
                             <div class="pc-section-title"><i class="fas fa-user-shield me-1"></i> Archive Viewer Account</div>
@@ -83,11 +83,11 @@
                             <div class="row g-2">
                                 <div class="col-6">
                                     <label class="pc-form-label">Viewer Password</label>
-                                    <input type="password" name="viewer_password" class="form-control pc-form-control" required minlength="4">
+                                    <input type="password" name="viewer_password" class="form-control pc-form-control" required minlength="4" autocomplete="new-password">
                                 </div>
                                 <div class="col-6">
                                     <label class="pc-form-label">Confirm</label>
-                                    <input type="password" name="viewer_password_confirmation" class="form-control pc-form-control" required minlength="4">
+                                    <input type="password" name="viewer_password_confirmation" class="form-control pc-form-control" required minlength="4" autocomplete="new-password">
                                 </div>
                             </div>
 
@@ -130,7 +130,7 @@
                                 </div>
                             </div>
 
-                            <form action="{{ route('period.closing.close') }}" method="POST" id="closePeriodForm"
+                            <form action="{{ route('period.closing.close') }}" method="POST" id="closePeriodForm" autocomplete="off"
                                 onsubmit="return confirm('Kya aap sure hain? Is date tak ka sara data band ho jayega. Koi record delete nahi hoga.');">
                                 @csrf
                                 <div class="row g-3">
@@ -143,7 +143,7 @@
                                     <div class="col-md-6">
                                         <label class="pc-form-label">Closing Password <span class="text-danger">*</span></label>
                                         <input type="password" name="closing_password" class="form-control pc-form-control" required
-                                            placeholder="••••••••">
+                                            placeholder="••••••••" autocomplete="new-password">
                                     </div>
                                     <div class="col-12">
                                         <label class="pc-form-label">Notes (optional)</label>
