@@ -27,9 +27,13 @@
                                 @csrf
                                 <input type="hidden" name="intended" value="{{ $intended }}">
                                 
+                                <!-- Dummy fields to absorb Chrome's aggressive autofill -->
+                                <input type="text" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" aria-hidden="true" autocomplete="username">
+                                <input type="password" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" aria-hidden="true" autocomplete="current-password">
+
                                 <div class="mb-3">
                                     <label for="password" class="form-label">Password</label>
-                                    <input type="password" name="password" id="password" class="form-control" placeholder="Enter your login password" required autofocus autocomplete="new-password">
+                                    <input type="password" name="password" id="password" class="form-control" placeholder="Enter your login password" required autofocus autocomplete="new-password" data-lpignore="true" readonly onfocus="this.removeAttribute('readonly');">
                                 </div>
 
                                 <div class="d-grid gap-2">

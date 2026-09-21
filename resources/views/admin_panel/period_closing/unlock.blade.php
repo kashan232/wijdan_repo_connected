@@ -26,10 +26,15 @@
 
                         <form action="{{ route('period.access.verify') }}" method="POST" autocomplete="off">
                             @csrf
+                            
+                            <!-- Dummy fields to absorb Chrome's aggressive autofill -->
+                            <input type="text" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" aria-hidden="true" autocomplete="username">
+                            <input type="password" style="position: absolute; top: -9999px; left: -9999px;" tabindex="-1" aria-hidden="true" autocomplete="current-password">
+
                             <div class="mb-3">
                                 <label class="pc-form-label">Access Password</label>
                                 <input type="password" name="access_password" class="form-control pc-form-control"
-                                    required autofocus placeholder="Password enter karein" autocomplete="new-password">
+                                    required autofocus placeholder="Password enter karein" autocomplete="new-password" data-lpignore="true" readonly onfocus="this.removeAttribute('readonly');">
                             </div>
                             <button type="submit" class="btn btn-primary pc-btn-primary w-100">
                                 <i class="fas fa-unlock me-2"></i>Verify & Continue
