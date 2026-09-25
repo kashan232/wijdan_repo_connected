@@ -16,19 +16,111 @@ class CustomerController extends Controller
     {
         $customers = Customer::latest()->get();
 
-        $closingBalances = DB::table('customer_ledgers')
-            ->select('customer_id', 'closing_balance')
-            ->orderBy('id', 'desc')
+        // 1. Sales (Total Net or Total Bill Amount) and Sale Payments (Cash + Card)
+        $sales = DB::table('sales')
+            ->select('customer', DB::raw('SUM(COALESCE(total_net, total_bill_amount)) as total_sales'), DB::raw('SUM(COALESCE(cash, 0) + COALESCE(card, 0)) as total_sale_payments'))
+            ->groupBy('customer')
+            ->get()
+            ->keyBy('customer');
+
+        // 2. Customer Payments
+        $payments = DB::table('customer_payments')
+            ->select('customer_id', DB::raw('SUM(amount) as total_payments'))
+            ->groupBy('customer_id')
             ->get()
             ->keyBy('customer_id');
 
+        // 3. Customer Charges (Plus and Minus)
+        $charges = DB::table('customer_charges')
+            ->select('customer_id', 
+                DB::raw("SUM(CASE WHEN type = 'plus' THEN amount ELSE 0 END) as total_plus"),
+                DB::raw("SUM(CASE WHEN type = 'minus' THEN amount ELSE 0 END) as total_minus")
+            )
+            ->groupBy('customer_id')
+            ->get()
+            ->keyBy('customer_id');
+
+        // 4. Sale Returns
+        $returns = DB::table('sales_returns')
+            ->select('customer', DB::raw('SUM(total_net) as total_returns'))
+            ->groupBy('customer')
+            ->get()
+            ->keyBy('customer');
+
         foreach ($customers as $customer) {
-            $customer->closing_balance = $closingBalances[$customer->id]->closing_balance ?? 0;
+            $opening = $customer->opening_balance ?? 0;
+            
+            $saleDebit = $sales[$customer->id]->total_sales ?? 0;
+            $saleCredit = $sales[$customer->id]->total_sale_payments ?? 0;
+            
+            $paymentCredit = $payments[$customer->id]->total_payments ?? 0;
+            
+            $chargeDebit = $charges[$customer->id]->total_plus ?? 0;
+            $chargeCredit = $charges[$customer->id]->total_minus ?? 0;
+            
+            $returnCredit = $returns[$customer->id]->total_returns ?? 0;
+
+            $customer->closing_balance = $opening + $saleDebit + $chargeDebit - $saleCredit - $paymentCredit - $chargeCredit - $returnCredit;
         }
 
         $totalClosingBalance = $customers->where('status', '!=', 'inactive')->sum('closing_balance');
 
         return view('admin_panel.customers.index', compact('customers', 'totalClosingBalance'));
+    }
+
+    public function actual_balances()
+    {
+        $sql = "
+            SELECT 
+                c.id AS customer_id,
+                c.customer_name AS customer_name,
+                c.opening_balance AS initial_opening,
+                COALESCE(s.total_sales, 0) AS total_sales,
+                COALESCE(s.total_sale_payments, 0) AS total_sale_payments,
+                COALESCE(sr.total_returns, 0) AS total_returns,
+                COALESCE(cp.total_payments, 0) AS total_payments,
+                COALESCE(ch.total_plus, 0) AS total_plus,
+                COALESCE(ch.total_minus, 0) AS total_minus,
+                
+                (c.opening_balance 
+                 + COALESCE(s.total_sales, 0) 
+                 + COALESCE(ch.total_plus, 0) 
+                 - COALESCE(s.total_sale_payments, 0) 
+                 - COALESCE(sr.total_returns, 0) 
+                 - COALESCE(cp.total_payments, 0)
+                 - COALESCE(ch.total_minus, 0)
+                ) AS calculated_true_balance,
+                
+                cl.closing_balance AS system_saved_balance
+            FROM customers c
+            LEFT JOIN (
+                SELECT customer, SUM(COALESCE(total_net, total_bill_amount)) AS total_sales, SUM(COALESCE(cash, 0) + COALESCE(card, 0)) AS total_sale_payments 
+                FROM sales GROUP BY customer
+            ) s ON s.customer = c.id
+            LEFT JOIN (
+                SELECT customer, SUM(total_net) AS total_returns 
+                FROM sales_returns GROUP BY customer
+            ) sr ON sr.customer = c.id
+            LEFT JOIN (
+                SELECT customer_id, SUM(amount) AS total_payments 
+                FROM customer_payments GROUP BY customer_id
+            ) cp ON cp.customer_id = c.id
+            LEFT JOIN (
+                SELECT customer_id, 
+                       SUM(CASE WHEN type = 'plus' THEN amount ELSE 0 END) AS total_plus,
+                       SUM(CASE WHEN type = 'minus' THEN amount ELSE 0 END) AS total_minus
+                FROM customer_charges GROUP BY customer_id
+            ) ch ON ch.customer_id = c.id
+            LEFT JOIN (
+                SELECT customer_id, closing_balance 
+                FROM customer_ledgers 
+                WHERE id IN (SELECT MAX(id) FROM customer_ledgers GROUP BY customer_id)
+            ) cl ON cl.customer_id = c.id
+        ";
+        
+        $results = DB::select($sql);
+        
+        return view('admin_panel.customers.actual_balances', compact('results'));
     }
 
     public function toggleStatus($id)

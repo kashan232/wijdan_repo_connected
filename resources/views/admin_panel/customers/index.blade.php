@@ -42,6 +42,9 @@
                     <a href="{{ route('customers.inactive') }}" class="btn btn-outline-secondary btn-sm">
                         Inactive
                     </a>
+                    <a href="{{ route('customers.actual_balances') }}" class="btn btn-outline-warning btn-sm">
+                        Actual Balances
+                    </a>
                     <a href="{{ route('customers.ledger') }}" class="btn btn-outline-primary btn-sm">
                         Ledger
                     </a>
