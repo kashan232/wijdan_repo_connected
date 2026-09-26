@@ -83,6 +83,7 @@
                                         <th class="text-primary">Calculated True Balance</th>
                                         <th class="text-secondary">System Saved Balance</th>
                                         <th>Difference</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -105,10 +106,12 @@
                                             <td class="text-secondary fw-bold">{{ number_format($row->system_saved_balance, 2) }}</td>
                                             <td class="{{ $diffClass }}">
                                                 {{ number_format($diff, 2) }}
-                                                @if(round($diff, 2) == 0)
-                                                    <span class="badge bg-success ms-2">OK</span>
+                                            </td>
+                                            <td>
+                                                @if(round($diff, 2) != 0)
+                                                    <button class="btn btn-sm btn-danger fix-btn" data-id="{{ $row->customer_id }}" data-diff="{{ $diff }}">Fix Auto</button>
                                                 @else
-                                                    <span class="badge bg-danger ms-2">Mismatch</span>
+                                                    <span class="badge bg-success">OK</span>
                                                 @endif
                                             </td>
                                         </tr>
@@ -130,6 +133,38 @@
         $('#actualBalancesTable').DataTable({
             "order": [],
             "pageLength": 25
+        });
+
+        $('#actualBalancesTable tbody').on('click', '.fix-btn', function() {
+            var btn = $(this);
+            var customer_id = btn.data('id');
+            var diff = btn.data('diff');
+
+            if (confirm('Are you sure you want to fix the calculated balance to match the system saved balance by adjusting the opening balance by ' + diff + '?')) {
+                btn.prop('disabled', true).text('Fixing...');
+                $.ajax({
+                    url: '{{ route('customers.fix_balance') }}',
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        customer_id: customer_id,
+                        difference: diff
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            location.reload();
+                        } else {
+                            alert('Something went wrong!');
+                            btn.prop('disabled', false).text('Fix Auto');
+                        }
+                    },
+                    error: function() {
+                        alert('Error processing request.');
+                        btn.prop('disabled', false).text('Fix Auto');
+                    }
+                });
+            }
         });
     });
 </script>

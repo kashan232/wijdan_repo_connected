@@ -123,6 +123,22 @@ class CustomerController extends Controller
         return view('admin_panel.customers.actual_balances', compact('results'));
     }
 
+    public function fix_balance(Request $request)
+    {
+        $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'difference' => 'required|numeric'
+        ]);
+
+        $customer = Customer::findOrFail($request->customer_id);
+        
+        // Equation: New Opening = Old Opening - Difference
+        $customer->opening_balance = $customer->opening_balance - $request->difference;
+        $customer->save();
+
+        return response()->json(['success' => true, 'message' => 'Balance fixed successfully by adjusting opening balance.']);
+    }
+
     public function toggleStatus($id)
     {
         $customer = Customer::findOrFail($id);

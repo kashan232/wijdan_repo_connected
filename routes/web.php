@@ -133,6 +133,7 @@ Route::middleware('auth')->group(function () {
     Route::get('customers/toggle-status/{id}', [CustomerController::class, 'toggleStatus'])->name('customers.toggleStatus');
     Route::get('/customers/ledger', [CustomerController::class, 'customer_ledger'])->name('customers.ledger');
     Route::get('/customers/actual-balances', [CustomerController::class, 'actual_balances'])->name('customers.actual_balances');
+    Route::post('/customers/fix-balance', [CustomerController::class, 'fix_balance'])->name('customers.fix_balance');
     Route::get('/customer/payments', [CustomerController::class, 'customer_payments'])->name('customer.payments');
     Route::post('/customer/payments', [CustomerController::class, 'store_customer_payment'])->name('customer.payments.store');
     Route::get('/customer/payments/{id}/edit', [CustomerController::class, 'edit_customer_payment'])->name('customer.payments.edit');
