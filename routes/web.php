@@ -337,11 +337,11 @@ Route::middleware('auth')->group(function () {
     Route::get('report/sale', [ReportingController::class, 'sale_report'])->name('report.sale')->middleware(['permission:Sale Report', 'lock.report']);
     Route::get('report/sale/fetch', [ReportingController::class, 'fetchsaleReport'])->name('report.sale.fetch')->middleware(['permission:Sale Report', 'lock.report']);
 
-    Route::get('report/niaz', [ReportingController::class, 'niaz_report'])->name('report.niaz')->middleware(['permission:Sale Report', 'lock.report']);
-    Route::get('report/niaz/fetch', [ReportingController::class, 'fetchNiazReport'])->name('report.niaz.fetch')->middleware(['permission:Sale Report', 'lock.report']);
+    Route::get('report/niaz', [ReportingController::class, 'niaz_report'])->name('report.niaz')->middleware(['permission:Niaz Report', 'lock.report']);
+    Route::get('report/niaz/fetch', [ReportingController::class, 'fetchNiazReport'])->name('report.niaz.fetch')->middleware(['permission:Niaz Report', 'lock.report']);
 
-    Route::get('report/sale-bonus', [ReportingController::class, 'sale_bonus_report'])->name('report.sale.bonus')->middleware(['permission:Sale Report', 'lock.report']);
-    Route::get('report/sale-bonus/fetch', [ReportingController::class, 'fetchSaleBonusReport'])->name('report.sale.bonus.fetch')->middleware(['permission:Sale Report', 'lock.report']);
+    Route::get('report/sale-bonus', [ReportingController::class, 'sale_bonus_report'])->name('report.sale.bonus')->middleware(['permission:Sale Bonus Report', 'lock.report']);
+    Route::get('report/sale-bonus/fetch', [ReportingController::class, 'fetchSaleBonusReport'])->name('report.sale.bonus.fetch')->middleware(['permission:Sale Bonus Report', 'lock.report']);
 
 
     Route::get('report/sale/category', [ReportingController::class, 'sale_report_category'])->name('report.sale.category')->middleware(['permission:Sale Report', 'lock.report']);
@@ -354,8 +354,8 @@ Route::middleware('auth')->group(function () {
     Route::get('report/vendor/ledger', [ReportingController::class, 'vendor_ledger_report'])->name('report.vendor.ledger')->middleware('permission:Vendor Ledger');
     Route::get('report/vendor-ledger/fetch', [ReportingController::class, 'fetch_vendor_ledger'])->name('report.vendor.ledger.fetch');
 
-    Route::get('report/expense/vocher', [ReportingController::class, 'expense_vocher'])->name('expense.vocher');
-    Route::get('/expense-voucher/ajax', [ReportingController::class, 'expenseVoucherAjax'])->name('expense.voucher.ajax');
+    Route::get('report/expense/vocher', [ReportingController::class, 'expense_vocher'])->name('expense.vocher')->middleware('permission:Expense Report');
+    Route::get('/expense-voucher/ajax', [ReportingController::class, 'expenseVoucherAjax'])->name('expense.voucher.ajax')->middleware('permission:Expense Report');
 
     // Vochers work
 

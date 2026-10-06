@@ -417,19 +417,21 @@
                                     </a>
                                 </li>
 
-                                @if (auth()->user()->email === 'admin@admin.com')
+                                @can('Niaz Report')
                                 <li>
                                     <a href="{{ route('report.niaz') }}">
                                         <i class="fa-solid fa-users"></i> Niaz Report
                                     </a>
                                 </li>
+                                @endcan
 
+                                @can('Sale Bonus Report')
                                 <li>
                                     <a href="{{ route('report.sale.bonus') }}">
                                         <i class="fa-solid fa-users"></i> Sale Bonus Report
                                     </a>
                                 </li>
-                                @endif
+                                @endcan
 
                                 <li>
                                     <a href="{{ route('report.sale.category') }}">
@@ -465,13 +467,13 @@
                                 </li>
                                 @endcan
 
-                                @if (auth()->user()->email === 'admin@admin.com')
+                                @can('Expense Report')
                                 <li>
                                     <a href="{{ route('expense.vocher') }}">
                                         <i class="fa-solid fa-users"></i> Expense Report
                                     </a>
                                 </li>
-                                @endif
+                                @endcan
 
                             </ul>
                         </div>
