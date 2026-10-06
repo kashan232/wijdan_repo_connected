@@ -502,7 +502,7 @@
                     </li>
                     @endif
 
-                    @if (auth()->user()->email === 'admin@admin.com')
+                    @if (auth()->user()->email === 'admin@admin.com' || auth()->user()->email === 'superadmin@gmail.com' || auth()->user()->hasRole('Super Admin'))
                     <li class="nav-item">
                         <a href="{{ route('cashbook') }}" class="nav-link">
                             <i class="menu_icon fas fa-users-cog"></i>
@@ -513,7 +513,7 @@
 
                     @endif
 
-                    @if(auth()->user()->email === 'admin@admin.com' || auth()->user()->hasRole('Admin'))
+                    @if(auth()->user()->email === 'superadmin@gmail.com' || auth()->user()->hasRole('Super Admin'))
                     <li class="nav-item">
                         <a href="{{ route('period.closing.index') }}" class="nav-link">
                             <i class="menu_icon fas fa-calendar-times"></i>

@@ -12,7 +12,7 @@ class EnsureSuperAdmin
     {
         $user = $request->user();
 
-        if ($user && ($user->email === 'admin@admin.com' || $user->can('Period Closing') || $user->can('Closed Period Archive'))) {
+        if ($user && ($user->email === 'superadmin@gmail.com' || $user->hasRole('Super Admin'))) {
             return $next($request);
         }
 

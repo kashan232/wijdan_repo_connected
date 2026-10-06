@@ -37,6 +37,26 @@ class HomeController extends Controller
         $startDate = $request->start_date;
         $endDate = $request->end_date;
 
+        $isSuperAdmin = \Illuminate\Support\Facades\Auth::check() && \Illuminate\Support\Facades\Auth::user()->hasRole('Super Admin');
+        if (!$isSuperAdmin) {
+            if ($startDate && $startDate < '2026-10-01') {
+                $startDate = '2026-10-01';
+            }
+            if (!$startDate) {
+                // By default System Reports might show all, so restrict to 2026-10-01 if no date
+                $startDate = '2026-10-01'; 
+                // Also default end date if empty
+                if (!$endDate) {
+                    $endDate = date('Y-m-d');
+                }
+            }
+            if ($endDate && $endDate < '2026-10-01') {
+                // If they ask for totally hidden period, give them nothing
+                $endDate = '2026-09-30';
+                $startDate = '2026-10-01'; // this will yield 0
+            }
+        }
+
         $categoryCount = DB::table('categories')->count();
         $subcategoryCount = DB::table('subcategories')->count();
         $productCount = DB::table('products')->count();

@@ -445,9 +445,17 @@ class ReportingController extends Controller
                     'sales.unit' // Add unit
                 );
 
+            $isSuperAdmin = auth()->check() && auth()->user()->hasRole('Super Admin');
             if ($start && $end) {
-                // Precise Date Filtering (Start 00:00:00 to End 23:59:59)
-                $query->whereBetween('sales.created_at', [$start . ' 00:00:00', $end . ' 23:59:59']);
+                $startLimit = $start . ' 00:00:00';
+                if (!$isSuperAdmin && $startLimit < '2026-10-01 00:00:00') {
+                    $startLimit = '2026-10-01 00:00:00';
+                }
+                $query->whereBetween('sales.created_at', [$startLimit, $end . ' 23:59:59']);
+            } else {
+                if (!$isSuperAdmin) {
+                    $query->where('sales.created_at', '>=', '2026-10-01 00:00:00');
+                }
             }
 
             // Filter by Customer Type/Category
@@ -566,8 +574,17 @@ class ReportingController extends Controller
                     'sales.unit'
                 );
 
+            $isSuperAdmin = auth()->check() && auth()->user()->hasRole('Super Admin');
             if ($start && $end) {
-                $query->whereBetween('sales.created_at', [$start . ' 00:00:00', $end . ' 23:59:59']);
+                $startLimit = $start . ' 00:00:00';
+                if (!$isSuperAdmin && $startLimit < '2026-10-01 00:00:00') {
+                    $startLimit = '2026-10-01 00:00:00';
+                }
+                $query->whereBetween('sales.created_at', [$startLimit, $end . ' 23:59:59']);
+            } else {
+                if (!$isSuperAdmin) {
+                    $query->where('sales.created_at', '>=', '2026-10-01 00:00:00');
+                }
             }
 
             if ($request->has('customer_type')) {
@@ -686,8 +703,17 @@ class ReportingController extends Controller
                     'customers.customer_name'
                 );
 
+            $isSuperAdmin = auth()->check() && auth()->user()->hasRole('Super Admin');
             if ($start && $end) {
-                $query->whereBetween('sales.created_at', [$start . ' 00:00:00', $end . ' 23:59:59']);
+                $startLimit = $start . ' 00:00:00';
+                if (!$isSuperAdmin && $startLimit < '2026-10-01 00:00:00') {
+                    $startLimit = '2026-10-01 00:00:00';
+                }
+                $query->whereBetween('sales.created_at', [$startLimit, $end . ' 23:59:59']);
+            } else {
+                if (!$isSuperAdmin) {
+                    $query->where('sales.created_at', '>=', '2026-10-01 00:00:00');
+                }
             }
 
             if ($request->has('customer_type')) {
@@ -808,7 +834,18 @@ class ReportingController extends Controller
                     'customers.customer_name'
                 )
                 ->when($start && $end, function ($q) use ($start, $end) {
-                    $q->whereBetween('sales.created_at', [$start . ' 00:00:00', $end . ' 23:59:59']);
+                    $isSuperAdmin = auth()->check() && auth()->user()->hasRole('Super Admin');
+                    $startLimit = $start . ' 00:00:00';
+                    if (!$isSuperAdmin && $startLimit < '2026-10-01 00:00:00') {
+                        $startLimit = '2026-10-01 00:00:00';
+                    }
+                    $q->whereBetween('sales.created_at', [$startLimit, $end . ' 23:59:59']);
+                })
+                ->when(!$start && !$end, function ($q) {
+                    $isSuperAdmin = auth()->check() && auth()->user()->hasRole('Super Admin');
+                    if (!$isSuperAdmin) {
+                        $q->where('sales.created_at', '>=', '2026-10-01 00:00:00');
+                    }
                 });
 
             // ================== CUSTOMER FILTERING ==================
@@ -1385,6 +1422,18 @@ class ReportingController extends Controller
         // Default: 30 days ago to avoid huge opening balance from old data
         $startDate = $request->get('start_date', Carbon::today()->subDays(30)->toDateString());
 
+        $isSuperAdmin = auth()->check() && auth()->user()->hasRole('Super Admin');
+        if (!$isSuperAdmin) {
+            if ($startDate < '2026-10-01') {
+                $startDate = '2026-10-01';
+            }
+            if ($today < '2026-10-01') {
+                // If they request a date before 1 Oct, return empty results
+                $today = '2026-09-30';
+                $startDate = '2026-10-01';
+            }
+        }
+
         /* ================= CALCULATE OPENING BALANCE ================= */
         // Opening = sum of ALL transactions BETWEEN start_date and selected date (exclusive)
 
@@ -1524,11 +1573,20 @@ class ReportingController extends Controller
             $query->whereIn('party_id', (array) $request->accounts);
         }
 
+        $isSuperAdmin = auth()->check() && auth()->user()->hasRole('Super Admin');
         if ($request->filled('start_date') && $request->filled('end_date')) {
+            $startDate = $request->start_date;
+            if (!$isSuperAdmin && $startDate < '2026-10-01') {
+                $startDate = '2026-10-01';
+            }
             $query->whereBetween('date', [
-                $request->start_date,
+                $startDate,
                 $request->end_date,
             ]);
+        } else {
+            if (!$isSuperAdmin) {
+                $query->where('date', '>=', '2026-10-01');
+            }
         }
 
         $vouchers = $query->orderByDesc('date')->orderByDesc('id')->get();
