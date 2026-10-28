@@ -57,18 +57,7 @@ class VendorController extends Controller
 
     public function fix_balance(Request $request)
     {
-        $request->validate([
-            'vendor_id' => 'required|exists:vendors,id',
-            'difference' => 'required|numeric'
-        ]);
-
-        $vendor = Vendor::findOrFail($request->vendor_id);
-        
-        // Equation: New Opening = Old Opening - Difference
-        $vendor->opening_balance = $vendor->opening_balance - $request->difference;
-        $vendor->save();
-
-        return response()->json(['success' => true, 'message' => 'Balance fixed successfully by adjusting opening balance.']);
+        return response()->json(['success' => false, 'message' => 'Fix Auto has been permanently disabled to protect opening balances.'], 403);
     }
 
     // Store or update vendor information
