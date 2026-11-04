@@ -31,13 +31,13 @@ class VendorController extends Controller
                 v.opening_balance AS initial_opening,
                 COALESCE(p.total_purchase, 0) AS total_purchases,
                 COALESCE(ig.total_inward, 0) AS total_inwards,
-                COALESCE(pr.total_pur_return, 0) AS total_returns,
+                (COALESCE(pr.total_pur_return, 0) + COALESCE(ir.total_inward_return, 0)) AS total_returns,
                 COALESCE(vp.total_payment, 0) AS total_payments,
                 
                 (v.opening_balance 
                  + COALESCE(p.total_purchase, 0) 
                  + COALESCE(ig.total_inward, 0) 
-                 - COALESCE(pr.total_pur_return, 0) 
+                 - (COALESCE(pr.total_pur_return, 0) + COALESCE(ir.total_inward_return, 0)) 
                  - COALESCE(vp.total_payment, 0)
                 ) AS calculated_true_balance,
                 
@@ -46,6 +46,7 @@ class VendorController extends Controller
             LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_purchase FROM purchases GROUP BY vendor_id) p ON p.vendor_id = v.id
             LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_inward FROM inward_gatepasses WHERE bill_status = 'billed' GROUP BY vendor_id) ig ON ig.vendor_id = v.id
             LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_pur_return FROM purchase_returns GROUP BY vendor_id) pr ON pr.vendor_id = v.id
+            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_inward_return FROM inward_returns GROUP BY vendor_id) ir ON ir.vendor_id = v.id
             LEFT JOIN (SELECT vendor_id, SUM(amount) AS total_payment FROM vendor_payments GROUP BY vendor_id) vp ON vp.vendor_id = v.id
             LEFT JOIN vendor_ledgers vl ON vl.vendor_id = v.id
         ";

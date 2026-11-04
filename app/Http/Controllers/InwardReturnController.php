@@ -29,7 +29,7 @@ class InwardReturnController extends Controller
 
     public function create($gatepass_id)
     {
-        $gatepass = InwardGatepass::with(['items.product', 'vendor', 'warehouse', 'branch'])->findOrFail($gatepass_id);
+        $gatepass = InwardGatepass::with(['items.product.unit', 'vendor', 'warehouse', 'branch'])->findOrFail($gatepass_id);
         
         // Fetch previous returns for this gatepass to calculate available quantity
         $previousReturns = InwardReturn::with('items')->where('inward_gatepass_id', $gatepass->id)->get();
@@ -40,21 +40,28 @@ class InwardReturnController extends Controller
                 if (!isset($returnedQtys[$item->product_id])) {
                     $returnedQtys[$item->product_id] = 0;
                 }
-                $returnedQtys[$item->product_id] += $item->qty;
+                $returnedQtys[$item->product_id] += (float)$item->qty;
             }
         }
 
         $items = [];
         foreach ($gatepass->items as $item) {
-            $soldQty = $item->qty;
-            $returnedQty = $returnedQtys[$item->product_id] ?? 0;
+            $soldQty = (float)$item->qty;
+            $returnedQty = (float)($returnedQtys[$item->product_id] ?? 0);
             $availableQty = max(0, $soldQty - $returnedQty);
             
+            $price = $item->price !== null ? (float)$item->price : (float)($item->product->wholesale_price ?? 0);
+            $discVal = (float)($item->discount_value ?? 0);
+            $discType = $item->discount_type ?: 'pkr';
+
             $items[] = [
                 'product_id' => $item->product_id,
                 'item_name' => $item->product->item_name ?? 'N/A',
                 'item_code' => $item->product->item_code ?? 'N/A',
                 'receive_type' => $item->receive_type ?? $gatepass->receive_type,
+                'price' => $price,
+                'discount_value' => $discVal,
+                'discount_type' => $discType,
                 'qty' => $soldQty,
                 'returned' => $returnedQty,
                 'available' => $availableQty,
@@ -76,11 +83,14 @@ class InwardReturnController extends Controller
         $productIds = $request->input('product_id', []);
         $returnQtys = $request->input('return_qty', []);
         $receiveTypes = $request->input('receive_type', []);
+        $prices = $request->input('price', []);
+        $discountValues = $request->input('discount_value', []);
+        $discountTypes = $request->input('discount_type', []);
 
         // Check if anything is being returned
         $hasReturn = false;
         foreach ($returnQtys as $qty) {
-            if ($qty > 0) {
+            if ((float)$qty > 0) {
                 $hasReturn = true;
                 break;
             }
@@ -93,7 +103,52 @@ class InwardReturnController extends Controller
         DB::beginTransaction();
         try {
             $gatepass = InwardGatepass::findOrFail($request->inward_gatepass_id);
+            $this->guardClosedPeriodByDate($request->return_date);
+
             $nextInvoice = InwardReturn::generateInvoiceNo();
+
+            $totalGross = 0;
+            $totalItemDiscount = 0;
+
+            // First calculate row items totals
+            $itemRowsToInsert = [];
+            for ($i = 0; $i < count($productIds); $i++) {
+                $pid = $productIds[$i];
+                $rQty = isset($returnQtys[$i]) ? (float)$returnQtys[$i] : 0;
+                $rType = $receiveTypes[$i] ?? $gatepass->receive_type;
+                $price = isset($prices[$i]) ? (float)$prices[$i] : 0;
+                $discVal = isset($discountValues[$i]) ? (float)$discountValues[$i] : 0;
+                $discType = $discountTypes[$i] ?? 'pkr';
+
+                if (!$pid || $rQty <= 0) continue;
+
+                $gross = $price * $rQty;
+                $lineDisc = 0;
+                if ($discType === 'percent') {
+                    $lineDisc = ($gross * $discVal) / 100;
+                } else {
+                    $lineDisc = $discVal * $rQty;
+                }
+                $lineTotal = $gross - $lineDisc;
+
+                $totalGross += $gross;
+                $totalItemDiscount += $lineDisc;
+
+                $itemRowsToInsert[] = [
+                    'product_id' => $pid,
+                    'qty' => $rQty,
+                    'receive_type' => $rType,
+                    'price' => $price,
+                    'discount_value' => $discVal,
+                    'discount_type' => $discType,
+                    'discount_amount' => $lineDisc,
+                    'total' => $lineTotal,
+                ];
+            }
+
+            $manualDiscount = (float)$request->input('discount', 0);
+            $overallDiscount = $totalItemDiscount + $manualDiscount;
+            $netAmount = max(0, ($totalGross - $totalItemDiscount) - $manualDiscount);
 
             $inwardReturn = InwardReturn::create([
                 'inward_gatepass_id' => $gatepass->id,
@@ -106,40 +161,44 @@ class InwardReturnController extends Controller
                 'vehicle_no' => $request->vehicle_no,
                 'driver_name' => $request->driver_name,
                 'remarks' => $request->remarks,
+                'subtotal' => $totalGross,
+                'item_discount' => $totalItemDiscount,
+                'discount' => $manualDiscount,
+                'overall_discount' => $overallDiscount,
+                'net_amount' => $netAmount,
             ]);
 
-            for ($i = 0; $i < count($productIds); $i++) {
-                $pid = $productIds[$i];
-                $rQty = isset($returnQtys[$i]) ? (float)$returnQtys[$i] : 0;
-                $rType = $receiveTypes[$i] ?? $gatepass->receive_type;
-
-                if (!$pid || $rQty <= 0) continue;
-
+            foreach ($itemRowsToInsert as $row) {
                 InwardReturnItem::create([
                     'inward_return_id' => $inwardReturn->id,
-                    'product_id' => $pid,
-                    'qty' => $rQty,
-                    'receive_type' => $rType,
+                    'product_id' => $row['product_id'],
+                    'qty' => $row['qty'],
+                    'receive_type' => $row['receive_type'],
+                    'price' => $row['price'],
+                    'discount_value' => $row['discount_value'],
+                    'discount_type' => $row['discount_type'],
+                    'discount_amount' => $row['discount_amount'],
+                    'total' => $row['total'],
                 ]);
 
                 // Adjust Stock (Subtract from warehouse/shop)
-                if ($rType === 'shop') {
+                if ($row['receive_type'] === 'shop') {
                     $stock = Stock::where('branch_id', $gatepass->branch_id)
-                        ->where('product_id', $pid)
+                        ->where('product_id', $row['product_id'])
                         ->first();
 
                     if ($stock) {
-                        $stock->qty -= $rQty;
+                        $stock->qty -= $row['qty'];
                         if ($stock->qty < 0) $stock->qty = 0;
                         $stock->save();
                     }
-                } elseif ($rType === 'warehouse') {
+                } elseif ($row['receive_type'] === 'warehouse') {
                     $whStock = WarehouseStock::where('warehouse_id', $gatepass->warehouse_id)
-                        ->where('product_id', $pid)
+                        ->where('product_id', $row['product_id'])
                         ->first();
 
                     if ($whStock) {
-                        $whStock->quantity -= $rQty;
+                        $whStock->quantity -= $row['qty'];
                         if ($whStock->quantity < 0) $whStock->quantity = 0;
                         $whStock->save();
                     }

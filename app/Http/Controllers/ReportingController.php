@@ -1249,12 +1249,12 @@ class ReportingController extends Controller
             ->where('return_date', '<', $start)
             ->sum('net_amount');
 
-        // 3b. Prior Inward Returns (Credit: We owe less)
+                // 3b. Prior Inward Returns (Credit: We owe less)
         $prevInwardReturns = DB::table('inward_returns')
-            ->join('inward_return_items', 'inward_returns.id', '=', 'inward_return_items.inward_return_id')
-            ->join('inward_gatepass_items', function ($join) {
-                $join->on('inward_returns.inward_gatepass_id', '=', 'inward_gatepass_items.inward_gatepass_id')
-                     ->on('inward_return_items.product_id', '=', 'inward_gatepass_items.product_id');
+            ->where('vendor_id', $vendorId)
+            ->where('return_date', '<', $start)
+            ->sum(DB::raw('COALESCE(net_amount, 0)'));
+
             })
             ->leftJoin('products', 'inward_return_items.product_id', '=', 'products.id')
             ->where('inward_returns.vendor_id', $vendorId)
@@ -1337,12 +1337,28 @@ class ReportingController extends Controller
                 ];
             });
 
-        // 🔹 2b. Inward Returns → Credit (reduces vendor balance)
+                // 2b. Inward Returns -> Credit (reduces vendor balance)
         $inwardReturnsPeriod = DB::table('inward_returns')
-            ->join('inward_return_items', 'inward_returns.id', '=', 'inward_return_items.inward_return_id')
-            ->join('inward_gatepass_items', function ($join) {
-                $join->on('inward_returns.inward_gatepass_id', '=', 'inward_gatepass_items.inward_gatepass_id')
-                     ->on('inward_return_items.product_id', '=', 'inward_gatepass_items.product_id');
+            ->where('vendor_id', $vendorId)
+            ->whereBetween('return_date', [$start, $end])
+            ->select(
+                'return_date as date',
+                'return_invoice as invoice',
+                DB::raw("'Inward Return' as description"),
+                'net_amount as credit_amount'
+            )
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'date' => $r->date,
+                    'invoice' => $r->invoice,
+                    'description' => $r->description,
+                    'debit' => 0,
+                    'credit' => (float)$r->credit_amount,
+                    'sort_date' => $r->date
+                ];
+            });
+
             })
             ->leftJoin('products', 'inward_return_items.product_id', '=', 'products.id')
             ->where('inward_returns.vendor_id', $vendorId)

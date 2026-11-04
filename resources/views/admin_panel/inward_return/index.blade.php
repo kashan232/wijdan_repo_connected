@@ -35,6 +35,9 @@
                                     <th>Date</th>
                                     <th>Vendor</th>
                                     <th>Received In</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th class="text-end">Overall Disc</th>
+                                    <th class="text-end">Net Return Amount</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -42,11 +45,14 @@
                                 @foreach($inwardReturns as $key => $return)
                                 <tr>
                                     <td>{{ $key + 1 }}</td>
-                                    <td>{{ $return->return_invoice }}</td>
+                                    <td class="fw-bold">{{ $return->return_invoice }}</td>
                                     <td>{{ $return->inwardGatepass ? $return->inwardGatepass->invoice_no : 'N/A' }}</td>
                                     <td>{{ \Carbon\Carbon::parse($return->return_date)->format('d-m-Y') }}</td>
                                     <td>{{ $return->vendor ? $return->vendor->name : 'N/A' }}</td>
                                     <td class="text-capitalize">{{ $return->inwardGatepass ? $return->inwardGatepass->receive_type : 'N/A' }}</td>
+                                    <td class="text-end">Rs. {{ number_format($return->subtotal ?? 0, 2) }}</td>
+                                    <td class="text-end text-danger">- Rs. {{ number_format($return->overall_discount ?? 0, 2) }}</td>
+                                    <td class="text-end fw-bold text-primary">Rs. {{ number_format($return->net_amount ?? 0, 2) }}</td>
                                     <td>
                                         <div class="btn-group">
                                             <a href="{{ route('inward-returns.show', $return->id) }}" class="btn btn-sm btn-info text-white">View</a>
@@ -68,20 +74,4 @@
     </div>
 </div>
 </div>
-
-@endsection
-
-@section('scripts')
-<!--datatable js-->
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
-
-<script>
-    $(document).ready(function() {
-        $('#example').DataTable({
-            order: [[0, 'desc']]
-        });
-    });
-</script>
 @endsection
