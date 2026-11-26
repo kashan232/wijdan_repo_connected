@@ -60,7 +60,7 @@
 
         <!-- Summary Cards -->
         <div class="row mb-4">
-            <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
+            <div class="col-md-6 mb-3 mb-md-0">
                 <div class="card bg-primary text-white shadow-sm h-100">
                     <div class="card-body">
                         <h5 class="card-title text-white mb-2">Total Calculated True Balance</h5>
@@ -68,27 +68,11 @@
                     </div>
                 </div>
             </div>
-            <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
+            <div class="col-md-6 mb-3 mb-md-0">
                 <div class="card text-white shadow-sm h-100" style="background-color: #d97706 !important;">
                     <div class="card-body">
                         <h5 class="card-title text-white mb-2">Total Payments</h5>
                         <h3 class="mb-0 text-white">Rs. {{ number_format($totalPayments, 2) }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
-                <div class="card bg-secondary text-white shadow-sm h-100">
-                    <div class="card-body">
-                        <h5 class="card-title text-white mb-2">Total System Saved Balance</h5>
-                        <h3 class="mb-0 text-white">Rs. {{ number_format($totalSaved, 2) }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
-                <div class="card {{ round($totalDiff, 2) != 0 ? 'bg-danger' : 'bg-success' }} text-white shadow-sm h-100">
-                    <div class="card-body">
-                        <h5 class="card-title text-white mb-2">Total Difference</h5>
-                        <h3 class="mb-0 text-white">Rs. {{ number_format($totalDiff, 2) }}</h3>
                     </div>
                 </div>
             </div>
