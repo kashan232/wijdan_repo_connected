@@ -1251,9 +1251,21 @@ class ReportingController extends Controller
 
         // 3b. Prior Inward Returns (Credit: We owe less)
         $prevInwardReturns = DB::table('inward_returns')
-            ->where('vendor_id', $vendorId)
-            ->where('return_date', '<', $start)
-            ->sum(DB::raw('COALESCE(net_amount, 0)'));
+            ->leftJoin('inward_return_items', 'inward_returns.id', '=', 'inward_return_items.inward_return_id')
+            ->leftJoin('inward_gatepass_items', function ($join) {
+                $join->on('inward_returns.inward_gatepass_id', '=', 'inward_gatepass_items.inward_gatepass_id')
+                     ->on('inward_return_items.product_id', '=', 'inward_gatepass_items.product_id');
+            })
+            ->leftJoin('products', 'inward_return_items.product_id', '=', 'products.id')
+            ->where('inward_returns.vendor_id', $vendorId)
+            ->where('inward_returns.return_date', '<', $start)
+            ->groupBy('inward_returns.id', 'inward_returns.net_amount')
+            ->select(DB::raw("CASE 
+                WHEN COALESCE(inward_returns.net_amount, 0) > 0 THEN inward_returns.net_amount 
+                ELSE COALESCE(SUM((COALESCE(inward_return_items.price, inward_gatepass_items.price, products.wholesale_price, 0) - COALESCE(inward_return_items.discount_amount, inward_gatepass_items.discount_value, 0)) * inward_return_items.qty), 0) 
+            END as return_amt"))
+            ->get()
+            ->sum('return_amt');
 
         // 4. Prior Payments (Credit: We owe less)
         $prevPayments = DB::table('vendor_payments')
@@ -1331,16 +1343,27 @@ class ReportingController extends Controller
                 ];
             });
 
-                // 2b. Inward Returns -> Credit (reduces vendor balance)
+        // 2b. Inward Returns -> Credit (reduces vendor balance)
         $inwardReturnsPeriod = DB::table('inward_returns')
-            ->where('vendor_id', $vendorId)
-            ->whereBetween('return_date', [$start, $end])
+            ->leftJoin('inward_return_items', 'inward_returns.id', '=', 'inward_return_items.inward_return_id')
+            ->leftJoin('inward_gatepass_items', function ($join) {
+                $join->on('inward_returns.inward_gatepass_id', '=', 'inward_gatepass_items.inward_gatepass_id')
+                     ->on('inward_return_items.product_id', '=', 'inward_gatepass_items.product_id');
+            })
+            ->leftJoin('products', 'inward_return_items.product_id', '=', 'products.id')
+            ->where('inward_returns.vendor_id', $vendorId)
+            ->whereBetween('inward_returns.return_date', [$start, $end])
             ->select(
-                'return_date as date',
-                'return_invoice as invoice',
+                'inward_returns.id',
+                'inward_returns.return_date as date',
+                'inward_returns.return_invoice as invoice',
                 DB::raw("'Inward Return' as description"),
-                'net_amount as credit_amount'
+                DB::raw("CASE 
+                    WHEN COALESCE(inward_returns.net_amount, 0) > 0 THEN inward_returns.net_amount 
+                    ELSE COALESCE(SUM((COALESCE(inward_return_items.price, inward_gatepass_items.price, products.wholesale_price, 0) - COALESCE(inward_return_items.discount_amount, inward_gatepass_items.discount_value, 0)) * inward_return_items.qty), 0) 
+                END as credit_amount")
             )
+            ->groupBy('inward_returns.id', 'inward_returns.return_date', 'inward_returns.return_invoice', 'inward_returns.net_amount')
             ->get()
             ->map(function ($r) {
                 return [
