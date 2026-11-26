@@ -22,38 +22,91 @@ class VendorController extends Controller
         return view('admin_panel.vendors.index', compact('vendors', 'totalClosingBalance'));
     }
 
-    public function actual_balances()
+    public function actual_balances(Request $request)
     {
+        $startDate = $request->filled('start_date') ? date('Y-m-d', strtotime($request->start_date)) : null;
+        $endDate = $request->filled('end_date') ? date('Y-m-d', strtotime($request->end_date)) : null;
+
+        $pConditions = [];
+        $igConditions = ["bill_status = 'billed'"];
+        $prConditions = [];
+        $irConditions = [];
+        $vpConditions = [];
+
+        if ($startDate) {
+            $pConditions[] = "purchase_date >= '$startDate'";
+            $igConditions[] = "gatepass_date >= '$startDate'";
+            $prConditions[] = "return_date >= '$startDate'";
+            $irConditions[] = "return_date >= '$startDate'";
+            $vpConditions[] = "payment_date >= '$startDate'";
+        }
+
+        if ($endDate) {
+            $pConditions[] = "purchase_date <= '$endDate'";
+            $igConditions[] = "gatepass_date <= '$endDate'";
+            $prConditions[] = "return_date <= '$endDate'";
+            $irConditions[] = "return_date <= '$endDate'";
+            $vpConditions[] = "payment_date <= '$endDate'";
+        }
+
+        $pWhere = !empty($pConditions) ? "WHERE " . implode(' AND ', $pConditions) : "";
+        $igWhere = !empty($igConditions) ? "WHERE " . implode(' AND ', $igConditions) : "";
+        $prWhere = !empty($prConditions) ? "WHERE " . implode(' AND ', $prConditions) : "";
+        $irWhere = !empty($irConditions) ? "WHERE " . implode(' AND ', $irConditions) : "";
+        $vpWhere = !empty($vpConditions) ? "WHERE " . implode(' AND ', $vpConditions) : "";
+
+        $priorExpr = "v.opening_balance";
+        $priorJoins = "";
+
+        if ($startDate) {
+            $priorExpr = "(v.opening_balance 
+                + COALESCE(prior_p.total, 0) 
+                + COALESCE(prior_ig.total, 0) 
+                - (COALESCE(prior_pr.total, 0) + COALESCE(prior_ir.total, 0)) 
+                - COALESCE(prior_vp.total, 0)
+            )";
+
+            $priorJoins = "
+                LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total FROM purchases WHERE purchase_date < '$startDate' GROUP BY vendor_id) prior_p ON prior_p.vendor_id = v.id
+                LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total FROM inward_gatepasses WHERE bill_status = 'billed' AND gatepass_date < '$startDate' GROUP BY vendor_id) prior_ig ON prior_ig.vendor_id = v.id
+                LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total FROM purchase_returns WHERE return_date < '$startDate' GROUP BY vendor_id) prior_pr ON prior_pr.vendor_id = v.id
+                LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total FROM inward_returns WHERE return_date < '$startDate' GROUP BY vendor_id) prior_ir ON prior_ir.vendor_id = v.id
+                LEFT JOIN (SELECT vendor_id, SUM(amount) AS total FROM vendor_payments WHERE payment_date < '$startDate' GROUP BY vendor_id) prior_vp ON prior_vp.vendor_id = v.id
+            ";
+        }
+
         $sql = "
             SELECT 
                 v.id AS vendor_id,
                 v.name AS vendor_name,
-                v.opening_balance AS initial_opening,
+                $priorExpr AS initial_opening,
                 COALESCE(p.total_purchase, 0) AS total_purchases,
                 COALESCE(ig.total_inward, 0) AS total_inwards,
                 (COALESCE(pr.total_pur_return, 0) + COALESCE(ir.total_inward_return, 0)) AS total_returns,
                 COALESCE(vp.total_payment, 0) AS total_payments,
                 
-                (v.opening_balance 
-                 + COALESCE(p.total_purchase, 0) 
-                 + COALESCE(ig.total_inward, 0) 
-                 - (COALESCE(pr.total_pur_return, 0) + COALESCE(ir.total_inward_return, 0)) 
-                 - COALESCE(vp.total_payment, 0)
+                (
+                    $priorExpr
+                    + COALESCE(p.total_purchase, 0) 
+                    + COALESCE(ig.total_inward, 0) 
+                    - (COALESCE(pr.total_pur_return, 0) + COALESCE(ir.total_inward_return, 0)) 
+                    - COALESCE(vp.total_payment, 0)
                 ) AS calculated_true_balance,
                 
                 vl.closing_balance AS system_saved_balance
             FROM vendors v
-            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_purchase FROM purchases GROUP BY vendor_id) p ON p.vendor_id = v.id
-            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_inward FROM inward_gatepasses WHERE bill_status = 'billed' GROUP BY vendor_id) ig ON ig.vendor_id = v.id
-            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_pur_return FROM purchase_returns GROUP BY vendor_id) pr ON pr.vendor_id = v.id
-            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_inward_return FROM inward_returns GROUP BY vendor_id) ir ON ir.vendor_id = v.id
-            LEFT JOIN (SELECT vendor_id, SUM(amount) AS total_payment FROM vendor_payments GROUP BY vendor_id) vp ON vp.vendor_id = v.id
+            $priorJoins
+            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_purchase FROM purchases $pWhere GROUP BY vendor_id) p ON p.vendor_id = v.id
+            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_inward FROM inward_gatepasses $igWhere GROUP BY vendor_id) ig ON ig.vendor_id = v.id
+            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_pur_return FROM purchase_returns $prWhere GROUP BY vendor_id) pr ON pr.vendor_id = v.id
+            LEFT JOIN (SELECT vendor_id, SUM(net_amount) AS total_inward_return FROM inward_returns $irWhere GROUP BY vendor_id) ir ON ir.vendor_id = v.id
+            LEFT JOIN (SELECT vendor_id, SUM(amount) AS total_payment FROM vendor_payments $vpWhere GROUP BY vendor_id) vp ON vp.vendor_id = v.id
             LEFT JOIN vendor_ledgers vl ON vl.vendor_id = v.id
         ";
         
         $results = \Illuminate\Support\Facades\DB::select($sql);
         
-        return view('admin_panel.vendors.actual_balances', compact('results'));
+        return view('admin_panel.vendors.actual_balances', compact('results', 'startDate', 'endDate'));
     }
 
     public function fix_balance(Request $request)
